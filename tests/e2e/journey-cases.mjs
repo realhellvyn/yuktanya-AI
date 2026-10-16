@@ -142,6 +142,23 @@ export async function journey({ step, base, db, newActor }) {
     if (!(await actors.koordinator.page.innerText("main")).includes("Diterima pemilik")) throw new Error("koordinator tidak melihat penerimaan");
   });
 
+  await step(tag("pemilik: kasus tanpa dokumen lalu tarik permintaan dua langkah (konfirmasi) → Ditutup"), async () => {
+    const p = actors.pemilik.page;
+    await p.goto(base + "/cases/new");
+    await p.fill("textarea[name=summary]", SUMMARY);
+    await p.check("input[name=consent]");
+    await submit(p, p.locator("button:has-text('Kirim permintaan penilaian')"));
+    const id = /\/cases\/([0-9a-f-]{36})/.exec(p.url())?.[1];
+    if (!id || id === caseId) throw new Error("kasus kedua tidak dibuat: " + p.url());
+    if (await p.locator("button:has-text('Ya, tarik permintaan')").isVisible()) throw new Error("tombol konfirmasi tarik terlihat sebelum langkah pertama");
+    await p.click("summary:has-text('Tarik permintaan')");
+    await submit(p, p.locator("button:has-text('Ya, tarik permintaan')"));
+    const t = await p.innerText("main");
+    if (!t.includes("Permintaan ditarik") || !t.includes("Ditutup")) throw new Error("tarik permintaan gagal: " + t.slice(0, 300));
+    const st = (await db.query("select status from special_cases where id = $1", [id])).rows[0].status;
+    if (st !== "CLOSED") throw new Error("status DB " + st);
+  });
+
   await step(tag("@375px: /cases, /cases/new, /cases/[id], /partner/cases, /partner/cases/[id], /admin/cases tanpa overflow, target sentuh, error konsol"), async () => {
     const o = await open("pemilik", HP);
     await checkPage(o, HP, "/cases", ["Kasus Khusus", NOTE]);

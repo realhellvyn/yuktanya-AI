@@ -128,8 +128,10 @@ export default async function DocumentPage({ params, searchParams }: { params: P
                   <p>Pemeriksaan oleh pengacara untuk versi ini: <strong>{formatIdr(quote.amountIdr)}</strong>. Pembayaran adalah biaya pemeriksaan dan tidak menjamin hasil positif.</p>
                   <Button type="submit">Minta pemeriksaan pengacara</Button>
                 </form>
-                <div className="flex flex-wrap items-center gap-x-2 text-muted"><span>Dokumen Anda rumit atau berisiko tinggi?</span><ButtonLink href={`/cases/new?document=${id}`} variant="quiet" className="!px-0">Ajukan penilaian khusus</ButtonLink></div>
               </Card>
+            )}
+            {!openCase && (
+              <div className="flex flex-wrap items-center gap-x-2 text-muted"><span>Dokumen Anda rumit atau berisiko tinggi?</span><ButtonLink href={`/cases/new?document=${id}`} variant="quiet" className="!px-0">Ajukan penilaian khusus</ButtonLink></div>
             )}
             {flags.aiPreReview && (
               <Card>

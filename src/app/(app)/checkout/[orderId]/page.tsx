@@ -10,7 +10,8 @@ import { mockSettleAction, payAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const NOTICE: Record<string, string> = { PROVIDER_UNAVAILABLE: "Metode pembayaran ini belum tersedia.", ORDER_NOT_PAYABLE: "Pesanan ini sudah tidak dapat dibayar." };
+const NOTICE: Record<string, string> = { PROVIDER_UNAVAILABLE: "Metode pembayaran ini belum tersedia.", ORDER_NOT_PAYABLE: "Pesanan ini sudah tidak dapat dibayar.",
+  SPECIAL_CASE_OPEN: "Dokumen ini sedang dalam penilaian khusus, jadi Review Standar belum dapat dibayar. Lihat status di menu Kasus Khusus, atau tarik permintaan penilaian khusus bila tidak jadi." };
 const LABEL: Record<string, string> = { MEMBERSHIP_MONTHLY: "Membership Yuktanya (1 periode)", MEMBERSHIP_ANNUAL: "Membership Yuktanya (1 tahun)", BUNDLE: "Paket kredit pemeriksaan", STANDARD_REVIEW: "Pemeriksaan Standar oleh pengacara", DEEP_REVIEW: "Pemeriksaan Mendalam oleh pengacara (tambahan)" };
 const btn = "min-h-12 rounded-lg px-5 font-semibold";
 

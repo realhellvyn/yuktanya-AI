@@ -241,3 +241,45 @@ describe("special_cases: dokumen berkasus khusus tidak bisa membeli Review Stand
     expect((await kit.order(owner, "STANDARD_REVIEW", v.versionId)).status).toBe("PENDING_PAYMENT");
   });
 });
+
+describe("special_cases: pembayaran order Review Standar yang sudah ada", () => {
+  it("order menunggu bayar lalu kasus dibuka → mulai bayar ditolak SPECIAL_CASE_OPEN; setelah kasus ditolak → boleh", async () => {
+    const { f, owner, v } = await setup();
+    const o = await kit.order(owner, "STANDARD_REVIEW", v.versionId);
+    const id = await submit(owner, v.documentId);
+    await expect(kit.pay(owner, o.order_id)).rejects.toThrow(/SPECIAL_CASE_OPEN/);
+    expect((await q1("select count(*)::int as n from payments where order_id = $1", [o.order_id])).n).toBe(0);
+    await triage(f.coordinator, id);
+    await quote(f.coordinator, id);
+    await decline(owner, id);
+    const p = await kit.pay(owner, o.order_id);
+    expect(await kit.settle("mock", p.ref, o.amount_idr)).toBe("SETTLED");
+  });
+
+  it("setelah kasus ditutup/ditarik → mulai bayar boleh", async () => {
+    const { owner, v } = await setup();
+    const o = await kit.order(owner, "STANDARD_REVIEW", v.versionId);
+    const id = await submit(owner, v.documentId);
+    await expect(kit.pay(owner, o.order_id)).rejects.toThrow(/SPECIAL_CASE_OPEN/);
+    await close(owner, id, "Tidak jadi");
+    expect((await kit.pay(owner, o.order_id)).paymentId).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it("pembayaran yang sudah dibuat sebelum kasus tetap bisa diselesaikan (uang sudah diterima)", async () => {
+    const { owner, v } = await setup();
+    const o = await kit.order(owner, "STANDARD_REVIEW", v.versionId);
+    const p = await kit.pay(owner, o.order_id);
+    await submit(owner, v.documentId);
+    expect(await kit.settle("mock", p.ref, o.amount_idr)).toBe("SETTLED");
+    expect((await q1("select status from orders where id = $1", [o.order_id])).status).toBe("PAID");
+  });
+
+  it("layanan billing memetakan kode ke BillingError SPECIAL_CASE_OPEN (bukan 500)", async () => {
+    const { createPgBillingService } = await import("@/lib/billing/service");
+    const { owner, v } = await setup();
+    const o = await kit.order(owner, "STANDARD_REVIEW", v.versionId);
+    await submit(owner, v.documentId);
+    const billing = createPgBillingService(pool, [{ name: "mock", createCharge: async () => ({ providerRef: `ref-${key()}`, instructions: "" }) } as never]);
+    await expect(billing.startPayment(owner, o.order_id, "mock")).rejects.toMatchObject({ code: "SPECIAL_CASE_OPEN" });
+  });
+});

@@ -28,7 +28,8 @@ export default async function CasePage({ params, searchParams }: { params: Promi
   if (page.kind === "notFound") notFound();
   const { c } = page;
   const expired = quoteExpired(c.quote?.expiresAt);
-  const error = q.e === "CONFIRM_REQUIRED" ? "Centang pernyataan bahwa Anda sudah membaca penawaran." : caseErrorText(q.e);
+  const error = q.e === "CONFIRM_REQUIRED" ? "Centang pernyataan bahwa Anda sudah membaca penawaran."
+    : q.e === "WITHDRAW_CONFIRM" ? "Permintaan belum ditarik. Tekan “Ya, tarik permintaan” untuk memastikan." : caseErrorText(q.e);
   const canWithdraw = ["SUBMITTED", "TRIAGED", "QUOTED"].includes(c.status);
   return (
     <main className="max-w-3xl space-y-6">
@@ -98,10 +99,15 @@ export default async function CasePage({ params, searchParams }: { params: Promi
         {c.documentId && <ButtonLink href={`/documents/${c.documentId}`} variant="secondary">Kembali ke dokumen</ButtonLink>}
         <ButtonLink href="/cases" variant="secondary">Semua kasus khusus</ButtonLink>
         {canWithdraw && (
-          <form action={withdrawCaseAction}>
-            <input type="hidden" name="caseId" value={c.id} />
-            <Button type="submit" variant="quiet">Tarik permintaan</Button>
-          </form>
+          <details className="w-full">
+            <summary className="inline-flex min-h-12 cursor-pointer items-center font-semibold text-brand underline underline-offset-4">Tarik permintaan</summary>
+            <form action={withdrawCaseAction} className="mt-2 space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
+              <input type="hidden" name="caseId" value={c.id} />
+              <input type="hidden" name="confirm" value="yes" />
+              <p>Yakin menarik permintaan ini? Kasus akan ditutup dan tidak dapat dibuka lagi. Anda dapat mengajukan permintaan baru nanti.</p>
+              <Button type="submit" variant="secondary">Ya, tarik permintaan</Button>
+            </form>
+          </details>
         )}
       </div>
     </main>

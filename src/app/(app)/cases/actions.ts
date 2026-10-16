@@ -53,6 +53,8 @@ export async function declineQuoteAction(formData: FormData): Promise<void> {
   await decide(formData, (u, id) => casesService().decline(u, id), "ditolak");
 }
 
+// Dua langkah: tombol konfirmasi di halaman membawa confirm=yes; tanpa itu tidak ada perubahan.
 export async function withdrawCaseAction(formData: FormData): Promise<void> {
+  if (formData.get("confirm") !== "yes") redirect(`/cases/${encodeURIComponent(str(formData, "caseId"))}?e=WITHDRAW_CONFIRM`);
   await decide(formData, (u, id) => casesService().close(u, id, "Ditarik pemilik"), "ditarik");
 }
