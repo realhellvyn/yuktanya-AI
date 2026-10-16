@@ -19,7 +19,7 @@ export default async function RevenuePage({ searchParams }: { searchParams: Prom
       {r === null && <p role="status">Belum ada pembayaran terverifikasi pada rentang ini.</p>}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <KpiCard label="Dikumpulkan" value={fmtIdr(r?.collected)} />
-        <KpiCard label="Sedang ditahan" value={fmtIdr(r?.held)} hint="Pernah terverifikasi, kini dalam rekonsiliasi" />
+        <KpiCard label="Sedang ditahan" value={fmtIdr(r?.held)} hint="Uang yang sudah masuk dan menunggu keputusan rekonsiliasi, termasuk pembayaran ganda atau terlambat" />
         <KpiCard label="Pengembalian dana (dicatat)" value={fmtIdr(r?.refunds)} />
         <KpiCard label="Bersih dikumpulkan" value={fmtIdr(r?.net)} />
         <KpiCard label="Biaya transaksi" value={fmtIdr(r?.fees)} hint="Ditampilkan terpisah" />

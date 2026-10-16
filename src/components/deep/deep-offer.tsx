@@ -24,7 +24,8 @@ export function DeepOffer({ eligible, reason, quote, action, parentRequestId, st
       <dl className="space-y-1">
         <div><dt className="font-medium">Biaya tambahan</dt><dd className="text-2xl font-semibold">{formatIdr(quote.amountIdr)}</dd></div>
         <div><dt className="font-medium">Keterangan</dt><dd>{member ? "Harga Member aktif" : `Harga umum. Member aktif membayar ${formatIdr(PRICING.deepAdditional.member)}.`}</dd></div>
-        {standardPaidIdr !== undefined && <div><dt className="font-medium">Pemeriksaan standar yang sudah dibayar</dt><dd>{formatIdr(standardPaidIdr)} (dihitung terpisah)</dd></div>}
+        {standardPaidIdr !== undefined && <div><dt className="font-medium">Pemeriksaan standar yang sudah dibayar</dt><dd>{standardPaidIdr > 0 ? `${formatIdr(standardPaidIdr)} (dihitung terpisah)` : "Memakai kredit pemeriksaan (dihitung terpisah)"}</dd></div>}
+        <div><dt className="font-medium">Total dibayar sekarang</dt><dd className="font-semibold">{formatIdr(quote.amountIdr)}</dd></div>
       </dl>
       <p>Membership ({formatIdr(PRICING.membershipMonthlyIdr)} per periode) adalah biaya terpisah dan tidak termasuk di sini.</p>
       <p>{CHECKOUT_NOTE}</p>

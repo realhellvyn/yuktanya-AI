@@ -4,7 +4,7 @@ import { Card, PageHeading } from "@/components/ui/card";
 import { ButtonLink } from "@/components/ui/button";
 import { deepService } from "@/lib/deep/runtime";
 import { trackDeepOfferShown } from "@/lib/deep/offer-event";
-import { loadDeepOfferPage } from "@/lib/deep/owner-pages";
+import { loadDeepOfferPage, offerViewProps } from "@/lib/deep/owner-pages";
 import { flags } from "@/lib/flags";
 import { requireUserId } from "@/lib/documents/session";
 import { reviewService } from "@/lib/reviews/runtime";
@@ -33,7 +33,7 @@ export default async function DeepOfferPage({ params, searchParams }: { params: 
       <PageHeading title="Pemeriksaan mendalam" lead={`Untuk ${review.title}, versi ${review.versionNo}`} />
       {q.notice && <p role="alert" className="font-semibold text-red-800">Pemeriksaan mendalam belum dapat dipesan ({q.notice}).</p>}
       {page.kind === "offer" ? (
-        <DeepOffer eligible reason={page.eligibility.reason} quote={page.eligibility.quote} action={requestDeepAction} parentRequestId={id} />
+        <DeepOffer {...offerViewProps(page.eligibility)} action={requestDeepAction} parentRequestId={id} />
       ) : (
         <Card className="space-y-2">
           <h2 className="text-xl font-semibold">Belum dapat ditawarkan</h2>

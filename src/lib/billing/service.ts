@@ -10,8 +10,11 @@ export type OrderView = {
   expiresAt: string; createdAt: string; paidAt: string | null; payments: { id: string; provider: string; status: string }[];
 };
 
+export type ManualPending = { paymentId: string; orderId: string; kind: string; amountIdr: number; createdAt: string; orderStatus: string; expired: boolean };
+export type ReconciliationItem = { orderId: string; paymentId: string | null; status: string; amountIdr: number; createdAt: string; extraPayment: boolean };
+
 export class BillingError extends Error {
-  constructor(readonly code: "NOT_ELIGIBLE" | "NOTE_REQUIRED" | "NOT_RECONCILIATION" | "AMOUNT_MISMATCH" | "CONFLICT" | "INVALID_ACTION" | "NOT_FOUND" | "ALREADY_REVIEWED" | "PRODUCT_UNAVAILABLE" | "ORDER_NOT_PAYABLE" | "INVALID_KIND" | "FORBIDDEN" | "PROVIDER_UNAVAILABLE" | "SPECIAL_CASE_OPEN", readonly reason?: string) {
+  constructor(readonly code: "NOT_ELIGIBLE" | "NOTE_REQUIRED" | "NOT_RECONCILIATION" | "AMOUNT_MISMATCH" | "CONFLICT" | "INVALID_ACTION" | "NOT_FOUND" | "ALREADY_REVIEWED" | "PRODUCT_UNAVAILABLE" | "ORDER_NOT_PAYABLE" | "INVALID_KIND" | "FORBIDDEN" | "PROVIDER_UNAVAILABLE" | "SPECIAL_CASE_OPEN" | "DISCOUNT_TAKEN", readonly reason?: string) {
     super(reason ? `${code}: ${reason}` : code);
     this.name = "BillingError";
   }
@@ -35,8 +38,11 @@ export interface BillingService {
   mockSettle(userId: string, paymentId: string, now?: Date): Promise<string>;
   confirmManual(adminId: string, paymentId: string, bankRef: string, amountIdr: number, receivedAt?: Date | null, now?: Date): Promise<string>;
   resolveReconciliation(adminId: string, orderId: string, action: "ACTIVATE" | "REFUND_RECORDED" | "CLOSE", note: string, now?: Date): Promise<string>;
-  pendingManualPayments(): Promise<{ paymentId: string; orderId: string; kind: string; amountIdr: number; createdAt: string }[]>;
-  reconciliation(): Promise<{ orderId: string; paymentId: string | null; status: string; amountIdr: number; createdAt: string }[]>;
+  // Transfer manual yang menunggu konfirmasi, termasuk yang ordernya sudah lunas lewat pembayaran lain atau sudah kedaluwarsa
+  // (30 hari terakhir): dana yang benar-benar masuk tetap dapat dikonfirmasi dan berakhir di rekonsiliasi, bukan hilang.
+  pendingManualPayments(now?: Date): Promise<ManualPending[]>;
+  // Order yang perlu rekonsiliasi, plus pembayaran tambahan (DISPUTED) pada order yang sudah lunas.
+  reconciliation(): Promise<ReconciliationItem[]>;
 }
 
 export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): BillingService {
@@ -118,21 +124,37 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
       } catch (e) {
         const m = e instanceof Error ? e.message : "";
         if (/NOT_ELIGIBLE/.test(m)) throw new BillingError("NOT_ELIGIBLE", "PARENT_CHANGED");
-        for (const c of ["NOTE_REQUIRED", "NOT_RECONCILIATION", "AMOUNT_MISMATCH", "CONFLICT", "INVALID_ACTION"] as const) if (m.includes(c)) throw new BillingError(c);
+        for (const c of ["NOTE_REQUIRED", "NOT_RECONCILIATION", "AMOUNT_MISMATCH", "CONFLICT", "INVALID_ACTION", "DISCOUNT_TAKEN"] as const) if (m.includes(c)) throw new BillingError(c);
         return mapError(e);
       }
     },
-    async pendingManualPayments() {
+    async pendingManualPayments(now = new Date()) {
       const { rows } = await pool.query(
-        "select p.id, p.order_id, o.kind, p.amount_idr, p.created_at from payments p join orders o on o.id = p.order_id where p.provider = 'manual' and p.status = 'PENDING' and o.status = 'PENDING_PAYMENT' order by p.created_at",
+        `select p.id, p.order_id, o.kind, p.amount_idr, p.created_at, p.status, o.status as order_status
+           from payments p join orders o on o.id = p.order_id
+          where p.provider = 'manual'
+            and (p.status = 'PENDING' or (p.status = 'EXPIRED' and o.status = 'EXPIRED' and o.expires_at > $1::timestamptz - interval '30 days'))
+          order by p.created_at`,
+        [now],
       );
-      return rows.map((r) => ({ paymentId: r.id, orderId: r.order_id, kind: r.kind, amountIdr: r.amount_idr, createdAt: r.created_at.toISOString() }));
+      return rows.map((r) => ({
+        paymentId: r.id, orderId: r.order_id, kind: r.kind, amountIdr: r.amount_idr, createdAt: r.created_at.toISOString(),
+        orderStatus: r.order_status, expired: r.status === "EXPIRED",
+      }));
     },
     async reconciliation() {
       const { rows } = await pool.query(
-        "select o.id as order_id, (select p.id from payments p where p.order_id = o.id order by p.created_at desc limit 1) as payment_id, o.status, o.amount_idr, o.created_at from orders o where o.status = 'RECONCILIATION_REQUIRED' order by o.created_at",
+        `select o.id as order_id, (select p.id from payments p where p.order_id = o.id order by p.created_at desc limit 1) as payment_id,
+                o.status, o.amount_idr, o.created_at, false as extra
+           from orders o where o.status = 'RECONCILIATION_REQUIRED'
+         union all
+         select o.id, p.id, o.status, coalesce(p.received_amount_idr, p.amount_idr), coalesce(p.received_at, p.created_at), true
+           from payments p join orders o on o.id = p.order_id where p.status = 'DISPUTED' and o.status = 'PAID'
+         order by 5`,
       );
-      return rows.map((r) => ({ orderId: r.order_id, paymentId: r.payment_id, status: r.status, amountIdr: r.amount_idr, createdAt: r.created_at.toISOString() }));
+      return rows.map((r) => ({
+        orderId: r.order_id, paymentId: r.payment_id, status: r.status, amountIdr: r.amount_idr, createdAt: r.created_at.toISOString(), extraPayment: r.extra,
+      }));
     },
   };
 }

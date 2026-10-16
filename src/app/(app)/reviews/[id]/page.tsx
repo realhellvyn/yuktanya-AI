@@ -6,6 +6,7 @@ import { DeepOffer } from "@/components/deep/deep-offer";
 import { DeepResult } from "@/components/deep/deep-result";
 import { deepNoticeText } from "@/lib/deep/notices";
 import { trackDeepOfferShown } from "@/lib/deep/offer-event";
+import { offerViewProps } from "@/lib/deep/owner-pages";
 import { deepService } from "@/lib/deep/runtime";
 import { flags } from "@/lib/flags";
 import { getPool } from "@/lib/db";
@@ -49,7 +50,7 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
       {deep && <DeepResult deep={deep} verifyUrl={deepUrl} />}
       {deepRef && <ButtonLink href={`/deep-reviews/${deepRef.deepId}`} variant="secondary">Lihat status pemeriksaan mendalam</ButtonLink>}
       {elig?.eligible && <ButtonLink href={`/reviews/${id}/deep`} variant="secondary">Lihat rincian pemeriksaan mendalam</ButtonLink>}
-      {elig && <DeepOffer eligible={elig.eligible} reason={elig.reason} quote={elig.quote} action={requestDeepAction} parentRequestId={id} standardPaidIdr={undefined} />}
+      {elig && <DeepOffer {...offerViewProps(elig)} action={requestDeepAction} parentRequestId={id} />}
     </main>
   );
 }

@@ -47,7 +47,7 @@ describe("flag dan pembelian", () => {
   it("flag ON: eligibility memberi harga server; order memakai harga server dan mengabaikan harga klien; tidak layak → 409 NOT_ELIGIBLE", async () => {
     const c = await kit.completedStandard();
     const e = await (await eligibilityHandler(deps(c.owner, ["user"]), req(undefined, `http://t/x?parent=${c.req}`))).json();
-    expect(e).toEqual({ eligible: true, reason: "OK", quote: { amountIdr: 200000, variant: "FREE" } });
+    expect(e).toEqual({ eligible: true, reason: "OK", quote: { amountIdr: 200000, variant: "FREE" }, standardPaidIdr: 50000 });
     const o = await createOrderHandler(bdeps(c.owner, true), req({ kind: "DEEP_REVIEW", parentRequestId: c.req, amount: 1 }));
     expect([o.status, (await o.json()).amountIdr]).toEqual([201, 200000]);
     const again = await createOrderHandler(bdeps(c.owner, true), req({ kind: "DEEP_REVIEW", parentRequestId: c.req }));

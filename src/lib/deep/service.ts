@@ -14,7 +14,8 @@ function mapError(e: unknown): never {
   throw e;
 }
 
-export type Eligibility = { eligible: boolean; reason: string; quote: { amountIdr: number; variant: string } | null };
+// standardPaidIdr: harga Review Standar induk yang sudah dibayar (0 bila memakai kredit); null bila tidak layak.
+export type Eligibility = { eligible: boolean; reason: string; quote: { amountIdr: number; variant: string } | null; standardPaidIdr: number | null };
 export type ParentNote = { noteNo: number; title: string; finding: string; severity: string; actionable: boolean; recommendedAction: string | null };
 export type ChecklistRow = { item: string; result: string; reasoning: string; evidenceRef: string };
 export type DispositionRow = { noteNo: number; disposition: string; evidence: string };
@@ -52,9 +53,12 @@ export function createPgDeepService(pool: Pool): DeepService {
     async eligibility(userId, parent, now = new Date()) {
       const { rows } = await pool.query("select * from deep_eligibility($1, $2, $3)", [userId, parent, now]);
       const r = rows[0] as { eligible: boolean; reason: string };
-      if (!r.eligible) return { eligible: false, reason: r.reason, quote: null };
+      if (!r.eligible) return { eligible: false, reason: r.reason, quote: null, standardPaidIdr: null };
       const q = (await pool.query("select * from quote_price($1, 'DEEP_REVIEW', $2)", [userId, now])).rows[0];
-      return { eligible: true, reason: r.reason, quote: { amountIdr: q.amount_idr, variant: q.variant } };
+      const paid = (await pool.query(
+        "select o.amount_idr from review_requests r join orders o on o.id = r.order_id where r.id = $1 and r.owner_id = $2 and o.user_id = $2", [parent, userId],
+      )).rows[0];
+      return { eligible: true, reason: r.reason, quote: { amountIdr: q.amount_idr, variant: q.variant }, standardPaidIdr: paid ? (paid.amount_idr as number) : null };
     },
 
     async forParent(userId, parent) {

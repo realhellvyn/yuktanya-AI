@@ -5,10 +5,13 @@ export type MembershipState =
   | { active: true; periodStart: string; periodEnd: string; firstReviewUsed: boolean };
 
 // Status untuk kartu akun: periode aktif sekarang dan apakah diskon review pertama periode ini sudah dipakai/dipesan.
+// Order yang lewat batas bayar (belum disapu) tidak lagi memesan diskon, sama seperti create_order/preview_price yang menyapu dulu.
 export async function getMembershipState(pool: Pool, userId: string, now: Date = new Date()): Promise<MembershipState> {
   const { rows } = await pool.query(
     `select m.id, m.period_start, m.period_end,
-            exists (select 1 from review_discount_entitlements e where e.membership_id = m.id and e.status in ('RESERVED', 'CONSUMED')) as used
+            exists (select 1 from review_discount_entitlements e join orders o on o.id = e.order_id
+                     where e.membership_id = m.id
+                       and (e.status = 'CONSUMED' or (e.status = 'RESERVED' and not (o.status = 'PENDING_PAYMENT' and o.expires_at <= $2)))) as used
        from memberships m
       where m.user_id = $1 and m.status = 'ACTIVE' and m.period_start <= $2 and $2 < m.period_end
       order by m.period_end desc limit 1`,

@@ -24,6 +24,15 @@ describe("halaman Deep Review pemilik", () => {
     expect(ok.kind).toBe("offer");
     if (ok.kind === "offer") expect(ok.eligibility.quote?.amountIdr).toBe(200000);
   });
+  it("tawaran membawa harga pemeriksaan standar yang sudah dibayar dari order induk (Free Rp50.000, Member pertama Rp30.000)", async () => {
+    const free = await kit.completedStandard();
+    const a = await loadDeepOfferPage(on, free.owner, free.req);
+    expect(a.kind === "offer" && a.eligibility.standardPaidIdr).toBe(50000);
+    const member = await kit.completedStandard({ member: true });
+    const b = await loadDeepOfferPage(on, member.owner, member.req);
+    expect(b.kind === "offer" && b.eligibility.standardPaidIdr).toBe(30000);
+    expect(b.kind === "offer" && b.eligibility.quote?.amountIdr).toBe(150000);
+  });
   it("sudah dipesan: tawaran mengalihkan ke halaman status; status hanya untuk pemilik", async () => {
     const c = await kit.completedStandard();
     const b = await kit.buy(c.owner, "DEEP_REVIEW", c.req);

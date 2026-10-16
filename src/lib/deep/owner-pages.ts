@@ -26,6 +26,11 @@ export async function loadDeepOfferPage(
   return { kind: "offer", eligibility };
 }
 
+// Satu pemetaan untuk kedua halaman tawaran: data kelayakan (termasuk harga standar yang sudah dibayar) → properti DeepOffer.
+export function offerViewProps(e: Eligibility): { eligible: boolean; reason: string; quote: Eligibility["quote"]; standardPaidIdr?: number } {
+  return { eligible: e.eligible, reason: e.reason, quote: e.quote, standardPaidIdr: e.standardPaidIdr ?? undefined };
+}
+
 export type StatusPage = { kind: "notFound" } | { kind: "ok"; deep: OwnerDeep; assigned: boolean };
 
 // Pemilik yang sudah membayar tetap bisa melihat statusnya walau flag pembelian dimatikan.

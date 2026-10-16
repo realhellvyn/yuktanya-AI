@@ -1,3 +1,4 @@
+import { MembershipBenefits } from "@/components/billing/membership-benefits";
 import { Button } from "@/components/ui/button";
 import { Card, PageHeading } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -5,7 +6,7 @@ import { getMembershipState } from "@/lib/billing/membership";
 import { getPool } from "@/lib/db";
 import { formatDateId, wibDate } from "@/lib/documents/format";
 import { requireUserId } from "@/lib/documents/session";
-import { formatIdr, PRICING, QUOTAS } from "@/lib/pricing/catalog";
+import { formatIdr, PRICING } from "@/lib/pricing/catalog";
 import { startMembershipAction } from "../checkout/actions";
 
 export const dynamic = "force-dynamic";
@@ -25,13 +26,7 @@ export default async function MembershipPage() {
       )}
       <Card className="space-y-4">
         <p className="text-3xl font-bold text-navy">{formatIdr(PRICING.membershipMonthlyIdr)} <span className="text-base font-normal text-muted">per periode tagihan</span></p>
-        <ul className="list-disc space-y-1.5 pl-6">
-          <li>{QUOTAS.MEMBER.messages} pesan AI per hari (non-member {QUOTAS.FREE.messages})</li>
-          <li>{QUOTAS.MEMBER.documents} dokumen baru per hari (non-member {QUOTAS.FREE.documents})</li>
-          <li>{QUOTAS.MEMBER.aiReviews} analisis awal AI per hari (non-member {QUOTAS.FREE.aiReviews})</li>
-          <li>Pemeriksaan pengacara pertama pada setiap periode: {formatIdr(PRICING.standard.memberFirst)}; berikutnya {formatIdr(PRICING.standard.memberLater)} (non-member {formatIdr(PRICING.standard.free)})</li>
-          <li>Berbagi dokumen, pengingat tenggat, dan paket bukti</li>
-        </ul>
+        <MembershipBenefits />
         <form action={startMembershipAction}>
           <Button type="submit">{m.active ? "Perpanjang membership" : "Lanjut ke pembayaran"}</Button>
         </form>

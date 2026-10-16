@@ -3,11 +3,15 @@ import { describe, expect, it } from "vitest";
 import { DeepOffer } from "@/components/deep/deep-offer";
 import { DeepResult } from "@/components/deep/deep-result";
 import { CHECKOUT_NOTE, LEGAL_DISCLAIMER, VERIFICATION_STATEMENTS } from "@/lib/copy";
-import type { OwnerDeep } from "@/lib/deep/service";
+import { readFileSync } from "node:fs";
+import { offerViewProps } from "@/lib/deep/owner-pages";
+import type { Eligibility, OwnerDeep } from "@/lib/deep/service";
 
 const noop = async () => {};
-const offer = (over: Partial<Parameters<typeof DeepOffer>[0]> = {}) =>
-  renderToStaticMarkup(DeepOffer({ eligible: true, reason: "OK", quote: { amountIdr: 200000, variant: "FREE" }, action: noop, parentRequestId: "p1", standardPaidIdr: 50000, ...over }));
+// Alur data halaman: hasil deepService().eligibility (termasuk harga standar yang sudah dibayar) → offerViewProps → DeepOffer.
+const eligibility = (over: Partial<Eligibility> = {}): Eligibility => ({ eligible: true, reason: "OK", quote: { amountIdr: 200000, variant: "FREE" }, standardPaidIdr: 50000, ...over });
+const offer = (over: Partial<Eligibility> = {}) =>
+  renderToStaticMarkup(DeepOffer({ ...offerViewProps(eligibility(over)), action: noop, parentRequestId: "p1" }));
 const links = (h: string) => h.match(/<(a|button) [^>]*>/g) ?? [];
 
 describe("DeepOffer", () => {
@@ -17,13 +21,27 @@ describe("DeepOffer", () => {
     expect(h).not.toMatch(/\bcap\b|dijamin|pasti disetujui/i);
     for (const tag of links(h)) expect(tag).toContain("min-h-12");
   });
+  it("harga standar yang sudah dibayar dan total yang dibayar sekarang tampil dari data kelayakan", () => {
+    const h = offer({ quote: { amountIdr: 150000, variant: "MEMBER" }, standardPaidIdr: 30000 });
+    expect(h).toContain("Pemeriksaan standar yang sudah dibayar");
+    expect(h).toContain("Rp30.000 (dihitung terpisah)");
+    expect(h).toMatch(/Total dibayar sekarang<\/dt><dd[^>]*>Rp150\.000/);
+    expect(offer({ standardPaidIdr: 0 })).toContain("Memakai kredit pemeriksaan");
+  });
+  it("kedua halaman tawaran memakai offerViewProps (harga standar tidak dibuang)", () => {
+    for (const f of ["src/app/(app)/reviews/[id]/page.tsx", "src/app/(app)/reviews/[id]/deep/page.tsx"]) {
+      const src = readFileSync(f, "utf8");
+      expect(src).toContain("offerViewProps(");
+      expect(src).not.toMatch(/standardPaidIdr=\{undefined\}/);
+    }
+  });
   it("Member menampilkan Rp150.000 sebagai harga Member", () => {
     const h = offer({ quote: { amountIdr: 150000, variant: "MEMBER" } });
     expect(h).toContain("Rp150.000");
     expect(h).toContain("Harga Member aktif");
   });
   it("tidak layak menampilkan alasan yang dapat dibaca dan tanpa tombol beli", () => {
-    const h = offer({ eligible: false, reason: "NO_ACTIONABLE_NOTES", quote: null });
+    const h = offer({ eligible: false, reason: "NO_ACTIONABLE_NOTES", quote: null, standardPaidIdr: null });
     expect(h).toContain("tidak memiliki catatan yang perlu ditindaklanjuti");
     expect(h).not.toContain("<form");
   });
