@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ButtonLink } from "@/components/ui/button";
 import { ReviewTimeline } from "@/components/reviews/review-timeline";
 import { ResultPanel } from "@/components/reviews/result-panel";
 import { DeepOffer } from "@/components/deep/deep-offer";
@@ -42,6 +43,8 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
       <ResultPanel review={review} verifyUrl={url} qrDataUrl={qr} isLatestVersion={review.versionNo === latest} />
       {q.notice && <p role="alert" className="font-semibold text-red-800">Pemeriksaan mendalam belum dapat dipesan ({q.notice}).</p>}
       {deep && <DeepResult deep={deep} verifyUrl={deepUrl} />}
+      {deepRef && <ButtonLink href={`/deep-reviews/${deepRef.deepId}`} variant="secondary">Lihat status pemeriksaan mendalam</ButtonLink>}
+      {elig?.eligible && <ButtonLink href={`/reviews/${id}/deep`} variant="secondary">Lihat rincian pemeriksaan mendalam</ButtonLink>}
       {elig && <DeepOffer eligible={elig.eligible} reason={elig.reason} quote={elig.quote} action={requestDeepAction} parentRequestId={id} standardPaidIdr={undefined} />}
     </main>
   );

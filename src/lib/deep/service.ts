@@ -34,6 +34,7 @@ export interface DeepService {
   eligibility(userId: string, parentRequestId: string, now?: Date): Promise<Eligibility>;
   forParent(userId: string, parentRequestId: string): Promise<{ deepId: string } | null>;
   getForOwner(userId: string, deepId: string): Promise<OwnerDeep | null>;
+  isAssigned(userId: string, deepId: string): Promise<boolean>;
   queue(reviewerId: string): Promise<{ deepId: string; status: string; createdAt: string; assignedAt: string; category: string }[]>;
   open(reviewerId: string, deepId: string, now?: Date): Promise<OpenedDeep>;
   saveDraft(reviewerId: string, deepId: string, revision: number, d: { extraWork: string; summary: string }, now?: Date): Promise<number>;
@@ -71,6 +72,11 @@ export function createPgDeepService(pool: Pool): DeepService {
         dispositions: (r.dispositions as { note_no: number; disposition: string; evidence: string }[]).map((d) => ({ noteNo: d.note_no, disposition: d.disposition, evidence: d.evidence })),
         verification: r.verification_code ? { code: r.verification_code, status: r.verification_status } : null,
       };
+    },
+
+    async isAssigned(userId, deepId) {
+      const { rows } = await pool.query("select exists (select 1 from deep_assignments a where a.deep_id = d.id) as assigned from deep_requests d where d.id = $1 and d.owner_id = $2", [deepId, userId]);
+      return rows[0]?.assigned === true;
     },
 
     async queue(reviewerId) {

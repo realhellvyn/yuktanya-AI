@@ -1,4 +1,4 @@
-import { CHECKOUT_NOTE } from "@/lib/copy";
+import { CHECKOUT_NOTE, DEEP_PAYMENT_STATEMENT } from "@/lib/copy";
 import { formatIdr, PRICING } from "@/lib/pricing/catalog";
 
 const REASON: Record<string, string> = {
@@ -28,6 +28,7 @@ export function DeepOffer({ eligible, reason, quote, action, parentRequestId, st
       </dl>
       <p>Membership ({formatIdr(PRICING.membershipMonthlyIdr)} per periode) adalah biaya terpisah dan tidak termasuk di sini.</p>
       <p>{CHECKOUT_NOTE}</p>
+      <p className="font-semibold">{DEEP_PAYMENT_STATEMENT}</p>
       <p>Hasil pemeriksaan mendalam bisa berupa persetujuan Enhanced, selesai dengan catatan, belum dapat disimpulkan, atau dirujuk sebagai kasus khusus. Pembayaran tidak menjamin salah satunya.</p>
       <form action={action}>
         <input type="hidden" name="parentRequestId" value={parentRequestId} />

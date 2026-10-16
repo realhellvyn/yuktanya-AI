@@ -28,3 +28,5 @@ export function verificationStatement(kind: VerificationKind, outcome: string | 
   if (kind === "LEGAL_ENHANCED") return VERIFICATION_STATEMENTS.LEGAL_ENHANCED;
   return outcome === "WITHIN_SCOPE" ? VERIFICATION_STATEMENTS.LEGAL_WITHIN_SCOPE : VERIFICATION_STATEMENTS.LEGAL_WITH_NOTES;
 }
+export const DEEP_PAYMENT_STATEMENT =
+  "Pembayaran tidak menjamin Enhanced, kesimpulan yang menguntungkan, keabsahan hukum, atau hasil di pengadilan.";

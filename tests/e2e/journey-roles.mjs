@@ -2,6 +2,15 @@
 import { createNdaVersion, register, say, submit } from "./helpers.mjs";
 
 export const onlyViewport = "desktop";
+const overflow = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+// Logika sama dengan journey-ui-roles.mjs: elemen interaktif terlihat yang tingginya < 43.5px.
+const smallTargets = (page) =>
+  page.evaluate(() =>
+    [...document.querySelectorAll("a[href], button, input:not([type=hidden]):not([type=checkbox]), select, textarea, summary")]
+      .filter((e) => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && !e.closest("[aria-hidden=true]") && !e.closest("nextjs-portal") && r.height < 43.5; })
+      .map((e) => `${e.tagName.toLowerCase()}:${(e.textContent || e.getAttribute("name") || "").trim().slice(0, 24)}:${Math.round(e.getBoundingClientRect().height)}px`),
+  );
+const PAY_STATEMENT = "Pembayaran tidak menjamin Enhanced, kesimpulan yang menguntungkan, keabsahan hukum, atau hasil di pengadilan.";
 
 export async function journey({ step, base, vp, db, newActor }) {
   const n = Date.now();
@@ -149,13 +158,32 @@ export async function journey({ step, base, vp, db, newActor }) {
     const offer = await ownerA.page.innerText("body");
     if (!/200\.000/.test(offer) || !/tidak menjamin/i.test(offer)) throw new Error("tawaran tidak lengkap: " + offer.slice(0, 400));
     await ownerA.shot("06-tawaran-deep");
+    const reviewId = /\/reviews\/([0-9a-f-]{36})/.exec(ownerA.page.url())[1];
+    // Halaman rincian /reviews/[id]/deep: harga, pernyataan wajib, lalu tombol menerima.
+    await ownerA.page.click("a:has-text('Lihat rincian pemeriksaan mendalam')");
+    await ownerA.page.waitForURL(/\/reviews\/[0-9a-f-]{36}\/deep$/);
+    const detail = await ownerA.page.innerText("main");
+    if (!detail.includes("Rp200.000") || !detail.includes(PAY_STATEMENT)) throw new Error("rincian tawaran tidak lengkap: " + detail.slice(0, 500));
+    for (const vp of [{ width: 375, height: 800 }, { width: 1280, height: 800 }]) {
+      await ownerA.page.setViewportSize(vp);
+      if ((await overflow(ownerA.page)) > 1) throw new Error(`/reviews/[id]/deep meluap @${vp.width}px`);
+      const small = await smallTargets(ownerA.page);
+      if (small.length) throw new Error(`target kecil di /reviews/[id]/deep @${vp.width}px: ${small.join(", ")}`);
+    }
+    await ownerA.shot("06b-rincian-deep");
+    // Pemilik lain: 404 pada halaman rincian yang sama.
+    const stranger = await newActor("pemilik-lain");
+    await register(stranger.page, base, mail("pemilik-lain"));
+    const r404 = await stranger.page.goto(base + `/reviews/${reviewId}/deep`);
+    if (r404.status() !== 404) throw new Error("pemilik lain mendapat status " + r404.status() + " di /reviews/[id]/deep");
+    ownerA.deepStranger = stranger;
     await ownerA.page.click("button:has-text('Lanjut ke pembayaran')");
     await ownerA.page.waitForURL(/\/checkout\//);
     await ownerA.page.click("button:has-text('Bayar dengan transfer bank')");
     await ownerA.page.waitForSelector("text=Tulis kode berikut");
   });
 
-  await step(tag("admin konfirmasi bayar; koordinator menugaskan; reviewer mengisi checklist M1-M7 dan menyetujui Enhanced"), async () => {
+  await step(tag("admin konfirmasi bayar; koordinator menugaskan"), async () => {
     const a = adminA.page;
     await a.goto(base + "/admin/payments");
     await a.locator("section[aria-labelledby=menunggu-h] form input[name=bankRef]").first().fill("BANK-UJI-DEEP");
@@ -163,6 +191,30 @@ export async function journey({ step, base, vp, db, newActor }) {
     const c = coordA.page;
     await c.goto(base + "/partner");
     await submit(c, c.locator("section[aria-labelledby=deepc-h] form button:has-text('Simpan')").first());
+  });
+
+  await step(tag("halaman status /deep-reviews/[id]: tahapan, tanpa Enhanced sebelum diputuskan; tautan dari /reviews/[id]; 375px; pemilik lain 404"), async () => {
+    const p = ownerA.page;
+    await p.goto(base + "/reviews");
+    await p.click("a[href^='/reviews/']");
+    await p.click("a:has-text('Lihat status pemeriksaan mendalam')");
+    await p.waitForURL(/\/deep-reviews\/[0-9a-f-]{36}$/);
+    const url = p.url();
+    const t = await p.innerText("main");
+    for (const w of ["Dipesan", "Dibayar", "Ditugaskan", "Diperiksa", "Selesai", "Hasil akan muncul"]) if (!t.includes(w)) throw new Error(`status tanpa "${w}": ` + t.slice(0, 400));
+    if (!/Ditugaskan\s*— selesai/.test(t)) throw new Error("tahap Ditugaskan belum selesai: " + t.slice(0, 400));
+    if (/Yuktanya Legal Verified — Enhanced|Enhanced disetujui/.test(t)) throw new Error("Enhanced tampil sebelum diputuskan");
+    for (const vp of [{ width: 375, height: 800 }, { width: 1280, height: 800 }]) {
+      await p.setViewportSize(vp);
+      if ((await overflow(p)) > 1) throw new Error(`/deep-reviews/[id] meluap @${vp.width}px`);
+      const small = await smallTargets(p);
+      if (small.length) throw new Error(`target kecil di /deep-reviews/[id] @${vp.width}px: ${small.join(", ")}`);
+    }
+    const r = await ownerA.deepStranger.page.goto(url);
+    if (r.status() !== 404) throw new Error("pemilik lain mendapat status " + r.status() + " di /deep-reviews/[id]");
+  });
+
+  await step(tag("reviewer mengisi checklist M1-M7 dan menyetujui Enhanced"), async () => {
     const r = revA.page;
     await r.goto(base + "/partner");
     await r.click("section[aria-labelledby=deepq-h] a");
@@ -195,6 +247,13 @@ export async function journey({ step, base, vp, db, newActor }) {
   });
 
   await step(tag("pemilik melihat Enhanced; pencabutan verifikasi induk menangguhkan Enhanced"), async () => {
+    await ownerA.page.goto(base + "/reviews");
+    await ownerA.page.click("a[href^='/reviews/']");
+    await ownerA.page.click("a:has-text('Lihat status pemeriksaan mendalam')");
+    await ownerA.page.waitForURL(/\/deep-reviews\//);
+    const done = await ownerA.page.innerText("main");
+    if (!done.includes("Enhanced disetujui") || !done.includes("Batasan:") || !done.includes("Pembayaran tidak menjamin Enhanced")) throw new Error("hasil Enhanced tidak lengkap: " + done.slice(0, 500));
+    await ownerA.shot("07b-status-deep");
     const pub = await (await ownerA.page.context().browser().newContext()).newPage();
     await pub.goto(base + "/verify/" + enhancedCode);
     if (!(await pub.innerText("body")).includes("Aktif")) throw new Error("Enhanced tidak aktif");
