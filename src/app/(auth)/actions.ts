@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { safeReturnTo } from "@/lib/auth/permissions";
 import { recordAttribution } from "@/lib/auth/record-attribution";
+import { recordEvent } from "@/lib/analytics/events";
+import { getPool } from "@/lib/db";
 import { hasSupabaseEnv } from "@/lib/supabase/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -44,6 +46,9 @@ export async function signUp(formData: FormData) {
     options: { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(returnTo)}` },
   });
   if (error) back("register", "failed", returnTo);
-  if (data?.user) await recordAttribution(data.user.id, (await cookies()).get("yk_attr")?.value);
+  if (data?.user) {
+    await recordAttribution(data.user.id, (await cookies()).get("yk_attr")?.value);
+    await recordEvent(getPool(), { name: "signup_completed", actorUserId: data.user.id, dedupeKey: `signup:${data.user.id}` }).catch(() => undefined);
+  }
   redirect(data?.session ? returnTo : "/register?sent=1");
 }
