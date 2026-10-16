@@ -45,3 +45,14 @@ export function formatDateId(iso: string): string {
   if (!m) throw new FormatError("Tanggal ISO tidak valid");
   return `${+m[3]} ${MONTHS[+m[2] - 1]} ${m[1]}`;
 }
+
+// Menambah bulan kalender pada tanggal ISO; hari dipotong ke akhir bulan tujuan (31 Jan + 1 bulan = 28/29 Feb).
+export function addMonthsIso(iso: string, months: number): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) throw new FormatError("Tanggal ISO tidak valid");
+  const index = +m[1] * 12 + (+m[2] - 1) + months;
+  const y = Math.floor(index / 12);
+  const mo = (index % 12) + 1;
+  const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  return toIso(y, mo, Math.min(+m[3], last));
+}

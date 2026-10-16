@@ -23,6 +23,7 @@ export const utangPiutang = defineTemplate({
     { id: "note", heading: "Catatan Pembayaran", text: "{{repaymentNote}}", whenKey: "repaymentNote" },
     { id: "dispute", heading: "Penyelesaian Sengketa", text: "Sengketa diselesaikan secara musyawarah. Bila tidak tercapai, sengketa diselesaikan melalui Pengadilan Negeri {{disputeCity}}." },
   ],
+  reminders: [{ id: "due", label: "Pinjaman jatuh tempo", date: (d) => (typeof d.dueDate === "string" ? d.dueDate : null) }],
   cross: (d): Record<string, string> => ({
     ...(normalizeName(d.creditor) && normalizeName(d.creditor) === normalizeName(d.debtor) ? { debtor: "Nama kedua pihak tidak boleh sama" } : {}),
     ...(typeof d.signingDate === "string" && typeof d.dueDate === "string" && d.dueDate <= d.signingDate ? { dueDate: "Tanggal lunas harus setelah tanggal surat dibuat" } : {}),

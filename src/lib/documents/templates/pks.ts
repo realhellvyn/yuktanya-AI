@@ -25,6 +25,7 @@ export const pks = defineTemplate({
     { id: "termination", heading: "Pengakhiran", text: "Salah satu pihak dapat mengakhiri perjanjian dengan pemberitahuan tertulis kepada pihak lainnya." },
     { id: "dispute", heading: "Penyelesaian Sengketa", text: "Sengketa diselesaikan secara musyawarah. Bila tidak tercapai, sengketa diselesaikan melalui Pengadilan Negeri {{disputeCity}}." },
   ],
+  reminders: [{ id: "end", label: "Kerja sama berakhir", date: (d) => (typeof d.endDate === "string" ? d.endDate : null) }],
   cross: (d): Record<string, string> => ({
     ...(normalizeName(d.partyA) && normalizeName(d.partyA) === normalizeName(d.partyB) ? { partyB: "Nama kedua pihak tidak boleh sama" } : {}),
     ...(typeof d.startDate === "string" && typeof d.endDate === "string" && d.endDate <= d.startDate ? { endDate: "Tanggal berakhir harus setelah tanggal mulai" } : {}),

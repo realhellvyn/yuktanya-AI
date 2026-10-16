@@ -34,3 +34,15 @@ describe("parseDateId", () => {
     expect(formatDateId("2026-01-05")).toBe("5 Januari 2026");
   });
 });
+
+describe("addMonthsIso", () => {
+  it("menambah bulan, memotong hari ke akhir bulan, dan melewati pergantian tahun", async () => {
+    const { addMonthsIso } = await import("@/lib/documents/format");
+    expect(addMonthsIso("2026-10-16", 24)).toBe("2028-10-16");
+    expect(addMonthsIso("2026-01-31", 1)).toBe("2026-02-28");
+    expect(addMonthsIso("2027-01-31", 1)).toBe("2027-02-28");
+    expect(addMonthsIso("2028-01-31", 1)).toBe("2028-02-29");
+    expect(addMonthsIso("2026-11-30", 3)).toBe("2027-02-28");
+    expect(addMonthsIso("2026-12-15", 1)).toBe("2027-01-15");
+  });
+});

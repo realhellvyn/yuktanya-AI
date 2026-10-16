@@ -15,6 +15,9 @@ export type FieldSpec = {
 // Klausul dirender hanya bila field `whenKey` (jika ada) terisi. Teks memuat {{key}}.
 export type ClauseSpec = { id: string; heading?: string; text: string; whenKey?: string };
 
+// Tenggat yang dapat diingatkan (opt-in). Tidak memengaruhi keluaran dokumen, jadi tidak ikut hash persetujuan.
+export type ReminderSpec = { id: string; label: string; date: (d: Data) => string | null };
+
 export type ValidationResult = { ok: true; data: Data } | { ok: false; errors: Record<string, string> };
 
 export type Template = {
@@ -24,6 +27,7 @@ export type Template = {
   title: string;
   fields: FieldSpec[];
   clauses: ClauseSpec[];
+  reminders: ReminderSpec[];
   validate(d: Data): ValidationResult;
   contentHash(): string;
 };
