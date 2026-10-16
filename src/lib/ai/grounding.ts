@@ -15,14 +15,21 @@ const DATE_SPANS = new RegExp(
   "giu",
 );
 
-// Token angka di cerita: "5.000.000" → 5000000, "24" → 24. Desimal/koma (mis. "5,5") sengaja tidak dihitung.
-// Tanda baca di ujung token ("Rp5.000.000.") dibuang sebelum dinilai.
+// Angka di cerita: "5.000.000", "5,000,000", "Rp5.000.000,00", "24", serta "5 juta", "5,5 juta", "500 ribu" (juta/jt, ribu/rb).
+// Tanda baca di ujung token dibuang sebelum dinilai.
+const SCALE = /(\d+(?:[.,]\d+)?)\s*(juta|jt|ribu|rb)\b/gi;
 function numbersIn(story: string): Set<number> {
   const out = new Set<number>();
-  for (const raw of story.replace(DATE_SPANS, " ").match(/\d[\d.,]*/g) ?? []) {
+  const plain = story.replace(DATE_SPANS, " ");
+  for (const m of plain.matchAll(SCALE)) {
+    const unit = /^(juta|jt)$/i.test(m[2]) ? 1_000_000 : 1_000;
+    out.add(Math.round(Number(m[1].replace(",", ".")) * unit));
+  }
+  for (const raw of plain.match(/\d[\d.,]*/g) ?? []) {
     const tok = raw.replace(/[.,]+$/, "");
     if (/^\d+$/.test(tok)) out.add(Number(tok));
-    else if (/^\d{1,3}(\.\d{3})+$/.test(tok)) out.add(Number(tok.replace(/\./g, "")));
+    else if (/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(tok)) out.add(Number(tok.replace(/,\d{1,2}$/, "").replace(/\./g, "")));
+    else if (/^\d{1,3}(,\d{3})+(\.\d{1,2})?$/.test(tok)) out.add(Number(tok.replace(/\.\d{1,2}$/, "").replace(/,/g, "")));
   }
   return out;
 }

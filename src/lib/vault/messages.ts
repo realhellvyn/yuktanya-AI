@@ -22,10 +22,13 @@ export const PANEL_NOTICES: Record<string, string> = {
 
 // Kode ringkas dari giliran percakapan → pesan tetap; teks dari URL tidak pernah ditampilkan.
 export const CHAT_NOTICES: Record<string, string> = {
-  quota: "Batas pesan AI hari ini sudah tercapai. Percakapan Anda tetap tersimpan dan bisa dilanjutkan besok mulai pukul 00.00 WIB.",
-  busy: "Masih ada permintaan AI yang berjalan. Coba lagi sebentar.",
+  quota: "Batas pesan AI hari ini sudah tercapai. Pesan terakhir belum terkirim. Percakapan sebelumnya tetap tersimpan dan bisa dilanjutkan besok mulai pukul 00.00 WIB.",
+  busy: "Masih ada permintaan AI yang berjalan. Pesan terakhir belum terkirim; tunggu sebentar lalu kirim lagi.",
   down: "Layanan AI sedang sibuk. Pesan Anda sudah tersimpan dan jatah AI Anda tidak terpakai. Tekan Coba lagi.",
-  stale: "Draf berubah di tab lain. Muat ulang halaman, lalu kirim pesan lagi.",
-  limit: "Terlalu banyak percobaan dalam waktu singkat. Tunggu satu menit, lalu coba lagi.",
-  incomplete: "Masih ada kolom wajib yang belum terisi. Lanjutkan percakapan agar lengkap.",
+  stale: "Draf berubah di tab lain, jadi pesan Anda belum diproses. Tekan Coba lagi.",
+  error: "Pesan belum dapat diproses. Periksa isinya, lalu kirim ulang.",
+  limit: "Terlalu banyak percobaan dalam waktu singkat. Pesan terakhir belum terkirim; tunggu satu menit, lalu kirim lagi.",
+  incomplete: "Masih ada kolom wajib yang belum terisi atau ada isian yang belum cocok. Lanjutkan percakapan agar lengkap.",
+  docQuota: "Batas pembuatan dokumen baru hari ini sudah tercapai. Draf Anda aman, dan Anda bisa melanjutkan besok mulai pukul 00.00 WIB.",
+  noTemplate: "Template ini belum tersedia.",
 };

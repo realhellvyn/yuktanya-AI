@@ -23,7 +23,17 @@ describe("groundSuggestions", () => {
     expect(groundSuggestions(utangPiutang, "pinjam 5000000 saja", { principalIdr: 5000000 })).toEqual({ principalIdr: 5000000 });
     expect(groundSuggestions(utangPiutang, story, { principalIdr: 7000000 })).toEqual({});
     expect(groundSuggestions(utangPiutang, story, { principalIdr: "5000000" })).toEqual({ principalIdr: 5000000 });
-    expect(groundSuggestions(utangPiutang, "pinjam 5,5 juta", { principalIdr: 5500000 })).toEqual({});
+  });
+
+  it("format uang umum dikenali: 5 juta, 5,5 juta, 500 ribu, Rp5.000.000,00, 5,000,000", () => {
+    const g = (t: string, n: number) => groundSuggestions(utangPiutang, t, { principalIdr: n });
+    expect(g("pinjam 5 juta", 5000000)).toEqual({ principalIdr: 5000000 });
+    expect(g("pinjam 5,5 juta", 5500000)).toEqual({ principalIdr: 5500000 });
+    expect(g("pinjam 500 ribu", 500000)).toEqual({ principalIdr: 500000 });
+    expect(g("pinjam Rp5.000.000,00", 5000000)).toEqual({ principalIdr: 5000000 });
+    expect(g("pinjam 5,000,000", 5000000)).toEqual({ principalIdr: 5000000 });
+    expect(g("pinjam 5 juta", 6000000)).toEqual({});
+    expect(g("pinjam 5 juta", 5000)).toEqual({});
   });
 
   it("tanggal lolos bila salah satu bentuk tertulisnya ada di cerita", () => {

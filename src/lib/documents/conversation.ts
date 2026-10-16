@@ -18,25 +18,25 @@ export async function listMessages(pool: Pool, userId: string, documentId: strin
   return rows.map((r) => ({ id: r.id, seq: Number(r.seq), role: r.role, content: r.content, answered: r.answered, createdAt: r.created_at.toISOString() }));
 }
 
-export async function saveUserMessage(pool: Pool, userId: string, documentId: string, content: string, key: string): Promise<{ id: string; duplicate: boolean }> {
+export async function saveUserMessage(pool: Pool, userId: string, documentId: string, content: string, key: string): Promise<{ id: string; seq: number; duplicate: boolean }> {
   await assertOwner(pool, userId, documentId);
   const ins = await pool.query(
     `insert into document_messages (document_id, role, content, idempotency_key) values ($1, 'user', $2, $3)
-       on conflict (document_id, idempotency_key) where role = 'user' do nothing returning id`,
+       on conflict (document_id, idempotency_key) where role = 'user' do nothing returning id, seq`,
     [documentId, content, key],
   );
-  if (ins.rows[0]) return { id: ins.rows[0].id, duplicate: false };
-  const { rows } = await pool.query("select id from document_messages where document_id = $1 and role = 'user' and idempotency_key = $2", [documentId, key]);
-  return { id: rows[0].id, duplicate: true };
+  if (ins.rows[0]) return { id: ins.rows[0].id, seq: Number(ins.rows[0].seq), duplicate: false };
+  const { rows } = await pool.query("select id, seq from document_messages where document_id = $1 and role = 'user' and idempotency_key = $2", [documentId, key]);
+  return { id: rows[0].id, seq: Number(rows[0].seq), duplicate: true };
 }
 
-// Balasan AI disimpan, lalu semua pesan pengguna sebelumnya ditandai terjawab.
-export async function saveAssistantReply(pool: Pool, userId: string, documentId: string, content: string): Promise<void> {
+// Balasan AI disimpan, lalu pesan pengguna sampai batas seq (yang benar-benar dibaca giliran ini) ditandai terjawab.
+export async function saveAssistantReply(pool: Pool, userId: string, documentId: string, content: string, upToSeq = Number.MAX_SAFE_INTEGER): Promise<void> {
   await assertOwner(pool, userId, documentId);
   const c = await pool.connect();
   try {
     await c.query("begin");
-    await c.query("update document_messages set answered = true where document_id = $1 and role = 'user' and not answered", [documentId]);
+    await c.query("update document_messages set answered = true where document_id = $1 and role = 'user' and not answered and seq <= $2", [documentId, upToSeq]);
     await c.query("insert into document_messages (document_id, role, content, answered) values ($1, 'assistant', $2, true)", [documentId, content]);
     await c.query("commit");
   } catch (e) {

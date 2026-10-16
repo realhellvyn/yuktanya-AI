@@ -38,7 +38,8 @@ describe("handleChatTurn", () => {
     expect(res.status).toBe(200);
     const b = await res.json();
     expect(b.applied.sort()).toEqual(["disclosingParty", "receivingParty", "termMonths"]);
-    expect(b.reply).toBe("Kapan tanggal perjanjiannya?");
+    expect(b.reply).toContain("Kapan tanggal perjanjiannya?");
+    expect(b.reply).toContain("Belum tercatat: Kota pengadilan");
     expect(b.ready).toBe(false);
     expect(b.missing).toEqual(expect.arrayContaining(["signingDate", "confidentialInfo", "purpose", "disputeCity"]));
     expect((await docs.get(u, id))!.draft.data).toEqual({ disclosingParty: "Sinta Dewi", receivingParty: "Budi Santoso", termMonths: 12 });
@@ -176,3 +177,74 @@ describe("handleChatTurn", () => {
     expect((await store.snapshot(u, NOW)).messagesUsed).toBe(0);
   });
 });
+
+describe("handleChatTurn: temuan reviewer", () => {
+  const utang = async (u: string, data: Record<string, string | number>) => {
+    const id = (await docs.create(u, "UTANG_PIUTANG", key())).documentId;
+    const d = await docs.get(u, id);
+    await docs.saveDraft(u, id, data, d!.draft.revision);
+    return id;
+  };
+  const base = { creditor: "Rina Wulandari", debtor: "Agus Prasetyo", signingDate: "2026-10-16", principalIdr: 5000000, dueDate: "2027-01-16", disputeCity: "Surabaya" };
+
+  it("perubahan yang membuat kolom lain tidak valid tidak diterapkan dan dijelaskan, draf tetap siap", async () => {
+    const u = await createUser(pool);
+    const id = await utang(u, base);
+    const t = setup(u, answer({ signingDate: "2027-02-01" }, "Baik, tanggal surat 1 Februari 2027 dicatat."));
+    const b = await (await t.call(id, { message: "tanggal surat 1 Februari 2027" })).json();
+    expect(b.applied).toEqual([]);
+    expect(b.reply).toContain("Tanggal lunas harus setelah tanggal surat dibuat");
+    expect((await docs.get(u, id))!.draft.data.signingDate).toBe("2026-10-16");
+    expect(b.ready).toBe(true);
+  });
+
+  it("nilai yang dibuang diakui jujur: balasan memuat 'Belum tercatat'", async () => {
+    const u = await createUser(pool);
+    const id = await utang(u, {});
+    const t = setup(u, answer({ principalIdr: 5000000 }, "Baik, Rp5.000.000 sudah saya catat."));
+    const b = await (await t.call(id, { message: "saya pinjam lima juta" })).json();
+    expect(b.applied).toEqual([]);
+    expect(b.reply).toContain("Belum tercatat");
+    expect(b.reply).toContain("Jumlah pinjaman");
+  });
+
+  it("kolom opsional dapat dikosongkan bila pengguna jelas memintanya; kolom wajib tidak", async () => {
+    const u = await createUser(pool);
+    const id = await utang(u, { ...base, repaymentNote: "Dicicil tiap bulan" });
+    const t = setup(u, answer({ repaymentNote: null, creditor: null }, "Baik, dihapus."));
+    const b = await (await t.call(id, { message: "tolong hapus catatan pembayaran dan kosongkan nama pemberi pinjaman" })).json();
+    expect(b.applied).toEqual(["repaymentNote"]);
+    const data = (await docs.get(u, id))!.draft.data;
+    expect(data.repaymentNote).toBeUndefined();
+    expect(data.creditor).toBe("Rina Wulandari");
+  });
+
+  it("null tanpa permintaan menghapus diabaikan", async () => {
+    const u = await createUser(pool);
+    const id = await utang(u, { ...base, repaymentNote: "Dicicil tiap bulan" });
+    const t = setup(u, answer({ repaymentNote: null }));
+    const b = await (await t.call(id, { message: "oke lanjut" })).json();
+    expect(b.applied).toEqual([]);
+    expect((await docs.get(u, id))!.draft.data.repaymentNote).toBe("Dicicil tiap bulan");
+  });
+
+  it("kunci sama dikirim ulang saat giliran pertama masih berjalan (instance lain) → AI_BUSY, LLM dipanggil sekali", async () => {
+    const u = await createUser(pool);
+    const id = await newDoc(u);
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const t = setup(u, async () => { await gate; return { text: JSON.stringify({ reply: "ok", fields: {} }), requestId: "r" }; });
+    const other = setup(u, answer({}));
+    const k = key();
+    const first = t.call(id, { message: "Saya Sinta Dewi", idem: k });
+    await vi.waitFor(async () => expect((await listMessages(pool, u, id)).length).toBe(1));
+    const res = await other.call(id, { message: "Saya Sinta Dewi", idem: k });
+    expect(res.status).toBe(429);
+    expect((await res.json()).code).toBe("AI_BUSY");
+    expect(other.chat).not.toHaveBeenCalled();
+    release();
+    await first;
+    expect(t.chat).toHaveBeenCalledTimes(1);
+  });
+});
+

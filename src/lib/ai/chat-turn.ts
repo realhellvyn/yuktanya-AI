@@ -31,6 +31,8 @@ const reply = z.object({
   fields: z.record(z.string(), z.union([z.string(), z.number(), z.null()])).optional(),
 });
 const HISTORY = 12;
+const ASKS_DELETE = /\b(hapus|kosongkan|hilangkan|buang|tidak perlu|tidak usah|tak usah)\b/i;
+const isReady = (t: Template, d: Data) => missingRequired(t, d).length === 0 && t.validate(d).ok;
 const SAFE_FALLBACK = "Maaf, saya belum menangkap maksud Anda. Bisa ulangi dengan kalimat lain? Pesan ini tidak memakai jatah AI Anda.";
 
 function systemPrompt(t: Template, data: Data): string {
@@ -76,7 +78,7 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
   const existing = await findTurnByKey(deps.pool, userId, params.id, key);
   if (existing?.reply != null) {
     const missing = missingRequired(template, doc.draft.data);
-    return json({ reply: existing.reply, applied: [], missing, ready: missing.length === 0, replay: true });
+    return json({ reply: existing.reply, applied: [], missing, ready: isReady(template, doc.draft.data), replay: true });
   }
 
   if (deps.inflight.has(userId)) return json({ code: "AI_BUSY" }, 429, { "retry-after": "2" });
@@ -89,10 +91,12 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
     const lastUnanswered = [...history].reverse().find((m) => m.role === "user" && !m.answered);
     let text = parsed.data.message;
     let reuse = false;
+    let readUpTo = 0;
     if (!text || existing) {
       if (!lastUnanswered) return json({ code: "INVALID_REQUEST" }, 400);
       text = lastUnanswered.content;
       reuse = true;
+      readUpTo = lastUnanswered.seq;
     }
 
     const reservation = await deps.store.reserve(userId, "MESSAGE", key, now);
@@ -100,9 +104,9 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
       const retryAfter = Math.max(1, Math.ceil((new Date(reservation.resetAt).getTime() - now.getTime()) / 1000));
       return json({ code: reservation.code, resetAt: reservation.resetAt }, 429, { "retry-after": String(retryAfter) });
     }
-    if (reservation.duplicate && !reuse) return json({ code: "DUPLICATE_REQUEST" }, 409);
+    if (reservation.duplicate) return json({ code: reuse ? "AI_BUSY" : "DUPLICATE_REQUEST" }, reuse ? 429 : 409, reuse ? { "retry-after": "2" } : undefined);
 
-    if (!reuse) await saveUserMessage(deps.pool, userId, params.id, text, key);
+    if (!reuse) readUpTo = (await saveUserMessage(deps.pool, userId, params.id, text, key)).seq;
     const earlier = history.filter((m) => !(reuse && lastUnanswered && m.id === lastUnanswered.id));
     const prior: ChatMessage[] = earlier.slice(-HISTORY).map((m) => ({ role: m.role, content: m.content }));
     const messages: ChatMessage[] = [{ role: "system", content: systemPrompt(template, doc.draft.data) }, ...prior, { role: "user", content: text }];
@@ -114,9 +118,9 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
       );
       if (!result.ok) {
         await deps.store.release(reservation.groupId);
-        await saveAssistantReply(deps.pool, userId, params.id, SAFE_FALLBACK);
+        await saveAssistantReply(deps.pool, userId, params.id, SAFE_FALLBACK, readUpTo);
         const missing = missingRequired(template, doc.draft.data);
-        return json({ reply: SAFE_FALLBACK, applied: [], missing, ready: missing.length === 0, notCharged: true });
+        return json({ reply: SAFE_FALLBACK, applied: [], missing, ready: isReady(template, doc.draft.data), notCharged: true });
       }
 
       const raw = (result.data.fields ?? {}) as Record<string, unknown>;
@@ -127,21 +131,45 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
       const wanted: Data = { ...inLatest };
       for (const k of Object.keys(inAll)) if (!(k in wanted) && blank(k)) wanted[k] = inAll[k];
       let applied = Object.keys(wanted).filter((k) => doc.draft.data[k] !== wanted[k]);
-      const candidate: Data = { ...doc.draft.data };
-      for (const k of applied) candidate[k] = wanted[k];
-      const checked = template.validate(candidate);
-      if (!checked.ok) applied = applied.filter((k) => !checked.errors[k] || checked.errors[k] === "Wajib diisi");
-      const final: Data = { ...doc.draft.data };
-      for (const k of applied) final[k] = wanted[k];
+      // null = kosongkan kolom: hanya kolom opsional, dan hanya bila pesan terbaru jelas memintanya.
+      let cleared = ASKS_DELETE.test(text)
+        ? template.fields.filter((f) => !f.required && raw[f.key] === null && !blank(f.key)).map((f) => f.key)
+        : [];
+      const build = (keep: string[], drop: string[]): Data => {
+        const d: Data = { ...doc.draft.data };
+        for (const k of keep) d[k] = wanted[k];
+        for (const k of drop) delete d[k];
+        return d;
+      };
+      let checked = template.validate(build(applied, cleared));
+      const firstErrors = checked.ok ? {} : checked.errors;
+      applied = applied.filter((k) => !firstErrors[k] || firstErrors[k] === "Wajib diisi");
+      checked = template.validate(build(applied, cleared));
+      const errs = checked.ok ? {} : checked.errors;
+      // Galat lintas-kolom (mis. tanggal lunas ≤ tanggal surat) ditulis di kolom lain: perubahan yang menimbulkannya ditolak seluruhnya.
+      const before = template.validate(doc.draft.data);
+      const prior = before.ok ? {} : before.errors;
+      const issues = Object.entries(errs).filter(([k, m]) => m !== "Wajib diisi" && prior[k] !== m).map(([, m]) => m);
+      if (issues.length > 0) {
+        applied = [];
+        cleared = [];
+      }
+      const final = build(applied, cleared);
 
-      if (applied.length > 0) await deps.service.saveDraft(userId, params.id, final, doc.draft.revision);
+      if (applied.length > 0 || cleared.length > 0) await deps.service.saveDraft(userId, params.id, final, doc.draft.revision);
       await deps.store.finalize(reservation.groupId, deps.now?.() ?? new Date()).catch(() => undefined);
 
+      // Nilai yang diusulkan model tapi tidak dicatat: sampaikan jujur, jangan biarkan balasan AI mengaku sudah mencatat.
+      const unnoted = template.fields.filter((f) => raw[f.key] != null && String(raw[f.key]).trim() !== "" && String(final[f.key] ?? "") !== String(raw[f.key]) && !cleared.includes(f.key));
+      const note =
+        unnoted.length > 0 || issues.length > 0
+          ? `Belum tercatat: ${unnoted.map((f) => f.label).join(", ") || "perubahan terakhir"}.${issues.length ? ` ${issues.join(" ")}` : " Tulis nilainya lengkap di pesan, sesuai contoh pada pertanyaan."}`
+          : "";
       const missing = missingRequired(template, final);
       const said = (result.data.reply ?? "").trim().slice(0, 600);
-      const out = said || fallbackReply(template, missing);
-      await saveAssistantReply(deps.pool, userId, params.id, out);
-      return json({ reply: out, applied, missing, ready: missing.length === 0 });
+      const out = [said || fallbackReply(template, missing), note].filter(Boolean).join("\n\n");
+      await saveAssistantReply(deps.pool, userId, params.id, out, readUpTo);
+      return json({ reply: out, applied: [...applied, ...cleared], missing, ready: isReady(template, final), issues });
     } catch (e) {
       await deps.store.release(reservation.groupId).catch(() => undefined);
       if (e instanceof StaleRevisionError) return json({ code: "STALE_REVISION" }, 409);

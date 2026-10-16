@@ -44,7 +44,13 @@ export async function sendMessageAction(formData: FormData): Promise<void> {
   let notice = "";
   if (res.status !== 200) {
     const code = ((await res.json().catch(() => ({}))) as { code?: string }).code;
-    notice = res.status === 502 ? "down" : res.status === 409 ? "stale" : code === "AI_BUSY" ? "busy" : code === "TOO_MANY_ATTEMPTS" ? "limit" : res.status === 429 ? "quota" : "down";
+    notice =
+      res.status === 502 ? "down"
+      : code === "STALE_REVISION" ? "stale"
+      : code === "AI_BUSY" || code === "DUPLICATE_REQUEST" ? "busy"
+      : code === "TOO_MANY_ATTEMPTS" ? "limit"
+      : res.status === 429 ? "quota"
+      : "error";
   }
   void userId;
   redirect(`/workspace/${documentId}${notice ? `?notice=${notice}` : ""}`);
@@ -57,15 +63,15 @@ export async function freezeAction(formData: FormData): Promise<void> {
   const svc = documentsService();
   const doc = await svc.get(userId, documentId);
   if (!doc || token.length < 8) notFound();
-  const summary = (msg: string): never => redirect(`/workspace/${documentId}?error=${encodeURIComponent(msg)}`);
+  const back = (notice: string): never => redirect(`/workspace/${documentId}?notice=${notice}`);
 
   const r = await svc.freeze(userId, documentId, token);
   if (r.ok) redirect(`/documents/${documentId}?version=${r.versionId}&baru=1`);
   if (r.code === "VALIDATION_FAILED") {
-    redirect(`/workspace/${documentId}?notice=incomplete`);
+    back("incomplete");
   }
-  if (r.code === "DOCUMENT_DAILY_QUOTA_REACHED") summary("Batas pembuatan dokumen baru hari ini sudah tercapai. Draf Anda aman, dan Anda bisa melanjutkan besok mulai pukul 00.00 WIB.");
-  summary("Template ini belum tersedia.");
+  if (r.code === "DOCUMENT_DAILY_QUOTA_REACHED") back("docQuota");
+  back("noTemplate");
 }
 
 export async function exportAction(formData: FormData): Promise<void> {

@@ -49,3 +49,17 @@ describe("percakapan dokumen", () => {
     await expect(saveUserMessage(pool, u, id, "x".repeat(4001), key())).rejects.toThrow();
   });
 });
+
+describe("saveAssistantReply hanya menandai pesan yang dibaca", () => {
+  it("pesan yang masuk setelah batas seq tetap belum terjawab", async () => {
+    const u = await createUser(pool);
+    const id = await newDoc(u);
+    const a = await saveUserMessage(pool, u, id, "satu", "k-aaaaaaaa1");
+    const b = await saveUserMessage(pool, u, id, "dua", "k-aaaaaaaa2");
+    await saveAssistantReply(pool, u, id, "balasan satu", a.seq);
+    const m = await listMessages(pool, u, id);
+    expect(m.filter((x) => x.role === "user").map((x) => [x.content, x.answered])).toEqual([["satu", true], ["dua", false]]);
+    expect(b.seq).toBeGreaterThan(a.seq);
+  });
+});
+

@@ -40,7 +40,9 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
   const data = doc.draft.data;
   const messages = await listMessages(getPool(), userId, id);
   const missing = missingRequired(t, data);
-  const ready = missing.length === 0;
+  const validity = t.validate(data);
+  const conflicts = !validity.ok ? Object.values(validity.errors).filter((m) => m !== "Wajib diisi") : [];
+  const ready = missing.length === 0 && validity.ok;
   const bar = progress(t, data);
   const preview = <PartialPreview title={t.title} rows={renderPartial(t, data)} />;
   const notice = q.notice && CHAT_NOTICES[q.notice];
@@ -52,7 +54,9 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
         <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-3xl">{t.title}</h1>
         <StepIndicator current={bar.done} total={bar.total} percent={bar.percent} label={`${bar.done} dari ${bar.total} kolom wajib terisi`} />
         {notice && <p role="alert" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold">{notice}</p>}
-        {q.error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{q.error}</p>}
+        {missing.length === 0 && conflicts.length > 0 && (
+          <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">Ada isian yang belum cocok: {conflicts.join(" ")} Sebutkan koreksinya di percakapan.</p>
+        )}
 
         {ready && (
           <Card aria-label="Dokumen siap dibuat" className="space-y-4 border-green-300 bg-green-50">
