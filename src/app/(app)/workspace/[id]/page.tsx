@@ -10,6 +10,9 @@ import { TEMPLATES } from "@/lib/documents/templates/registry";
 import { buildSteps, nextMissing, progress, summarize } from "@/lib/documents/wizard";
 import { freezeAction, saveStepAction } from "../../documents/actions";
 
+// Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
+export const dynamic = "force-dynamic";
+
 export default async function WorkspacePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ step?: string; error?: string }> }) {
   const { id } = await params;
   const q = await searchParams;

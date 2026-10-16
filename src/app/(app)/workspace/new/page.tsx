@@ -1,5 +1,8 @@
 import { createDocumentAction } from "../../documents/actions";
 
+// Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
+export const dynamic = "force-dynamic";
+
 const OPTIONS = [
   { category: "PKS", title: "Perjanjian Kerja Sama", text: "untuk kerja sama usaha atau proyek" },
   { category: "UTANG_PIUTANG", title: "Surat Utang Piutang", text: "untuk pinjam-meminjam uang" },

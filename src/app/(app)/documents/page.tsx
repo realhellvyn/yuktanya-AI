@@ -2,8 +2,12 @@ import Link from "next/link";
 import { documentsService } from "@/lib/documents/runtime";
 import { requireUserId } from "@/lib/documents/session";
 
+// Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
+export const dynamic = "force-dynamic";
+
 export default async function DocumentsPage() {
-  const docs = await documentsService().list(await requireUserId());
+  const userId = await requireUserId();
+  const docs = await documentsService().list(userId);
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">Dokumen Saya</h1>

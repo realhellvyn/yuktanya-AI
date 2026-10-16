@@ -7,6 +7,9 @@ import { documentsService } from "@/lib/documents/runtime";
 import { requireUserId } from "@/lib/documents/session";
 import { exportAction, startNewVersionAction } from "../actions";
 
+// Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
+export const dynamic = "force-dynamic";
+
 const LABEL = { changed: "Diubah", added: "Ditambah", removed: "Dihapus", same: "Sama" } as const;
 
 export default async function DocumentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ version?: string; against?: string; exported?: string; baru?: string }> }) {

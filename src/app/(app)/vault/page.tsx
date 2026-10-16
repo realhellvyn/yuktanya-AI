@@ -2,6 +2,9 @@ import Link from "next/link";
 import { documentsService } from "@/lib/documents/runtime";
 import { requireUserId } from "@/lib/documents/session";
 
+// Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
+export const dynamic = "force-dynamic";
+
 export default async function VaultPage() {
   const userId = await requireUserId();
   const svc = documentsService();
