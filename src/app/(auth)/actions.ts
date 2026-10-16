@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { googleAuthEnabled, googleRedirectTo } from "@/lib/auth/google";
 import { safeReturnTo } from "@/lib/auth/permissions";
 import { recordAttribution } from "@/lib/auth/record-attribution";
 import { recordEvent } from "@/lib/analytics/events";
@@ -51,4 +52,14 @@ export async function signUp(formData: FormData) {
     await recordEvent(getPool(), { name: "signup_completed", actorUserId: data.user.id, dedupeKey: `signup:${data.user.id}` }).catch(() => undefined);
   }
   redirect(data?.session ? returnTo : "/register?sent=1");
+}
+
+export async function signInWithGoogle(formData: FormData) {
+  const returnTo = safeReturnTo(String(formData.get("returnTo") ?? ""));
+  if (!googleAuthEnabled(process.env) || !hasSupabaseEnv()) back("login", "unconfigured", returnTo);
+  const supabase = await createSupabaseServerClient();
+  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const { data, error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: googleRedirectTo(origin, returnTo) } });
+  if (error || !data.url) back("login", "failed", returnTo);
+  redirect(data!.url!);
 }

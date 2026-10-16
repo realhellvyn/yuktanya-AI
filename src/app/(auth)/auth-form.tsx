@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { googleAuthEnabled } from "@/lib/auth/google";
+import { signInWithGoogle } from "./actions";
 
 const MESSAGES: Record<string, string> = {
   invalid: "Email atau kata sandi belum sesuai. Kata sandi minimal 8 karakter.",
@@ -29,6 +31,17 @@ export function AuthForm({ mode, action, error, sent, returnTo }: Props) {
         <p role="alert" className="mt-4 rounded-lg border border-red-700 bg-white p-4 text-red-800">
           {MESSAGES[error] ?? MESSAGES.failed}
         </p>
+      )}
+      {googleAuthEnabled(process.env) && (
+        <>
+          <form action={signInWithGoogle} className="mt-6">
+            <input type="hidden" name="returnTo" value={returnTo} />
+            <button type="submit" className="min-h-12 w-full rounded-lg border border-slate-400 bg-white px-4 font-semibold text-slate-900">
+              {isLogin ? "Masuk dengan Google" : "Daftar dengan Google"}
+            </button>
+          </form>
+          <p className="mt-4 text-center text-slate-600" aria-hidden="true">atau</p>
+        </>
       )}
       <form action={action} className="mt-6 space-y-5">
         <input type="hidden" name="returnTo" value={returnTo} />
