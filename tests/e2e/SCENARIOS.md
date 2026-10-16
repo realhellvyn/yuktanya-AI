@@ -29,6 +29,7 @@ every change; TEST_STRATEGY.md controls selection. Assert backend state, not jus
 | E17 admin | Seed standard/deep orders, failures/refunds, delayed completions | Verified-payment-only revenue split; unique funnel counts and fixed cohort denominator; honest no-data |
 | E17b admin analytics (`journey-admin-analytics.mjs`) | Seed synthetic documents on fixed WIB days via DB (Free vs Member, NDA vs PKS, 23.59/00.00 WIB edges); admin changes type/membership filters and custom range; reversed range; 375px; non-admin | Trend charts render; numbers change with filters/range; Jakarta day boundaries; plain error keeps typed dates; no overflow/touch targets ≥43.5px; no document titles; non-admin denied |
 | E17c data rights (`journey-data-rights.mjs`) | Chat draft typed then reload; offline toggle; send; two owners download their data; owner A (with published Standard Review verification) deletes account with wrong then correct confirmation; old login; public /verify; 375px /settings | Draft restored then cleared after send; offline banner + disabled Kirim; JSON parses and holds only own rows; fake Auth soft-deletes A; old session and login fail; /verify still Aktif without document text; B unaffected; no overflow/touch targets ≥43.5px |
+| E17d UX audit D (`journey-ux.mjs`, desktop + 375px) | Unknown route; `?error=`/`?notice=` with script/fake-instruction text and `__proto__`; register; Bantuan from app menu; "Saya belum tahu" chat (fake LLM: invented SURAT_KUASA, then loan story); start suggested document; NDA version → checkout | Indonesian 404 (status 404) with Beranda/Bantuan; no URL text rendered, no error page; Bantuan visible in sidebar/mobile header, mobile tabs Beranda/Buat Dokumen/Dokumen Saya/Akun; invented document never offered; catalogue suggestion creates Utang Piutang draft in normal chat; 2 chooser messages = 2 quota units; checkout shows document, version, scope, reviewer, price rule, "AI gratis; pemeriksaan pengacara berbayar"; no overflow/touch targets ≥43.5px; no console errors |
 | E18 UI | Keyboard/mobile/200% zoom, notes comprehension, negative Enhanced outcome | Readable price/status/action; no color-only state; payment understood as review fee, not cap purchase |
 
 Release smoke selects E01–E06, E08–E14 and affected exception paths. Full matrix before major
@@ -37,7 +38,7 @@ release; unit/integration cover detailed permutations without unnecessary browse
 ## Pemetaan otomasi (diverifikasi terhadap berkas tes, 16 Okt 2026)
 Sebutan: **J** = `tests/e2e/journey*.mjs` (browser, Postgres sementara + Auth palsu + gateway LLM palsu);
 **DB** = `tests/db/*.test.ts` (Postgres sementara); **S** = `tests/smoke/release-smoke.test.ts`;
-**U** = `tests/unit/*`. Perjalanan selain `journey.mjs` dan `journey-public.mjs` hanya berjalan di desktop
+**U** = `tests/unit/*`. Perjalanan selain `journey.mjs`, `journey-public.mjs`, dan `journey-ux.mjs` hanya berjalan di desktop
 (`onlyViewport`), kecuali langkah yang memang memakai lebar 375px.
 
 | ID | Status | Dicakup oleh | Yang belum dicakup |
@@ -61,6 +62,7 @@ Sebutan: **J** = `tests/e2e/journey*.mjs` (browser, Postgres sementara + Auth pa
 | E17 | Otomatis (DB) | DB `admin-metrics` (pendapatan hanya VERIFIED, funnel kohort, "tanpa data" null, refund); J `journey-ui-roles` (halaman admin tampil) | Pemisahan Standard vs Deep di UI tidak diuji di browser |
 | E17b | Otomatis | J `journey-admin-analytics.mjs` (desktop + 375px); DB `admin-metrics` (admin_analytics), `analytics-events` | |
 | E17c | Otomatis | J `journey-data-rights.mjs` (desktop + 375px); DB `data-rights`; U `data-rights` | Penghapusan akun Auth memakai Auth palsu; Auth nyata belum diuji |
+| E17d | Otomatis | J `journey-ux.mjs` (desktop + 375px); DB `template-chooser`, `owner-ux`; U `query-text`, `error-pages`, `reviews-ui`, `billing-ui`, `document-ui`, `admin-payment-messages` | Jawaban pemilih yang hilang di jaringan tidak diputar ulang (percakapan pemilih tidak disimpan server); halaman galat `error.tsx` tidak dipicu di browser (hanya U) |
 | E18 | Sebagian; sisanya **tidak diotomatisasi** | J memeriksa tanpa scroll horizontal, target sentuh >= 43,5/44px, tanpa error konsol pada halaman utama (mobile 375px); U `deep-ui`, `billing-ui` memeriksa kata "Enhanced"/pernyataan pembayaran dan tanpa kata "cap" | Navigasi keyboard, zoom 200%, pemahaman catatan, dan keterbacaan hasil negatif membutuhkan uji kegunaan manusia (lihat docs/USABILITY_TEST_PLAN.md); status tidak hanya warna belum diaudit otomatis |
 
 Catatan: E2E selalu memakai flag `DEEP_REVIEW_PURCHASE`, `ENHANCED_ISSUANCE`, `AI_PREREVIEW_ENABLED` = true,

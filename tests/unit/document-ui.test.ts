@@ -104,3 +104,19 @@ describe("DocumentPreview dan VersionList", () => {
     expect(all).not.toMatch(/\bcap\b/i);
   });
 });
+
+describe("TemplateChooser (D-01)", () => {
+  it("sapaan, kotak pesan berlabel, kunci idempoten tersembunyi; tanpa saran sebelum AI menjawab", async () => {
+    const { TemplateChooser } = await import("@/components/documents/template-chooser");
+    const noopState = async (s: never) => s;
+    const h = renderToStaticMarkup(createElement(TemplateChooser, {
+      options: [{ category: "NDA", title: "Perjanjian Kerahasiaan (NDA)", text: "untuk menjaga informasi rahasia" }],
+      initialKey: "kunci-awal-123", chooseAction: noopState as never, createAction: async () => {}, specialCaseNote: "Biaya ditentukan.",
+    }));
+    expect(h).toContain("Ceritakan keperluan Anda");
+    expect(h).toMatch(/<label[^>]*>[\s\S]*Pesan Anda/);
+    expect(h).toContain('value="kunci-awal-123"');
+    expect(h).not.toContain("Saran AI");
+    expect(h).not.toContain('name="category"');
+  });
+});

@@ -97,3 +97,21 @@ Refunds, re-review rounds, SLA and negative-outcome legal wording require signed
   itu tidak ada tantangan kode yang dibuat. Pengingat email juga ditandai belum terkirim.
 - Pembatas laju auth di aplikasi (Postgres, hash kunci) gagal-terbuka bila database pembatas tidak dapat dihubungi; batas
   Supabase Auth tetap lapisan kedua.
+
+## UX audit D (Task 14)
+- "Saya belum tahu" (`/workspace/pilih`): percakapan singkat di mana AI menyarankan SATU template katalog (NDA, PKS,
+  UTANG_PIUTANG) atau rute Kasus Khusus. Wajib masuk; satu pesan AI per giliran dengan reservasi atomik dan kunci idempoten
+  (kunci sama tidak dipotong dua kali dan tidak memanggil AI lagi); dilepas bila gateway gagal atau keluaran rusak. Pilihan
+  model divalidasi terhadap registri template di server; dokumen di luar katalog tidak pernah ditawarkan. Memulai dokumen
+  tetap lewat aksi pembuatan dokumen biasa, lalu berlanjut di percakapan dokumen. Percakapan pemilih TIDAK disimpan di server
+  (tanpa tabel/migrasi baru, tanpa isi pesan di ekspor/penghapusan); riwayat singkat dibawa klien dan hanya menjadi konteks.
+  Akibatnya jawaban yang hilang di jaringan tidak dapat diputar ulang: kunci yang sama menjawab "sudah diproses".
+- Teks dari alamat (`?error=`, `?notice=`, `?e=`, `?r=`, ...) tidak pernah ditampilkan apa adanya: kode dikenal dipetakan
+  ke kalimat tetap (`fixedText`, menolak nama bawaan objek), ID divalidasi sebagai UUID sebelum masuk tautan, email di `/s/[token]`
+  ditampilkan tersamar.
+- Hasil Standar menyebut nama firma mitra yang menangani (bukan identitas pribadi reviewer) dan tanggal; laporan pemeriksaan
+  belum dapat diunduh sebagai berkas (dinyatakan jujur; dokumen versi itu dapat diunduh dengan blok verifikasi). DECLINED
+  dijelaskan persis seperti `publish_standard`: order dibatalkan dan diganti 1 kredit pemeriksaan standar (berlaku 90 hari,
+  dipakai otomatis oleh `quote_price`). INCONCLUSIVE tidak membuat kredit atau pengembalian dana otomatis, dan dinyatakan begitu.
+- `loading.tsx` hanya di segmen `/dashboard`: di segmen yang memuat halaman bersarang dengan `notFound()`, respons yang
+  mengalir lebih dulu membuat status 404 menjadi 200.

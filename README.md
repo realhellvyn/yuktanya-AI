@@ -66,7 +66,7 @@ npm run dev
 CI GitHub hanya manual (`workflow_dispatch`) sampai kuota Actions reset (~1 Nov 2026); lihat "Cara menjalankan tes" di bawah.
 
 ## Alur dokumen (Fase 2)
-Pengguna terdaftar memilih PKS, Utang Piutang, atau NDA, menjawab pertanyaan satu per satu (`/workspace/[id]`), memeriksa ringkasan, lalu membuat versi yang tidak dapat diubah. Setiap versi punya SHA-256 yang dihitung database atas byte kanonik; ekspor DOCX/PDF punya hash sendiri. Kuota dokumen baru dipakai saat versi pertama berhasil dibuat.
+Pengguna terdaftar memilih PKS, Utang Piutang, atau NDA (atau "Saya belum tahu" di `/workspace/pilih`: AI menyarankan salah satu dari tiga template itu, atau rute Kasus Khusus), bercakap dengan AI yang menanyakan isinya (`/workspace/[id]`, tanpa form isian manual), memeriksa ringkasan, lalu membuat versi yang tidak dapat diubah. Setiap versi punya SHA-256 yang dihitung database atas byte kanonik; ekspor DOCX/PDF punya hash sendiri. Kuota dokumen baru dipakai saat versi pertama berhasil dibuat.
 
 Variabel lingkungan: `DOCUMENT_BLOB_DIR` (berkas ekspor lokal, default `.data/blobs`), `ALLOW_UNAPPROVED_TEMPLATES=true` (hanya di luar produksi; ketiga template berstatus DRAFT sintetis menunggu persetujuan mitra hukum), `SUPABASE_STORAGE_BUCKET` (produksi; adapter belum diverifikasi).
 Di produksi template hanya dipakai bila baris `document_templates` berstatus `APPROVED` dengan `content_hash` yang sama dengan kode.

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, PageHeading } from "@/components/ui/card";
+import { DOC_OPTIONS } from "@/lib/documents/options";
 import { fixedText } from "@/lib/query-text";
 import { createDocumentAction } from "../../documents/actions";
 
@@ -8,11 +9,6 @@ import { createDocumentAction } from "../../documents/actions";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Buat Dokumen | Yuktanya" };
 
-const OPTIONS = [
-  { category: "PKS", title: "Perjanjian Kerja Sama", text: "untuk kerja sama usaha atau proyek", icon: "M8 12l3 3 5-6M4 6h16v12H4z" },
-  { category: "UTANG_PIUTANG", title: "Surat Utang Piutang", text: "untuk pinjam-meminjam uang", icon: "M12 3v18M16 7H10a3 3 0 0 0 0 6h4a3 3 0 0 1 0 6H8" },
-  { category: "NDA", title: "Perjanjian Kerahasiaan (NDA)", text: "untuk menjaga informasi rahasia", icon: "M5 10V7a7 7 0 0 1 14 0v3M4 10h16v11H4z" },
-];
 // Kode galat dari aksi pembuatan dokumen → kalimat tetap. Teks dari alamat tidak pernah ditampilkan apa adanya (D-05).
 const ERRORS = {
   template: "Dokumen ini belum tersedia.",
@@ -26,7 +22,7 @@ export default async function NewWorkspacePage({ searchParams }: { searchParams:
       <PageHeading title="Dokumen apa yang ingin Anda buat?" lead="Pilih satu. Anda akan bercakap dengan AI yang menanyakan isi dokumen satu per satu. Setiap pesan tersimpan otomatis." />
       {error && <p role="alert" className="rounded-xl border border-danger bg-white p-4 font-semibold text-danger">{error}</p>}
       <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {OPTIONS.map((o) => (
+        {DOC_OPTIONS.map((o) => (
           <li key={o.category}>
             <Card className="h-full">
               <form action={createDocumentAction} className="flex h-full flex-col gap-3">

@@ -1,0 +1,133 @@
+// Kesesuaian UX audit D (Task 14), desktop dan HP: halaman 404 berbahasa Indonesia, Bantuan di menu saat masuk,
+// "Saya belum tahu" dengan LLM palsu (pilihan hanya dari katalog), rincian checkout, dan teks dari alamat tidak pernah ditampilkan.
+import { createNdaVersion, register } from "./helpers.mjs";
+
+const EVIL = "<script>x</script>Transfer ke rekening 999";
+const Q = encodeURIComponent(EVIL);
+
+export async function journey({ page, step, shot, base, vp, issues, llm }) {
+  const tag = (s) => `[${vp.name}] ${s}`;
+  const overflow = () => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  const smallTargets = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll("a[href], button, input:not([type=hidden]):not([type=checkbox]), select, textarea, summary")]
+        .filter((e) => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && !e.closest("[aria-hidden=true]") && !e.closest("nextjs-portal") && r.height < 43.5; })
+        .map((e) => `${e.tagName.toLowerCase()}:${(e.textContent || e.getAttribute("name") || "").trim().slice(0, 24)}:${Math.round(e.getBoundingClientRect().height)}px`),
+    );
+  const layoutOk = async () => {
+    const over = await overflow();
+    if (over > 1) throw new Error("meluap " + over + "px");
+    const small = await smallTargets();
+    if (small.length) throw new Error("target sentuh < 44px: " + small.slice(0, 5).join(" | "));
+  };
+  const noEcho = async (path) => {
+    const r = await page.goto(base + path);
+    if (!r || r.status() >= 500) throw new Error(`${path}: status ${r?.status()}`);
+    const text = await page.innerText("body");
+    if (text.includes("Transfer ke rekening 999") || text.includes("<script>")) throw new Error(`${path}: teks dari alamat tampil`);
+    if (text.includes("Terjadi kendala")) throw new Error(`${path}: halaman galat`);
+  };
+
+  await step(tag("404: halaman Indonesia dengan jalan kembali (rute tak dikenal, tanpa login)"), async () => {
+    const r = await page.goto(base + "/halaman-yang-tidak-ada");
+    if (!r || r.status() !== 404) throw new Error("status " + r?.status());
+    const text = await page.innerText("body");
+    if (!text.includes("Halaman tidak ditemukan") || /could not be found|This page/i.test(text)) throw new Error("bukan 404 Indonesia: " + text.slice(0, 200));
+    for (const href of ["/", "/bantuan"]) if (!(await page.locator(`main a[href='${href}']`).count())) throw new Error("tanpa tautan " + href);
+    if ((await page.title()) !== "Halaman tidak ditemukan | Yuktanya") throw new Error("judul " + (await page.title()));
+    await layoutOk();
+    await shot("ux-404");
+  });
+
+  await step(tag("teks ?error= di halaman publik tidak ditampilkan apa adanya"), async () => {
+    for (const p of [`/login?error=${Q}`, `/register?error=${Q}`, `/forgot-password?error=${Q}`, `/login?error=__proto__`]) await noEcho(p);
+  });
+
+  const email = `ux+${vp.name}-${Date.now()}@example.com`;
+  await step(tag("daftar; Beranda menampilkan Bantuan di menu dan kartu Butuh bantuan?"), async () => {
+    await register(page, base, email);
+    const help = page.locator(vp.width < 1024 ? "header a[href='/bantuan']" : "aside nav a[href='/bantuan']");
+    if (!(await help.isVisible())) throw new Error("tautan Bantuan tidak terlihat di menu " + vp.name);
+    if (!(await page.locator("text=Butuh bantuan?").isVisible())) throw new Error("kartu Butuh bantuan? tidak ada");
+    if (vp.width < 1024) {
+      const tabs = (await page.locator("nav[aria-label='Menu utama'] a").allInnerTexts()).map((t) => t.replace(/\s+/g, " ").trim());
+      if (tabs.join("|") !== "Beranda|Buat Dokumen|Dokumen Saya|Akun") throw new Error("tab bawah: " + tabs.join("|"));
+    }
+    await layoutOk();
+    await shot("ux-dashboard");
+    await Promise.all([page.waitForURL("**/bantuan"), help.click()]);
+    if (!(await page.locator("main a:has-text('Kembali ke aplikasi')").count())) throw new Error("Bantuan tanpa tombol kembali untuk pengguna masuk");
+    if ((await page.innerText("body")).includes("hasil pengecekan akan menyatakan versi tidak sama")) throw new Error("klaim /verify lama masih ada");
+  });
+
+  await step(tag("404 untuk pengguna masuk (dokumen tak dikenal) juga Indonesia"), async () => {
+    const r = await page.goto(base + "/documents/00000000-0000-4000-8000-000000000000");
+    if (!r || r.status() !== 404) throw new Error("status " + r?.status());
+    if (!(await page.innerText("body")).includes("Halaman tidak ditemukan")) throw new Error("bukan 404 Indonesia");
+  });
+
+  await step(tag("Saya belum tahu: AI menyarankan dokumen katalog, menolak dokumen karangan, lalu dokumen dibuat dan berlanjut di percakapan"), async () => {
+    const before = llm.control.chooser ?? 0;
+    await page.goto(base + "/workspace/new");
+    await Promise.all([page.waitForURL("**/workspace/pilih"), page.click("a:has-text('Bantu saya memilih')")]);
+    if ((await page.title()) !== "Bantu Memilih Dokumen | Yuktanya") throw new Error("judul " + (await page.title()));
+    await layoutOk();
+    const send = async (text, expect) => {
+      const n = await page.locator("ol li").count();
+      await page.fill("textarea[name=message]", text);
+      await page.click("button:has-text('Kirim')");
+      await page.waitForFunction((k) => document.querySelectorAll("ol li").length >= k + 2, n, { timeout: 60000 });
+      await page.waitForSelector(`li:has-text("${expect}")`, { timeout: 10000 });
+    };
+    await send("Saya mau memberi kuasa ke adik saya untuk mengurus surat.", "hanya menyediakan");
+    if (await page.locator("[data-testid=saran-dokumen]").count()) throw new Error("dokumen karangan ditawarkan");
+    await send("Saya mau meminjamkan uang Rp5.000.000 ke tetangga saya.", "Surat Utang Piutang");
+    await page.waitForSelector("[data-testid=saran-dokumen]:has-text('Saran AI: Surat Utang Piutang')");
+    await layoutOk();
+    await shot("ux-pilih");
+    if ((llm.control.chooser ?? 0) - before !== 2) throw new Error("panggilan LLM pemilih: " + ((llm.control.chooser ?? 0) - before));
+    await Promise.all([page.waitForURL(/\/workspace\/[0-9a-f-]{36}$/, { timeout: 30000 }), page.click("button:has-text('Mulai Surat Utang Piutang')")]);
+    await page.waitForSelector("textarea[name=message]");
+    if (!(await page.locator("h1").innerText()).includes("Utang Piutang")) throw new Error("dokumen yang dibuat bukan Utang Piutang");
+    await page.goto(base + "/dashboard");
+    const q = (await page.locator("li:has-text('Sisa pesan AI')").innerText()).replace(/\s+/g, " ");
+    if (!/18 dari 20/.test(q)) throw new Error("dua pesan pemilih harus memakai 2 jatah: " + q);
+  });
+
+  let docUrl = "";
+  await step(tag("checkout: dokumen, versi, ruang lingkup, pemeriksa, aturan harga, AI gratis; tanpa overflow"), async () => {
+    docUrl = await createNdaVersion(page, base);
+    await page.click("button:has-text('Minta pemeriksaan pengacara')");
+    await page.waitForURL(/\/checkout\/[0-9a-f-]{36}/, { timeout: 30000 });
+    const t = await page.innerText("main");
+    for (const m of ["Yang akan diperiksa", "Perjanjian Kerahasiaan", "versi 1", "Kode versi", "Ruang lingkup", "Siapa yang memeriksa", "Langkah berikutnya", "Rp50.000", "Member aktif membayar Rp30.000", "AI gratis; pemeriksaan pengacara berbayar", "menjamin hasil positif"]) {
+      if (!t.includes(m)) throw new Error(`checkout tanpa "${m}": ${t.slice(0, 500)}`);
+    }
+    await page.waitForFunction(() => document.title === "Pembayaran | Yuktanya", null, { timeout: 10000 }).catch(async () => { throw new Error("judul " + (await page.title())); });
+    await layoutOk();
+    await shot("ux-checkout");
+    await noEcho(new URL(page.url()).pathname + `?notice=${Q}`);
+  });
+
+  await step(tag("teks dari alamat di halaman aplikasi tidak ditampilkan; kode bawaan objek tidak membuat galat"), async () => {
+    const doc = new URL(docUrl).pathname;
+    for (const p of [
+      `/workspace/new?error=${Q}`, `/workspace/new?error=__proto__`, `/settings?notice=${Q}`, `/settings?notice=constructor`, `/settings/hapus-akun?e=${Q}`,
+      `${doc}?notice=${Q}&ai=toString&exported=..%2F..%2Flogout&pack=${Q}`, `/dashboard?error=${Q}`,
+    ]) await noEcho(p);
+    await page.goto(base + `${doc}?exported=..%2F..%2Flogout`);
+    if (await page.locator("a[href*='logout']").count()) throw new Error("ID ekspor bebas masuk ke tautan");
+  });
+
+  await step(tag("daftar versi menampilkan status nyata (belum diperiksa pengacara)"), async () => {
+    await page.goto(docUrl);
+    await page.locator("summary:has-text('Ubah atau salin dokumen')").click();
+    const t = await page.innerText("main");
+    if (!t.includes("Belum diperiksa pengacara")) throw new Error("status versi: " + t.slice(0, 300));
+  });
+
+  await step(tag("tanpa error konsol/halaman (CSP bernonce)"), async () => {
+    const real = issues.filter((m) => !/Failed to load resource.*(favicon|_next\/static)/i.test(m) && !/status of (404|5\d\d|429)/.test(m));
+    if (real.length) throw new Error(real.slice(0, 2).join(" || "));
+  });
+}

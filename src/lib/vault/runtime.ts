@@ -10,6 +10,7 @@ import { createRateLimiter } from "./rate-limit";
 import { createPgReminderService } from "./reminders";
 import { createPgShareService } from "./share";
 import type { ChatTurnDeps } from "@/lib/ai/chat-turn";
+import type { ChooserDeps } from "@/lib/ai/template-chooser";
 import type { AiReviewDeps } from "@/lib/ai/prereview";
 import { createPgVerificationService } from "@/lib/verification/service";
 import { getSessionRoles } from "@/lib/supabase/server";
@@ -45,6 +46,13 @@ export function chatTurnDeps(): ChatTurnDeps {
     inflight: chatInflight,
     attempts: createPgAttemptLimiter(getPool()),
   };
+}
+
+// Pemilih dokumen "Saya belum tahu" (D-01): sesi, kuota, limiter percobaan, dan gateway sama dengan percakapan dokumen.
+const chooserInflight = new Set<string>();
+export function chooserDeps(): ChooserDeps {
+  const base = chatTurnDeps();
+  return { getUserId: base.getUserId, store: base.store, pool: getPool(), chat, inflight: chooserInflight, attempts: base.attempts };
 }
 
 const aiReviewInflight = new Set<string>();

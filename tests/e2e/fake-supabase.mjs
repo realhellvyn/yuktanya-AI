@@ -146,6 +146,19 @@ export function startFakeLlm({ port }) {
       res.writeHead(200, { "content-type": "application/json" });
       return res.end(JSON.stringify({ id: "fake-pre", choices: [{ message: { role: "assistant", content: JSON.stringify(report) } }] }));
     }
+    // Pemilih dokumen "Saya belum tahu" (src/lib/ai/template-chooser.ts): aturan kata kunci yang deterministik.
+    // "kuasa" sengaja dijawab dengan dokumen karangan (SURAT_KUASA) agar penolakan pilihan di luar katalog teruji.
+    if (system.includes("memilih jenis dokumen di Yuktanya")) {
+      const pick = /pinjam|minjam|utang|hutang/i.test(last) ? ["UTANG_PIUTANG", "Sepertinya Anda membutuhkan Surat Utang Piutang, karena ada uang yang dipinjamkan."]
+        : /rahasia/i.test(last) ? ["NDA", "Sepertinya Anda membutuhkan Perjanjian Kerahasiaan (NDA)."]
+        : /kerja sama|kerjasama|bermitra/i.test(last) ? ["PKS", "Sepertinya Anda membutuhkan Perjanjian Kerja Sama."]
+        : /kuasa/i.test(last) ? ["SURAT_KUASA", "Anda membutuhkan Surat Kuasa."]
+        : /cerai|warisan|digugat|pidana/i.test(last) ? ["KASUS_KHUSUS", "Keperluan ini sebaiknya dinilai khusus oleh firma hukum."]
+        : [null, "Boleh ceritakan lebih jelas: untuk keperluan apa dan dengan siapa?"];
+      control.chooser = (control.chooser ?? 0) + 1;
+      res.writeHead(200, { "content-type": "application/json" });
+      return res.end(JSON.stringify({ id: "fake-pilih", choices: [{ message: { role: "assistant", content: JSON.stringify({ reply: pick[1], choice: pick[0] }) } }] }));
+    }
     const person = (re) => re.exec(last)?.[1];
     const date = /Tanggal (\d{1,2}) ([A-Za-z]+) (\d{4})/.exec(last);
     const out = {
