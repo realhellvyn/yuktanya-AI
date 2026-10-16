@@ -253,6 +253,13 @@ unit dan integrasi, bukan browser. Vektor tes uang ditambahkan ke
 `tests/policy-vectors.json` saat implementasi. Skenario di atas adalah **spesifikasi**,
 belum ada yang dijalankan. Waktu jalan **[UNKNOWN]**.
 
+**Penjaga kuota CI (GitHub Actions):** pengalaman pemilik menunjukkan E2E/smoke yang terlalu
+sering menghabiskan menit gratis. Aturan: unit dan integrasi jalan di PR dengan filter path;
+smoke 6 skenario hanya lewat pemicu manual atau tag rilis; E2E katalog hanya lewat
+pemicu manual per tag; `concurrency` dengan `cancel-in-progress` agar run lama dibatalkan;
+cache dependensi dan browser Playwright; tidak ada run terjadwal otomatis untuk E2E. Sisa
+kuota akun **[UNKNOWN]** dan dicek pemilik di Settings → Billing and plans → Usage.
+
 ## 11. Penanganan kegagalan
 
 Gateway AI mati: input tersimpan. Callback ganda: idempoten. Pembayaran kedaluwarsa:
@@ -276,6 +283,9 @@ Fase 2 berdiri; Deep, Enhanced, QR/revocation sesuai peta v8.
 - Struktur kepemilikan dan aliran uang antar pihak; aspek etika profesi advokat.
 - Kebijakan iklan platform dan aturan promosi layanan hukum.
 - Sign-off partner atas semua butir v8 (template, rubrik M1–M7, scope, dan seterusnya).
+- Ekspor berbadge: tata letak blok verifikasi di dokumen; apakah DOCX (dapat diedit) ikut
+  berbadge atau hanya PDF (usulan: hanya PDF); apakah stempel/tanda tangan profesional
+  dicantumkan (terpisah di v8, butuh kewenangan dan engagement).
 - Jangkauan privasi jalur drafting (chat wawancara mengirim nama/nominal ke upstream):
   gate produksi untuk jalur ini perlu keputusan; prototype tetap sintetis.
 
