@@ -6,3 +6,25 @@ export const SPECIAL_CASE_NOTE = "Biaya dan ruang lingkup ditentukan setelah ase
 export const CHECKOUT_NOTE =
   "Pembayaran adalah biaya pemeriksaan. Tidak menjamin hasil positif atau penerbitan verifikasi Enhanced.";
 export const LEGAL_DISCLAIMER = "Tidak menjamin keabsahan atau hasil hukum dalam semua keadaan.";
+
+// Teks wajib hasil verifikasi (docs/VERIFICATION_POLICY.md). Tanpa kata "cap" di tampilan pengguna.
+export const VERIFICATION_TITLES = {
+  AI: "Yuktanya AI Verified — Pemeriksaan Awal oleh AI",
+  LEGAL: "Yuktanya Legal Verified",
+  LEGAL_ENHANCED: "Yuktanya Legal Verified — Enhanced",
+} as const;
+export type VerificationKind = keyof typeof VERIFICATION_TITLES;
+export const VERIFICATION_STATEMENTS = {
+  AI: "Analisis otomatis untuk versi dokumen ini telah selesai. Bukan pengesahan hukum dan belum diperiksa pengacara.",
+  LEGAL_WITH_NOTES: "Pemeriksaan selesai dengan catatan. Baca catatan sebelum menggunakan dokumen.",
+  LEGAL_WITHIN_SCOPE: "Pemeriksa menyatakan dokumen memenuhi kriteria dalam ruang lingkup pemeriksaan yang tercantum.",
+  LEGAL_ENHANCED: "Versi ini telah melalui pemeriksaan tambahan oleh profesional hukum dan memenuhi kriteria material dalam lingkup yang tercantum.",
+} as const;
+export const QR_NOT_SIGNATURE = "Kode QR hanya mengarah ke halaman pengecekan. Ini bukan tanda tangan.";
+export const NEW_VERSION_NOT_REVIEWED = "Versi baru belum diperiksa";
+
+export function verificationStatement(kind: VerificationKind, outcome: string | null): string {
+  if (kind === "AI") return VERIFICATION_STATEMENTS.AI;
+  if (kind === "LEGAL_ENHANCED") return VERIFICATION_STATEMENTS.LEGAL_ENHANCED;
+  return outcome === "WITHIN_SCOPE" ? VERIFICATION_STATEMENTS.LEGAL_WITHIN_SCOPE : VERIFICATION_STATEMENTS.LEGAL_WITH_NOTES;
+}
