@@ -25,7 +25,7 @@ export const nda = defineTemplate({
     { id: "dispute", heading: "Penyelesaian Sengketa", text: "Sengketa diselesaikan secara musyawarah. Bila tidak tercapai, sengketa diselesaikan melalui Pengadilan Negeri {{disputeCity}}." },
     { id: "notes", heading: "Catatan Tambahan", text: "{{additionalNotes}}", whenKey: "additionalNotes" },
   ],
-  cross: (d) =>
+  cross: (d): Record<string, string> =>
     normalizeName(d.disclosingParty) && normalizeName(d.disclosingParty) === normalizeName(d.receivingParty)
       ? { receivingParty: "Nama kedua pihak tidak boleh sama" }
       : {},
