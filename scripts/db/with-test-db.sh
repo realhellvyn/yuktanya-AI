@@ -32,7 +32,7 @@ $RUN "$PGBIN/pg_ctl" -D "$DIR/data" -o "-p $PORT -c listen_addresses=127.0.0.1 -
 PSQL="psql -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $PORT -U postgres"
 $PSQL -d postgres -c "create database yuktanya_test" >/dev/null
 $PSQL -d yuktanya_test -f "$ROOT/tests/db/bootstrap.sql" >/dev/null
-for f in "$ROOT"/supabase/migrations/*.sql; do
+for f in "${MIGRATIONS_DIR:-$ROOT/supabase/migrations}"/*.sql; do
   [ -e "$f" ] || continue
   $PSQL -d yuktanya_test -f "$f" >/dev/null
 done

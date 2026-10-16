@@ -20,3 +20,11 @@ Persetujuan template oleh mitra hukum (`document_templates` harus `APPROVED` den
 
 ## Celah yang diketahui
 Metrik AI hanya mencakup rute chat (bantuan isian dan analisis awal AI belum mengirim event); pekerjaan deep yang ditahan tetap berstatus ON_HOLD setelah refund/tutup; refund dan neto belum dipecah per jenis layanan; beberapa kasus smoke (E02 reviewer satu firma tak ditugaskan, E05 standar belum selesai, E10 catatan material belum selesai, E11 penugasan basi, E14 dokumen ke-6 Member, hash tidak cocok) belum punya kasus smoke tersendiri meski dicakup tes DB; Pembatas laju publik berada di memori per proses; unggahan PDF/DOCX belum ada; tidak ada jalur reinstate untuk verifikasi yang ditangguhkan; blok triase kasus khusus tidak punya sumber data; revoke oleh reviewer penerbit langsung (kebijakan menyebut hanya permintaan pencabutan).
+
+## Status migrasi Supabase staging (proyek `yuktanya`, diterapkan 16 Okt 2026)
+Migrasi 01–28 sudah diterapkan ke proyek staging lewat alat MCP, yang otomatis membatalkan pernyataan `DROP` dan `delete from`. Karena itu skema staging **berbeda sedikit** dari `supabase/migrations/*` di repo; perilaku yang dimaksud sama. Tidak ada data nyata di sana.
+- Migrasi 05, 16, 17, 18, 22, 23 diterapkan dalam varian tanpa `DROP` (fungsi lama dibiarkan sebagai overload/pembungkus yang dicabut dari `anon`/`authenticated`). Nama migrasi di staging memakai akhiran (`_nodrop`, `_a1…_a5`).
+- `ai_attempt_allowed` di staging **tidak menghapus** baris lama; retensi `ai_attempts` harus dijalankan pekerjaan terjadwal terpisah (belum ada).
+- Fungsi `delete_note` (hapus catatan draf Legal Note) **belum ada** di staging karena memuat `delete from`. Terapkan manual lewat dashboard/CLI Supabase dari `20261016000021_report_publish.sql` sebelum reviewer memakai tombol hapus catatan.
+- Advisor keamanan staging: tidak ada temuan dari skema aplikasi selain INFO "RLS tanpa kebijakan" (disengaja: default-deny, akses lewat fungsi service_role). `public.rls_auto_enable()` adalah fungsi bawaan platform, bukan bagian repo ini.
+- Untuk produksi, terapkan berkas asli dengan Supabase CLI (`supabase db push`) pada proyek yang bersih, bukan varian ini.
