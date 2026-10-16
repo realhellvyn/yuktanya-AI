@@ -54,9 +54,11 @@ describe("permukaan pemilik dokumen", () => {
     }
   });
 
-  it("/api/documents memerlukan sesi tetapi tidak memaksa peran", () => {
+  it("/api/documents mengikuti aturan permukaan pemilik: peran profesional/admin ditolak", () => {
     expect(redirectOf(guardPath("/api/documents/versions/x", null))).toContain("/login");
-    expect(guardPath("/api/documents/versions/x", ["user", "reviewer"])).toEqual({ allow: true });
+    expect(guardPath("/api/documents/versions/x", ["user"])).toEqual({ allow: true });
+    expect(redirectOf(guardPath("/api/documents/versions/x", ["user", "reviewer"]))).toBe("/partner");
+    expect(redirectOf(guardPath("/api/documents", ["user", "platform_admin"]))).toBe("/admin");
   });
 
   it("prefix mirip tidak ikut terlindungi", () => {

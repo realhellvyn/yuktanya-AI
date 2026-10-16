@@ -25,7 +25,6 @@ const DRAFT_NOTICE = "Template belum disetujui mitra hukum";
 function show(f: FieldSpec, v: string | number): string {
   if (f.kind === "idr") return formatIdr(Number(v));
   if (f.kind === "date") return formatDateId(String(v));
-  if (f.kind === "integer" && f.key.toLowerCase().includes("month")) return `${v} bulan`;
   return String(v);
 }
 

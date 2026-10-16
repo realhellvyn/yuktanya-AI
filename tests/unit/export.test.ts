@@ -3,7 +3,7 @@ import JSZip from "jszip";
 import { PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { AI_DRAFT_LABEL } from "@/lib/copy";
-import { exportDocx, exportPdf, sha256Hex } from "@/lib/documents/export";
+import { UnsupportedCharactersError, exportDocx, exportPdf, pdfLines, sha256Hex } from "@/lib/documents/export";
 import { renderDocument } from "@/lib/documents/render";
 import { nda } from "@/lib/documents/templates/nda";
 import type { Data } from "@/lib/documents/types";
@@ -20,6 +20,16 @@ describe("exportDocx", () => {
     expect(String.fromCharCode(bytes[0], bytes[1])).toBe("PK");
     const xml = await (await JSZip.loadAsync(bytes)).file("word/document.xml")!.async("string");
     for (const s of ["Perjanjian Kerahasiaan (NDA)", "ZZ-PIHAK-SATU", "ZZ-KOTA", AI_DRAFT_LABEL]) expect(xml).toContain(s);
+  });
+});
+
+describe("exportDocx baris baru", () => {
+  it("baris baru dalam teks panjang menjadi jeda baris dan teks utuh", async () => {
+    const bytes = await exportDocx(doc({ ...data, confidentialInfo: "baris satu\r\nbaris dua" }));
+    const xml = await (await JSZip.loadAsync(bytes)).file("word/document.xml")!.async("string");
+    expect(xml).toContain("baris satu");
+    expect(xml).toContain("baris dua");
+    expect(xml).toContain("<w:br/>");
   });
 });
 
@@ -40,9 +50,16 @@ describe("exportPdf", () => {
     expect((await PDFDocument.load(huge)).getPageCount()).toBeGreaterThan(1);
   });
 
-  it("karakter di luar WinAnsi diganti tanpa melempar", async () => {
-    const bytes = await exportPdf(doc({ ...data, confidentialInfo: "日本語 😀 ok café" }));
-    expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThanOrEqual(1);
+  it("karakter di luar WinAnsi ditolak dengan daftar karakter, bukan diganti diam-diam", async () => {
+    const err = await exportPdf(doc({ ...data, confidentialInfo: "日本 Nguyễn café" })).catch((e) => e);
+    expect(err).toBeInstanceOf(UnsupportedCharactersError);
+    expect((err as UnsupportedCharactersError).characters).toEqual(expect.arrayContaining(["日", "本", "ễ"]));
+    expect((err as UnsupportedCharactersError).characters).not.toContain("é");
+  });
+
+  it("pdfLines memecah baris baru (CRLF/CR/LF) sebelum pemeriksaan dan tidak mengubah teks", () => {
+    expect(pdfLines("baris satu\r\nbaris dua\nbaris tiga\rempat")).toEqual(["baris satu", "baris dua", "baris tiga", "empat"]);
+    expect(pdfLines("café Rp5.000")).toEqual(["café Rp5.000"]);
   });
 });
 

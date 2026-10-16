@@ -11,9 +11,9 @@ export function VersionList({ versions, documentId }: { versions: VersionSummary
           <p>Dibuat {when(v.createdAt)} WIB</p>
           <p>Kode versi: <span className="font-mono">{v.sha256.slice(0, 12)}</span></p>
           <p>Versi baru belum diperiksa</p>
-          <p className="mt-2 flex gap-4">
-            <a className="text-blue-700 underline" href={`/documents/${documentId}?version=${v.id}`}>Lihat</a>
-            {i > 0 && <a className="text-blue-700 underline" href={`/documents/${documentId}?version=${v.id}&against=${versions[i - 1].id}`}>Bandingkan dengan versi sebelumnya</a>}
+          <p className="mt-2 flex flex-wrap gap-4">
+            <a className="inline-flex min-h-12 items-center text-blue-700 underline" href={`/documents/${documentId}?version=${v.id}`}>Lihat</a>
+            {i > 0 && <a className="inline-flex min-h-12 items-center text-blue-700 underline" href={`/documents/${documentId}?version=${v.id}&against=${versions[i - 1].id}`}>Bandingkan dengan versi sebelumnya</a>}
           </p>
         </li>
       ))}

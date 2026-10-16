@@ -55,6 +55,34 @@ describe("autentikasi", () => {
   });
 });
 
+describe("peran non-pemilik", () => {
+  it("getUserId yang melempar ForbiddenError → 403 di setiap handler dan service tidak dipanggil", async () => {
+    const all = [H.createDocumentHandler, H.listDocumentsHandler, H.getDocumentHandler, H.saveDraftHandler, H.freezeHandler, H.getVersionHandler, H.diffHandler, H.exportHandler, H.downloadHandler, H.cloneHandler];
+    for (const h of all) {
+      const res = await h(
+        { getUserId: async () => { throw new H.ForbiddenError(); }, service: never },
+        new Request("http://t/x", { method: "POST", headers: { "idempotency-key": idem() }, body: "{}" }),
+        { id: uuid(), versionId: uuid(), exportId: uuid() },
+      );
+      expect(res.status).toBe(403);
+      expect(await json(res)).toEqual({ code: "FORBIDDEN" });
+    }
+  });
+
+  it("ekspor PDF dengan karakter tak didukung → 422 PDF_UNSUPPORTED_CHARACTERS tanpa menulis berkas", async () => {
+    const u = await createUser(pool);
+    const id = await newDoc(u, { ...data, confidentialInfo: "Nguyễn Văn" });
+    const f = await json(await call(H.freezeHandler, u, { id }, { key: idem(), body: {} }));
+    const res = await call(H.exportHandler, u, { versionId: f.versionId }, { body: { format: "PDF" } });
+    expect(res.status).toBe(422);
+    const b = await json(res);
+    expect(b.code).toBe("PDF_UNSUPPORTED_CHARACTERS");
+    expect(b.characters).toContain("ễ");
+    expect((await pool.query("select 1 from document_exports where version_id = $1", [f.versionId])).rowCount).toBe(0);
+    expect((await call(H.exportHandler, u, { versionId: f.versionId }, { body: { format: "DOCX" } })).status).toBe(201);
+  });
+});
+
 describe("validasi permintaan", () => {
   it("create/freeze tanpa Idempotency-Key → 400; kategori tak dikenal → 400", async () => {
     const u = await createUser(pool);

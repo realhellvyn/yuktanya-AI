@@ -15,9 +15,12 @@ const text = (d: ReturnType<typeof renderDocument>) => d.blocks.map((b) => b.tex
 describe("renderDocument", () => {
   it("setiap nilai sentinel muncul dan tidak ada placeholder tersisa", () => {
     const doc = renderDocument(nda, ndaData, "DRAFT");
-    for (const s of ["ZZ-PIHAK-SATU", "ZZ-PIHAK-DUA", "ZZ-INFO-RAHASIA", "ZZ-TUJUAN", "ZZ-KOTA", "16 Oktober 2026", "24 bulan"]) {
+    for (const s of ["ZZ-PIHAK-SATU", "ZZ-PIHAK-DUA", "ZZ-INFO-RAHASIA", "ZZ-TUJUAN", "ZZ-KOTA", "16 Oktober 2026"]) {
       expect(text(doc)).toContain(s);
     }
+    // Teks klausul persis: satuan "bulan" hanya satu kali.
+    expect(text(doc)).toContain("Kewajiban menjaga kerahasiaan berlaku selama 24 bulan terhitung sejak 16 Oktober 2026.");
+    expect(text(doc)).not.toMatch(/bulan bulan/);
     expect(text(doc)).not.toMatch(/\{\{\w+\}\}/);
   });
 

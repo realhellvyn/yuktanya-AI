@@ -5,6 +5,15 @@ import type { RenderedDoc } from "./render";
 
 export const sha256Hex = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
+export class UnsupportedCharactersError extends Error {
+  constructor(public readonly characters: string[]) {
+    super(`PDF belum mendukung karakter: ${characters.join(" ")}`);
+    this.name = "UnsupportedCharactersError";
+  }
+}
+
+const lines = (text: string) => text.split(/\r\n|\r|\n/);
+
 export async function exportDocx(doc: RenderedDoc): Promise<Uint8Array> {
   const children: Paragraph[] = [];
   for (const b of doc.blocks) {
@@ -14,19 +23,27 @@ export async function exportDocx(doc: RenderedDoc): Promise<Uint8Array> {
     } else if (b.kind === "heading") {
       children.push(new Paragraph({ text: b.text, heading: HeadingLevel.HEADING_2 }));
     } else {
-      children.push(new Paragraph({ children: [new TextRun(b.text)], spacing: { after: 120 } }));
+      children.push(new Paragraph({ children: lines(b.text).map((l, i) => new TextRun({ text: l, break: i > 0 ? 1 : undefined })), spacing: { after: 120 } }));
     }
   }
   return new Uint8Array(await Packer.toBuffer(new Document({ sections: [{ children }] })));
 }
 
-// Font standar PDF hanya mendukung WinAnsi; karakter lain diganti '?'. Menanam font Unicode adalah pekerjaan lanjutan.
+// Font standar PDF hanya mendukung WinAnsi. Teks tidak pernah diganti diam-diam: karakter lain membuat ekspor PDF ditolak
+// dengan daftar karakternya (DOCX tetap tersedia). Menanam font Unicode adalah pekerjaan lanjutan.
 const WIN_ANSI = /^[ -~ -ÿ‘’“”–—•…€]$/;
-const safe = (s: string) => Array.from(s.replace(/\t/g, "    ")).map((ch) => (WIN_ANSI.test(ch) ? ch : "?")).join("");
+
+export function pdfLines(text: string): string[] {
+  const out = lines(text.replace(/\t/g, "    "));
+  const bad = new Set<string>();
+  for (const l of out) for (const ch of Array.from(l)) if (!WIN_ANSI.test(ch)) bad.add(ch);
+  if (bad.size > 0) throw new UnsupportedCharactersError([...bad]);
+  return out;
+}
 
 function wrap(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
   const lines: string[] = [];
-  for (const para of safe(text).split(/\r?\n/)) {
+  for (const para of pdfLines(text)) {
     let line = "";
     for (const word of para.split(" ")) {
       let w = word;
@@ -48,6 +65,17 @@ function wrap(text: string, font: PDFFont, size: number, maxWidth: number): stri
 }
 
 export async function exportPdf(doc: RenderedDoc): Promise<Uint8Array> {
+  // Periksa seluruh dokumen dulu supaya galat memuat semua karakter bermasalah sekaligus.
+  const bad = new Set<string>();
+  for (const t of [doc.label, ...doc.blocks.map((b) => b.text)]) {
+    try {
+      pdfLines(t);
+    } catch (e) {
+      if (e instanceof UnsupportedCharactersError) e.characters.forEach((c) => bad.add(c));
+      else throw e;
+    }
+  }
+  if (bad.size > 0) throw new UnsupportedCharactersError([...bad]);
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);

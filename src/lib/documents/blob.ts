@@ -58,3 +58,12 @@ export function createSupabaseBlobStore(client: SupabaseClient, bucket: string):
     },
   };
 }
+
+// Produksi wajib memakai Supabase Storage; tanpa konfigurasi lengkap gagal keras, bukan diam-diam ke disk lokal yang tidak awet.
+export function chooseBlobMode(env: { NODE_ENV?: string; NEXT_PUBLIC_SUPABASE_URL?: string; SUPABASE_SERVICE_ROLE_KEY?: string }): "supabase" | "fs" {
+  if (env.NODE_ENV !== "production") return "fs";
+  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("Produksi memerlukan konfigurasi Supabase Storage (NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY)");
+  }
+  return "supabase";
+}

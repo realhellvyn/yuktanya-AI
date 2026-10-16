@@ -40,7 +40,7 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
           {summarize(t, data).map((s, i) => (
             <div key={s.label}>
               <dt className="font-semibold">{s.label}</dt>
-              <dd>{s.value} <Link className="ml-2 text-blue-700 underline" href={`/workspace/${id}?step=${i + 1}`}>Ubah</Link></dd>
+              <dd>{s.value} <Link className="ml-2 inline-flex min-h-12 items-center text-blue-700 underline" href={`/workspace/${id}?step=${i + 1}`}>Ubah</Link></dd>
             </div>
           ))}
         </dl>
@@ -55,7 +55,7 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
             <p>Dokumen yang dibuat tidak dapat diubah. Jika perlu perubahan, Anda membuat versi baru.</p>
           </form>
         )}
-        {doc.versions.length > 0 && <Link className="text-blue-700 underline" href={`/documents/${id}`}>Lihat versi yang sudah dibuat</Link>}
+        {doc.versions.length > 0 && <Link className="inline-flex min-h-12 items-center text-blue-700 underline" href={`/documents/${id}`}>Lihat versi yang sudah dibuat</Link>}
       </main>
     );
   }

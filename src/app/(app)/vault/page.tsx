@@ -22,7 +22,7 @@ export default async function VaultPage() {
               <ul className="mt-2 space-y-1">
                 {d.versions.map((v) => (
                   <li key={v.id}>
-                    <Link className="text-blue-700 underline" href={`/documents/${d.id}?version=${v.id}`}>Versi {v.versionNo}</Link>
+                    <Link className="inline-flex min-h-12 items-center text-blue-700 underline" href={`/documents/${d.id}?version=${v.id}`}>Versi {v.versionNo}</Link>
                     {" "}· kode <span className="font-mono">{v.sha256.slice(0, 12)}</span>
                   </li>
                 ))}

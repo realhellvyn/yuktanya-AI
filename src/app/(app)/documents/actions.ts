@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { notFound, redirect } from "next/navigation";
 import { FormatError, parseDateId, parseIdr } from "@/lib/documents/format";
+import { UnsupportedCharactersError } from "@/lib/documents/export";
 import { documentsService } from "@/lib/documents/runtime";
 import { StaleRevisionError } from "@/lib/documents/service";
 import { requireUserId } from "@/lib/documents/session";
@@ -102,7 +103,10 @@ export async function exportAction(formData: FormData): Promise<void> {
   const documentId = str(formData, "documentId");
   const versionId = str(formData, "versionId");
   const format = str(formData, "format") === "PDF" ? "PDF" : "DOCX";
-  const e = await documentsService().exportVersion(userId, versionId, format);
+  const e = await documentsService().exportVersion(userId, versionId, format).catch((err: unknown) => {
+    if (err instanceof UnsupportedCharactersError) redirect(`/documents/${documentId}?version=${versionId}&error=pdf`);
+    throw err;
+  });
   if (!e) notFound();
   redirect(`/documents/${documentId}?version=${versionId}&exported=${e.exportId}`);
 }

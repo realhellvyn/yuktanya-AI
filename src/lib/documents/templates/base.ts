@@ -1,24 +1,39 @@
 import { createHash } from "node:crypto";
 import { parseDateId } from "../format";
 import { stableStringify } from "../stable";
+import { RENDER_VERSION } from "../version";
 import type { ClauseSpec, Data, FieldSpec, Template, ValidationResult } from "../types";
 
 type Def = Omit<Template, "validate" | "contentHash"> & { cross?: (d: Data) => Record<string, string> };
 
-export function templateHash(t: Pick<Template, "id" | "version" | "fields" | "clauses">): string {
+type HashSource = Pick<Template, "id" | "version" | "fields" | "clauses" | "title" | "category">;
+
+// Semua yang memengaruhi keluaran dokumen ikut di-hash, termasuk judul, kategori, dan versi aturan render.
+export function templateHashInput(t: HashSource) {
   const clauses = t.clauses.map((c: ClauseSpec) => ({ id: c.id, heading: c.heading ?? null, text: c.text, whenKey: c.whenKey ?? null }));
-  return createHash("sha256").update(stableStringify({ id: t.id, version: t.version, fields: t.fields, clauses })).digest("hex");
+  return { id: t.id, version: t.version, title: t.title, category: t.category, fields: t.fields, clauses, renderVersion: RENDER_VERSION };
+}
+
+export function templateHash(t: HashSource): string {
+  return createHash("sha256").update(stableStringify(templateHashInput(t))).digest("hex");
 }
 
 export const normalizeName = (s: unknown): string => String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
 
 const isBlank = (v: unknown) => v === undefined || v === null || (typeof v === "string" && v.trim() === "");
 
+// Karakter kontrol ditolak; teks panjang boleh berisi tab dan baris baru, teks singkat tidak.
+const CTRL_SINGLE = /[\u0000-\u001F\u007F]/;
+const CTRL_MULTI = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
+const BAD_CHARS = "Teks mengandung karakter yang tidak didukung";
+
 function checkField(f: FieldSpec, v: unknown): string | null {
   switch (f.kind) {
     case "text":
+      if (typeof v === "string" && CTRL_SINGLE.test(v)) return BAD_CHARS;
       return typeof v === "string" && v.trim().length <= 200 ? null : "Isi dengan teks singkat (maksimal 200 karakter)";
     case "longtext":
+      if (typeof v === "string" && CTRL_MULTI.test(v)) return BAD_CHARS;
       return typeof v === "string" && v.trim().length <= 2000 ? null : "Isi dengan teks (maksimal 2000 karakter)";
     case "idr":
       return typeof v === "number" && Number.isSafeInteger(v) && v > 0 ? null : "Isi dengan angka rupiah lebih dari 0";

@@ -12,14 +12,14 @@ export default async function DocumentsPage() {
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">Dokumen Saya</h1>
       {docs.length === 0 ? (
-        <p>Belum ada dokumen. Mulai dari membuat dokumen pertama Anda. <Link className="text-blue-700 underline" href="/workspace/new">Buat Dokumen</Link></p>
+        <p>Belum ada dokumen. Mulai dari membuat dokumen pertama Anda. <Link className="inline-flex min-h-12 items-center text-blue-700 underline" href="/workspace/new">Buat Dokumen</Link></p>
       ) : (
         <ul className="space-y-3">
           {docs.map((d) => (
             <li key={d.id} className="rounded-lg border border-slate-300 bg-white p-4">
               <p className="font-semibold">{d.title}</p>
               <p>{d.versionCount === 0 ? "Draf belum selesai" : `${d.versionCount} versi dibuat`}</p>
-              <Link className="text-blue-700 underline" href={d.versionCount === 0 ? `/workspace/${d.id}` : `/documents/${d.id}`}>{d.versionCount === 0 ? "Lanjutkan mengisi" : "Buka"}</Link>
+              <Link className="inline-flex min-h-12 items-center text-blue-700 underline" href={d.versionCount === 0 ? `/workspace/${d.id}` : `/documents/${d.id}`}>{d.versionCount === 0 ? "Lanjutkan mengisi" : "Buka"}</Link>
             </li>
           ))}
         </ul>

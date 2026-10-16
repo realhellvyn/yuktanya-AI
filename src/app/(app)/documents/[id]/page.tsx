@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 const LABEL = { changed: "Diubah", added: "Ditambah", removed: "Dihapus", same: "Sama" } as const;
 
-export default async function DocumentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ version?: string; against?: string; exported?: string; baru?: string }> }) {
+export default async function DocumentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ version?: string; against?: string; exported?: string; baru?: string; error?: string }> }) {
   const { id } = await params;
   const q = await searchParams;
   const userId = await requireUserId();
@@ -27,9 +27,14 @@ export default async function DocumentPage({ params, searchParams }: { params: P
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">{doc.title}</h1>
+      {q.error === "pdf" && (
+        <p role="alert" className="rounded-lg border border-red-700 bg-white p-4 text-red-800">
+          PDF belum mendukung beberapa karakter di dokumen ini. Gunakan unduhan Word (DOCX).
+        </p>
+      )}
       {q.baru && <p role="status" className="rounded-lg border border-slate-300 bg-white p-4">Dokumen berhasil dibuat. Versi ini tidak dapat diubah.</p>}
       {doc.versions.length === 0 ? (
-        <p>Belum ada versi. <Link className="text-blue-700 underline" href={`/workspace/${id}`}>Lanjutkan mengisi</Link></p>
+        <p>Belum ada versi. <Link className="inline-flex min-h-12 items-center text-blue-700 underline" href={`/workspace/${id}`}>Lanjutkan mengisi</Link></p>
       ) : (
         <VersionList documentId={id} versions={doc.versions} />
       )}
@@ -66,7 +71,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
               <button type="submit" className="min-h-12 rounded-lg border border-slate-400 bg-white px-5 font-medium">Salin menjadi dokumen baru</button>
             </form>
           </div>
-          {q.exported && <p role="status"><a className="text-blue-700 underline" href={`/api/documents/exports/${q.exported}`}>Berkas siap. Tekan di sini untuk mengunduh.</a></p>}
+          {q.exported && <p role="status"><a className="inline-flex min-h-12 items-center text-blue-700 underline" href={`/api/documents/exports/${q.exported}`}>Berkas siap. Tekan di sini untuk mengunduh.</a></p>}
         </section>
       )}
     </main>

@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { DocumentPreview } from "@/components/documents/document-preview";
 import { VersionList } from "@/components/documents/version-list";
+import { AppNav } from "@/components/app-nav";
 import { WizardStep } from "@/components/documents/wizard-step";
 import { AI_DRAFT_LABEL } from "@/lib/copy";
 import { renderDocument } from "@/lib/documents/render";
@@ -68,6 +69,22 @@ describe("DocumentPreview dan VersionList", () => {
     expect(html).toContain("aaaaaaaaaaaa");
     expect(html).not.toContain("aaaaaaaaaaaaa");
     expect(html).not.toMatch(/Verified/i);
+  });
+
+  it("setiap tautan di daftar versi dan menu punya tinggi minimal 48px (min-h-12)", () => {
+    const list = renderToStaticMarkup(VersionList({
+      documentId: "d1",
+      versions: [
+        { id: "v1", versionNo: 1, sha256: "a".repeat(64), createdAt: "2026-10-16T05:00:00.000Z" },
+        { id: "v2", versionNo: 2, sha256: "b".repeat(64), createdAt: "2026-10-16T06:00:00.000Z" },
+      ],
+    }));
+    const nav = renderToStaticMarkup(AppNav());
+    for (const html of [list, nav]) {
+      const anchors = html.match(/<a [^>]*>/g) ?? [];
+      expect(anchors.length).toBeGreaterThan(0);
+      for (const a of anchors) expect(a).toContain("min-h-12");
+    }
   });
 
   it("tidak ada kata 'cap' di keluaran komponen", () => {

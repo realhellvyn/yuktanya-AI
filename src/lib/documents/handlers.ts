@@ -1,9 +1,18 @@
 import { z } from "zod";
 import { diffRendered } from "./diff";
+import { UnsupportedCharactersError } from "./export";
 import { IntegrityError, NotFoundError, StaleRevisionError, type DocumentsService } from "./service";
 import { TemplateNotApprovedError } from "./templates/registry";
 
 export type DocDeps = { getUserId(): Promise<string | null>; service: DocumentsService; now?: () => Date };
+// Dilempar getUserId untuk sesi non-pemilik (peran profesional/admin): hanya akun pemilik biasa yang memakai dokumen.
+export class ForbiddenError extends Error {
+  constructor() {
+    super("FORBIDDEN");
+    this.name = "ForbiddenError";
+  }
+}
+
 type Params = Record<string, string>;
 type Handler = (deps: DocDeps, req: Request, params?: Params) => Promise<Response>;
 
@@ -21,7 +30,13 @@ const readJson = (req: Request) => req.json().catch(() => null);
 // Membungkus autentikasi, validasi ID, dan pemetaan error umum.
 function guarded(ids: string[], run: (userId: string, deps: DocDeps, req: Request, p: Params) => Promise<Response>): Handler {
   return async (deps, req, params = {}) => {
-    const userId = await deps.getUserId();
+    let userId: string | null;
+    try {
+      userId = await deps.getUserId();
+    } catch (e) {
+      if (e instanceof ForbiddenError) return json({ code: "FORBIDDEN" }, 403);
+      throw e;
+    }
     if (!userId) return json({ code: "AUTH_REQUIRED" }, 401);
     if (ids.some((k) => !UUID.test(params[k] ?? ""))) return notFound();
     try {
@@ -31,6 +46,7 @@ function guarded(ids: string[], run: (userId: string, deps: DocDeps, req: Reques
       if (e instanceof StaleRevisionError) return json({ code: "STALE_REVISION" }, 409);
       if (e instanceof TemplateNotApprovedError) return json({ code: "TEMPLATE_NOT_APPROVED" }, 409);
       if (e instanceof IntegrityError) return json({ code: "INTEGRITY_ERROR" }, 500);
+      if (e instanceof UnsupportedCharactersError) return json({ code: "PDF_UNSUPPORTED_CHARACTERS", characters: e.characters }, 422);
       if (e instanceof Error && e.message.includes("TOO_MANY_DRAFTS")) return json({ code: "TOO_MANY_DRAFTS" }, 429);
       throw e;
     }

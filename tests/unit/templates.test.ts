@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { nda } from "@/lib/documents/templates/nda";
 import { pks } from "@/lib/documents/templates/pks";
 import { utangPiutang } from "@/lib/documents/templates/utang-piutang";
-import { templateHash } from "@/lib/documents/templates/base";
+import { templateHash, templateHashInput } from "@/lib/documents/templates/base";
 import type { Data, Template } from "@/lib/documents/types";
 
 const valid: Record<string, { t: Template; data: Data }> = {
@@ -60,6 +60,12 @@ describe.each(Object.entries(valid))("template %s", (_name, { t, data }) => {
     expect(templateHash(changed)).not.toBe(t.contentHash());
   });
 
+  it("hash persetujuan mencakup judul, kategori, dan versi aturan render", () => {
+    expect(Object.keys(templateHashInput(t)).sort()).toEqual(["category", "clauses", "fields", "id", "renderVersion", "title", "version"]);
+    expect(templateHash({ ...t, title: t.title + "!" })).not.toBe(t.contentHash());
+    expect(templateHash({ ...t, category: t.category === "NDA" ? "PKS" : "NDA" })).not.toBe(t.contentHash());
+  });
+
   it("kategori, versi, dan status placeholder sintetis tercatat", () => {
     expect(t.version).toBe(1);
     expect(t.id).toMatch(/^[a-z-]+$/);
@@ -97,6 +103,17 @@ describe("aturan lintas field", () => {
     expect(r.ok).toBe(false);
     const feb = pks.validate({ ...valid.PKS.data, startDate: "2026-02-31" });
     expect(feb.ok).toBe(false);
+  });
+
+  it("karakter kontrol ditolak; baris baru hanya boleh di teks panjang", () => {
+    const ctl = nda.validate({ ...valid.NDA.data, disclosingParty: "Sinta\u0001Dewi" });
+    expect(ctl.ok).toBe(false);
+    const nl = nda.validate({ ...valid.NDA.data, disclosingParty: "Sinta\nDewi" });
+    expect(nl.ok).toBe(false);
+    const ok = nda.validate({ ...valid.NDA.data, confidentialInfo: "baris satu\r\nbaris dua" });
+    expect(ok.ok).toBe(true);
+    const nul = nda.validate({ ...valid.NDA.data, confidentialInfo: "a\u0000b" });
+    expect(nul.ok).toBe(false);
   });
 
   it("field di luar skema dibuang dari data hasil validasi dan teks dipangkas", () => {

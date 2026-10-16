@@ -28,7 +28,9 @@ export async function proxy(request: NextRequest) {
     const verdict = guardPath(pathname, session?.roles ?? null);
     if (!verdict.allow) {
       if (pathname.startsWith("/api/")) {
-        return NextResponse.json({ code: "AUTH_REQUIRED" }, { status: 401 });
+        return session
+          ? NextResponse.json({ code: "FORBIDDEN" }, { status: 403 })
+          : NextResponse.json({ code: "AUTH_REQUIRED" }, { status: 401 });
       }
       return NextResponse.redirect(new URL(verdict.redirect, request.url));
     }
