@@ -1,0 +1,87 @@
+{
+  "description": "Acceptance vectors for future unit/integration implementation; not an application test runner.",
+  "pricing": [
+    {
+      "plan": "FREE",
+      "standard": 50000,
+      "deep_additional": 200000,
+      "service_total": 250000
+    },
+    {
+      "plan": "MEMBER_ACTIVE_FIRST",
+      "standard": 30000,
+      "deep_additional": 150000,
+      "service_total": 180000
+    },
+    {
+      "plan": "MEMBER_ACTIVE_LATER",
+      "standard": 35000,
+      "deep_additional": 150000,
+      "service_total": 185000
+    }
+  ],
+  "quotas": [
+    {
+      "plan": "FREE",
+      "messages": 20,
+      "documents": 1,
+      "ai_reviews": 2
+    },
+    {
+      "plan": "MEMBER_ACTIVE",
+      "messages": 60,
+      "documents": 5,
+      "ai_reviews": 10
+    }
+  ],
+  "eligibility": [
+    {
+      "standard": "COMPLETED",
+      "published_actionable_notes": 1,
+      "parent_active": true,
+      "same_version": true,
+      "expect": true
+    },
+    {
+      "standard": "IN_REVIEW",
+      "published_actionable_notes": 1,
+      "parent_active": true,
+      "same_version": true,
+      "expect": false
+    },
+    {
+      "standard": "COMPLETED",
+      "published_actionable_notes": 0,
+      "parent_active": true,
+      "same_version": true,
+      "expect": false
+    },
+    {
+      "standard": "COMPLETED",
+      "published_actionable_notes": 1,
+      "parent_active": false,
+      "same_version": true,
+      "expect": false
+    },
+    {
+      "standard": "COMPLETED",
+      "published_actionable_notes": 1,
+      "parent_active": true,
+      "same_version": false,
+      "expect": false
+    }
+  ],
+  "enhanced_negative_guards": [
+    "PAYMENT_ONLY",
+    "NO_EXTRA_WORK",
+    "UNAUTHORIZED_REVIEWER",
+    "MATERIAL_FAIL",
+    "MATERIAL_UNKNOWN",
+    "MISSING_EVIDENCE",
+    "UNRESOLVED_MATERIAL_NOTE",
+    "NO_ATTESTATION",
+    "STALE_HASH",
+    "REVOKED_PARENT",
+    "UNAPPROVED_RUBRIC"
+  ]
+}

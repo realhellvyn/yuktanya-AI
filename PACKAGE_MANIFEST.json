@@ -1,0 +1,181 @@
+{
+  "version": "8",
+  "date": "2026-10-16",
+  "files": [
+    {
+      "path": ".env.example",
+      "sha256": "c4203defb107bee1c8240986dfc6194ec61047ac15d49e0b609d46fc2e42b801",
+      "bytes": 455
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "21308b56e9cb1a04987f5fc03de75123e0fafd9957d122ec8937c2ab7bc9d391",
+      "bytes": 73
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "7806b1139f3ec933ffdb8356f575ca9e50fe89a6ad6c7cba27458d8591db5a4d",
+      "bytes": 3341
+    },
+    {
+      "path": "docs/ADMIN_DASHBOARD.md",
+      "sha256": "f0afae8c9db99a83ecad8267e28d321c34cdf8d92144fa4c53fe4362d0737e58",
+      "bytes": 9306
+    },
+    {
+      "path": "docs/AI_FAIR_USAGE.md",
+      "sha256": "f4d334db64969d8a0a799c9eba0a13b7222a426c2dda7f4ef59bf1f21bfc8399",
+      "bytes": 5936
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "sha256": "bc351cf70ee6a73bdcebdb62a82bef5c0d5b8737376f1f035177fc8da99da84b",
+      "bytes": 7846
+    },
+    {
+      "path": "docs/AUDIT_REPORT_v6.md",
+      "sha256": "40b2c66921841bd525ba14dceb8d13bb352550f1ad33e852cad3419c987edfd3",
+      "bytes": 2517
+    },
+    {
+      "path": "docs/AUDIT_REPORT_v7.md",
+      "sha256": "dbf0f67cda615e10e2593372f8f6e35b2c993ce3f345e9fdd6fe583247c32e6e",
+      "bytes": 1408
+    },
+    {
+      "path": "docs/AUDIT_REPORT_v8.md",
+      "sha256": "783b9e51213ac6d52955d0ac98a41802e4aaf7488b749645845d392c1af57130",
+      "bytes": 4013
+    },
+    {
+      "path": "docs/DATA_MODEL.md",
+      "sha256": "15e629fc3c198cfc18eccdee8636b330fe9431de10ed863ef01fd1618618b1fb",
+      "bytes": 10260
+    },
+    {
+      "path": "docs/DECISIONS_AND_PRECEDENCE.md",
+      "sha256": "f389b3274fd205c726134dde5f8e4c393e291761438b79cf04ac4e8031763f16",
+      "bytes": 3555
+    },
+    {
+      "path": "docs/DEEP_REVIEW.md",
+      "sha256": "6a78b751a8a843f5d1a29ba54598624dd529a2aa4b6976940421faa23bb69103",
+      "bytes": 7253
+    },
+    {
+      "path": "docs/DELIVERY_PLAN.md",
+      "sha256": "a5a95b872cc77a8c8320398e53a0283aaf712f7d8886f3b0deda9e0ec7b6c1eb",
+      "bytes": 5760
+    },
+    {
+      "path": "docs/DESIGN_SYSTEM.md",
+      "sha256": "f18a6b4b5e58b418721e770da22bd3fcbe886ee46531f0d421c154d03a32ffba",
+      "bytes": 5073
+    },
+    {
+      "path": "docs/IMPLEMENTATION_GUIDE.md",
+      "sha256": "6b6974e5ff2fd955e06d60d9db158dde61e48e2408209f09968ff951248a9e29",
+      "bytes": 3801
+    },
+    {
+      "path": "docs/OPEN_QUESTIONS.md",
+      "sha256": "67fa0b125672c33efa08432ae8601737ec5ee4d04eb70d9c75882b07e991b6c9",
+      "bytes": 3047
+    },
+    {
+      "path": "docs/PARTNER_DASHBOARD.md",
+      "sha256": "8877d7a019d08aa43ffb62acef96dadd1f74754e1dd025b4a92afb7330c98291",
+      "bytes": 2441
+    },
+    {
+      "path": "docs/PERMISSIONS.md",
+      "sha256": "f7169e1505b6f58f8bf8aef7d953b548768f6acaf7e6700e2331ede3b2544b69",
+      "bytes": 2252
+    },
+    {
+      "path": "docs/PRODUCT_SPEC.md",
+      "sha256": "e4fb5b3738ec9d7bc417ea71f03a42797964e13a5ad27fb6470f07d7de2d170a",
+      "bytes": 5925
+    },
+    {
+      "path": "docs/SECURITY_AND_LEGAL.md",
+      "sha256": "baf4cf04a1efc50a267ab8244ca2a58518ba129a56b892ecf5d2eb22fd259f19",
+      "bytes": 5447
+    },
+    {
+      "path": "docs/SOURCE_INVENTORY.json",
+      "sha256": "78be33156921f9eb7ac392f25aef2581d8982ef6af26c2c49c5eff373c5a921d",
+      "bytes": 4182
+    },
+    {
+      "path": "docs/TEST_STRATEGY.md",
+      "sha256": "f51b8a92c2e57f4a3087f4d1ab7debaf2454c66f3dd3b524082992b66e2f3936",
+      "bytes": 2404
+    },
+    {
+      "path": "docs/USABILITY_TEST_PLAN.md",
+      "sha256": "dfee22c8be3d226ea1466541cd568dc903006768334a0509c4544ce3dd926504",
+      "bytes": 2636
+    },
+    {
+      "path": "docs/USER_DASHBOARD.md",
+      "sha256": "1617ae8e01f9192d608d0dba59c2523c2617744ce32f38073e70605ea53c5c39",
+      "bytes": 4947
+    },
+    {
+      "path": "docs/USER_FLOWS.md",
+      "sha256": "e08568c9938f07753dbf1faafb72d79cd37e52dbc6ab59867ae256eaae687838",
+      "bytes": 4635
+    },
+    {
+      "path": "docs/UX_SPEC.md",
+      "sha256": "7d28194e3e2b92d3c79fc529c4dae234d5ff1f2a5e4c10cfadeac000a2445b5b",
+      "bytes": 3733
+    },
+    {
+      "path": "docs/VERIFICATION_POLICY.md",
+      "sha256": "1461453d781a6ab980391c820e9a625bd3ca1fc0b5eff8fbe6f2673325d97772",
+      "bytes": 6254
+    },
+    {
+      "path": "docs/WIREFRAMES.md",
+      "sha256": "f1d40196e4e450124342f299541e9035676a1918ae29c4a9582c8dc618c97122",
+      "bytes": 6257
+    },
+    {
+      "path": "docs/WORKFLOWS.md",
+      "sha256": "c8f9460e198d5994f834247e8db3ecc787350e27a54469ff2ff14f4152280791",
+      "bytes": 6246
+    },
+    {
+      "path": "prompts/CLAUDE_CODE_START.md",
+      "sha256": "dc5d578d0ace91712c4b85fe4c20ed19efc35cb5ff2f17ae61ca4ce05f443ddb",
+      "bytes": 2105
+    },
+    {
+      "path": "README.md",
+      "sha256": "c4d67044ac268d1459ddc0f7ac84c703f2cecb65dd9e45a72d3db87adda32abf",
+      "bytes": 3347
+    },
+    {
+      "path": "scripts/validate_package.py",
+      "sha256": "353d9d7e5498fcf4805a4fa093776e393517b27854d5125d9ec1743aa34251af",
+      "bytes": 635
+    },
+    {
+      "path": "supabase/migrations/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "tests/e2e/SCENARIOS.md",
+      "sha256": "34aa27db65335b65dd41a2c20099213fb557c14f1fd25f47751dd3a6e73c2cde",
+      "bytes": 3789
+    },
+    {
+      "path": "tests/policy-vectors.json",
+      "sha256": "87033467e17919f60d8c624483cb905229794492e1d248823757cf360f4b3d80",
+      "bytes": 1981
+    }
+  ]
+}

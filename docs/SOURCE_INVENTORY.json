@@ -1,0 +1,131 @@
+{
+  "source_archive": "Yuktanya_Claude_Code_Handoff_v7_Verification.zip",
+  "sha256": "b9fd5759664ab0abcf16aec6c18ad1b7c99169871b33db54acfb2d8f72ef60da",
+  "files": [
+    {
+      "path": ".env.example",
+      "sha256": "c4203defb107bee1c8240986dfc6194ec61047ac15d49e0b609d46fc2e42b801",
+      "bytes": 455
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "21308b56e9cb1a04987f5fc03de75123e0fafd9957d122ec8937c2ab7bc9d391",
+      "bytes": 73
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "959700b161c2e9ccd17edc234a4e8e91358d67aef377a5aa628352e5e350a677",
+      "bytes": 2548
+    },
+    {
+      "path": "docs/ADMIN_DASHBOARD.md",
+      "sha256": "d4af665a8a038ebf7c8e397915f876a09bfebf304051522df00525751d52cd55",
+      "bytes": 8199
+    },
+    {
+      "path": "docs/AI_FAIR_USAGE.md",
+      "sha256": "d5bce2f04933e1a4049aaf1fa25cea81a2fec77f87d5d3ed2cef649cd7216e9c",
+      "bytes": 5557
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "sha256": "e628e8049060db1bbf1d896020e559b62c1476c773e9cffefeb9aacb4909b48f",
+      "bytes": 6432
+    },
+    {
+      "path": "docs/AUDIT_REPORT_v6.md",
+      "sha256": "84a4379d9b2ed2ffce0fdf0b48f09efc7d3333f0ff7474bc63dcac943d55e3e4",
+      "bytes": 2359
+    },
+    {
+      "path": "docs/AUDIT_REPORT_v7.md",
+      "sha256": "52a6012120195fd60d10e198aebaec3ab33a9c85aa4353f198b3aecf29790cf8",
+      "bytes": 1261
+    },
+    {
+      "path": "docs/DATA_MODEL.md",
+      "sha256": "ad565020f64f9fce6e1c7e9c53c3570f73016272002ca183aca71cb065b48a47",
+      "bytes": 7198
+    },
+    {
+      "path": "docs/DECISIONS_AND_PRECEDENCE.md",
+      "sha256": "194b2a85162d65f5c0ac960db964157aba9bdd6e44edc3a90b9f5054cc4218e0",
+      "bytes": 3331
+    },
+    {
+      "path": "docs/DELIVERY_PLAN.md",
+      "sha256": "08bfc93a8d63d0856e69f8a15cbc5e5a5d31ac4883959c614a3da5aa85608cff",
+      "bytes": 5678
+    },
+    {
+      "path": "docs/DESIGN_SYSTEM.md",
+      "sha256": "c551ccc7a7d545c68298d1795ea2653683c21ba63a80275ea52555730c3bf819",
+      "bytes": 5135
+    },
+    {
+      "path": "docs/OPEN_QUESTIONS.md",
+      "sha256": "53a0c03148d9b5484e268148a2c10c650498ea4b2d5ed10f23764da5f410c29b",
+      "bytes": 2936
+    },
+    {
+      "path": "docs/PRODUCT_SPEC.md",
+      "sha256": "5caad7706b5913e40dcd3be4d41826f614c6cc8aca6e8bc592c05dbf867d7c19",
+      "bytes": 5965
+    },
+    {
+      "path": "docs/SECURITY_AND_LEGAL.md",
+      "sha256": "b8ba3875178331c3c0f7bc12a46cf79fd80a1d1137ae65a68265ab38e66fb519",
+      "bytes": 5230
+    },
+    {
+      "path": "docs/USABILITY_TEST_PLAN.md",
+      "sha256": "3ae7bb8b67ecb07868ec7c6820c782b85f632f01e4ecec8927cd9aff4f1aa17d",
+      "bytes": 2912
+    },
+    {
+      "path": "docs/USER_DASHBOARD.md",
+      "sha256": "bfc0bbdf136c6011332ac73cce2dbdb83cee9e6040d5f4a52e474b4ac48f24cd",
+      "bytes": 4480
+    },
+    {
+      "path": "docs/USER_FLOWS.md",
+      "sha256": "4f12cde6f4306abe40d320db24d6842abc977dfcfa83f8048baf61883b9bdeca",
+      "bytes": 3582
+    },
+    {
+      "path": "docs/UX_SPEC.md",
+      "sha256": "b2dfceb1d114bbf7b36f1022d5b989c5e96e561ceb29efbf3507b6d623410666",
+      "bytes": 3733
+    },
+    {
+      "path": "docs/VERIFICATION_POLICY.md",
+      "sha256": "d96e1147ba211098d5aa72beb03a56c0956b3d0b161a684af8a2578c3286a691",
+      "bytes": 6172
+    },
+    {
+      "path": "docs/WIREFRAMES.md",
+      "sha256": "014396ba371422093f11c828a3cd4cd7f1e4996e03c6d0d100c13245d6c8ca5b",
+      "bytes": 5910
+    },
+    {
+      "path": "docs/WORKFLOWS.md",
+      "sha256": "9844679689bc286a413c3fbf7267a56285799e9c65cb5114e85266cd9954fbc4",
+      "bytes": 6009
+    },
+    {
+      "path": "prompts/CLAUDE_CODE_START.md",
+      "sha256": "9a01655650c7745ccca0d3bc978db2873fff11943ef18d2f515cf4e2221a2570",
+      "bytes": 4044
+    },
+    {
+      "path": "README.md",
+      "sha256": "f502b18c9d7149bdfd6d71f6b7578e314fdc2efc56e6403eefbf4944f3491e2a",
+      "bytes": 5548
+    },
+    {
+      "path": "supabase/migrations/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ]
+}
