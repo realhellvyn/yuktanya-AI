@@ -30,6 +30,14 @@ pengacara/praktisi hukum, dan review mendalam. Dihitung juga sebagai rasio antar
   luar lingkup pembangunan sistem ini. Sistem dibuat netral terhadapnya (§5.4) dan statusnya
   dicatat sebagai **[UNKNOWN]** (§12).
 
+### Glosarium istilah
+
+| Istilah | Arti |
+|---|---|
+| "Cap" (istilah internal pemilik) | Tiga jenis catatan verifikasi: `AI` (Yuktanya AI Verified), `LEGAL` (Yuktanya Legal Verified, hasil Dengan/Tanpa Legal Note), `LEGAL_ENHANCED` (Yuktanya Legal Verified — Enhanced) |
+| Teks ke pengguna | Pakai nama persis v8 atau kata "verifikasi". Kata "cap" tidak dipakai di UI/pemasaran sebelum disetujui partner, karena dapat terbaca sebagai stempel resmi (`VERIFICATION_POLICY.md`, `DESIGN_SYSTEM.md`) |
+| Tanpa verifikasi | Review `INCONCLUSIVE`/`DECLINED`/`INCOMPLETE`, dan setiap versi yang diedit setelah diperiksa |
+
 ## 3. Arsitektur tambahan
 
 Semua dalam modular monolith v8. Cross-row invariant dijaga transaksi/RPC Supabase.
