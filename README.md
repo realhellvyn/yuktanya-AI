@@ -55,3 +55,13 @@ Exclusive partner firm, Legal Vault, aksesibilitas pengguna awam/orang tua, tanp
 subscription. Live e-sign/e-meterai, notarial workflows dan advanced RAG di luar MVP.
 Gateway endpoint/privasi upstream, hosting komersial, legal/professional signoff, refund,
 renewal, scope/SLA dan final rubric tetap membutuhkan validasi sebelum produksi.
+
+## Menjalankan lokal (Fase 0–1)
+Butuh Node 22 dan Postgres 16 (server tes DB memakai `initdb` dari `/usr/lib/postgresql/16/bin`).
+```
+npm ci
+npm run check     # lint + typecheck + unit + DB (tanpa jaringan, tanpa data nyata)
+npm run dev
+```
+CI GitHub hanya manual (`workflow_dispatch`) sampai kuota Actions reset (~1 Nov 2026).
+Ketersediaan Postgres 16 di runner GitHub belum diverifikasi; cek pada run manual pertama.
