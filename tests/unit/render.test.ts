@@ -87,7 +87,7 @@ describe("renderDocument", () => {
 });
 
 describe("renderPartial (pratinjau bertahap)", () => {
-  it("klausul yang semua isiannya sudah ada ditampilkan, sisanya ditandai belum lengkap", async () => {
+  it("klausul yang semua isiannya ada ditandai lengkap; yang belum, nilai yang ada tetap tampil dan kekosongan ditandai", async () => {
     const { renderPartial } = await import("@/lib/documents/render");
     const rows = renderPartial(nda, { disclosingParty: "Sinta Dewi", receivingParty: "Budi", signingDate: "2026-10-16" });
     const parties = rows.find((r) => r.id === "parties")!;
@@ -96,7 +96,11 @@ describe("renderPartial (pratinjau bertahap)", () => {
     expect(parties.text).toContain("16 Oktober 2026");
     const info = rows.find((r) => r.id === "info")!;
     expect(info.complete).toBe(false);
-    expect(info.text).toBe("");
+    expect(info.text).toContain("[Informasi apa yang dirahasiakan belum diisi]");
+    const partial = renderPartial(nda, { disclosingParty: "Sinta Dewi", receivingParty: "Budi" }).find((r) => r.id === "parties")!;
+    expect(partial.complete).toBe(false);
+    expect(partial.text).toContain("Sinta Dewi");
+    expect(partial.text).toContain("[Tanggal perjanjian dibuat belum diisi]");
   });
 
   it("klausul opsional tanpa isian tidak muncul", async () => {

@@ -1,9 +1,7 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
-import { assistDeps, evidenceDeps, reminderService, shareService } from "@/lib/vault/runtime";
-import { handleAssist } from "@/lib/ai/assist";
+import { evidenceDeps, reminderService, shareService } from "@/lib/vault/runtime";
 import { requireUserId } from "@/lib/documents/session";
 import { NotFoundError } from "@/lib/documents/service";
 import { buildEvidencePack, RateLimitedError } from "@/lib/vault/evidence";
@@ -72,20 +70,4 @@ export async function buildPackAction(formData: FormData): Promise<void> {
     if (e instanceof FeatureNotAvailableError) redirect(panel(documentId, versionId, "&notice=feature"));
     throw e;
   }
-}
-
-// Bantuan AI: hasil dikembalikan sebagai kode ringkas, bukan teks bebas.
-export async function assistAction(formData: FormData): Promise<void> {
-  await requireUserId();
-  const id = str(formData, "documentId");
-  const res = await handleAssist(
-    assistDeps(),
-    new Request("http://internal/assist", { method: "POST", headers: { "content-type": "application/json", "idempotency-key": randomUUID() }, body: JSON.stringify({ story: str(formData, "story") }) }),
-    { id },
-  );
-  const body = (await res.json().catch(() => ({}))) as { applied?: string[]; fallback?: string; code?: string };
-  let code = "down";
-  if (res.status === 200) code = body.fallback ? "manual" : (body.applied?.length ?? 0) > 0 ? "ok" : "none";
-  else if (res.status === 429) code = body.code === "AI_BUSY" || body.code === "TOO_MANY_ATTEMPTS" ? "busy" : "quota";
-  redirect(`/workspace/${id}?step=ringkasan&assist=${code}`);
 }

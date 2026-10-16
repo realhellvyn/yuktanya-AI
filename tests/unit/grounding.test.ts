@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groundSuggestions } from "@/lib/ai/assist";
+import { groundSuggestions } from "@/lib/ai/grounding";
 import { nda } from "@/lib/documents/templates/nda";
 import { utangPiutang } from "@/lib/documents/templates/utang-piutang";
 

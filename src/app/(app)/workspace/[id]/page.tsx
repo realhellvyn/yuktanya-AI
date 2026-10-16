@@ -1,32 +1,36 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { DocumentPreview } from "@/components/documents/document-preview";
-import { WizardStep } from "@/components/documents/wizard-step";
+import { ChatPanel } from "@/components/documents/chat-panel";
 import { PartialPreview } from "@/components/documents/partial-preview";
-import { StepIndicator } from "@/components/ui/step-indicator";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { renderDocument, renderPartial } from "@/lib/documents/render";
+import { StepIndicator } from "@/components/ui/step-indicator";
+import { listMessages } from "@/lib/documents/conversation";
+import { getPool } from "@/lib/db";
+import { renderPartial } from "@/lib/documents/render";
 import { documentsService } from "@/lib/documents/runtime";
 import { requireUserId } from "@/lib/documents/session";
 import { TEMPLATES } from "@/lib/documents/templates/registry";
-import { buildSteps, nextMissing, progress, summarize } from "@/lib/documents/wizard";
-import { ASSIST_NOTICES } from "@/lib/vault/messages";
-import { freezeAction, saveStepAction } from "../../documents/actions";
-import { assistAction } from "../../documents/vault-actions";
-import { AssistBox } from "@/components/documents/assist-box";
-import { StoryFirst } from "@/components/documents/story-first";
+import { missingRequired, progress, summarize } from "@/lib/documents/wizard";
+import { CHAT_NOTICES } from "@/lib/vault/messages";
+import { freezeAction, sendMessageAction } from "../../documents/actions";
 
 // Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
 export const dynamic = "force-dynamic";
 
-const STORY_EXAMPLE = {
-  UTANG_PIUTANG: "Saya Sinta Dewi meminjamkan Rp5.000.000 kepada Budi Santoso dan akan dikembalikan pada 16 April 2027.",
-  NDA: "Saya Sinta Dewi ingin menjaga rahasia daftar pelanggan dari Budi Santoso selama 12 bulan.",
-  PKS: "Saya Sinta Dewi dan Budi Santoso ingin bekerja sama membuka kedai kopi selama 24 bulan.",
-} as const;
+const GREETING: Record<string, string> = {
+  UTANG_PIUTANG: "Halo! Ceritakan saja kebutuhan Anda, misalnya siapa yang meminjamkan, siapa yang meminjam, berapa jumlahnya, dan kapan dikembalikan. Saya akan menanyakan hal yang belum jelas, satu per satu.",
+  NDA: "Halo! Ceritakan saja kebutuhan Anda, misalnya siapa yang membagikan informasi rahasia, siapa penerimanya, dan informasi apa yang dijaga. Saya akan menanyakan hal yang belum jelas, satu per satu.",
+  PKS: "Halo! Ceritakan saja kebutuhan Anda, misalnya siapa saja pihak yang bekerja sama, kerja sama apa, dan berapa lama. Saya akan menanyakan hal yang belum jelas, satu per satu.",
+};
+const PLACEHOLDER: Record<string, string> = {
+  UTANG_PIUTANG: "Contoh: Saya Sinta Dewi meminjamkan Rp5.000.000 kepada Budi Santoso, dikembalikan 16 April 2027.",
+  NDA: "Contoh: Saya Sinta Dewi ingin menjaga rahasia daftar pelanggan dari Budi Santoso selama 12 bulan.",
+  PKS: "Contoh: Saya Sinta Dewi dan Budi Santoso ingin bekerja sama membuka kedai kopi selama 24 bulan.",
+};
 
-export default async function WorkspacePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ step?: string; error?: string; assist?: string }> }) {
+export default async function WorkspacePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ notice?: string; error?: string }> }) {
   const { id } = await params;
   const q = await searchParams;
   const userId = await requireUserId();
@@ -34,80 +38,57 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
   if (!doc) notFound();
   const t = TEMPLATES[doc.category];
   const data = doc.draft.data;
-  const missing = nextMissing(t, data);
-  const showSummary = q.step === "ringkasan" || (!q.step && missing === null);
+  const messages = await listMessages(getPool(), userId, id);
+  const missing = missingRequired(t, data);
+  const ready = missing.length === 0;
   const bar = progress(t, data);
+  const preview = <PartialPreview title={t.title} rows={renderPartial(t, data)} />;
+  const notice = q.notice && CHAT_NOTICES[q.notice];
+  const hasUnanswered = messages.at(-1)?.role === "user" && !messages.at(-1)?.answered;
 
-  if (showSummary) {
-    let preview = null;
-    try {
-      preview = renderDocument(t, data, "DRAFT");
-    } catch {
-      preview = null;
-    }
-    return (
-      <main className="max-w-3xl space-y-6">
-        <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">Periksa jawaban Anda</h1>
-        {q.assist && ASSIST_NOTICES[q.assist] && <p role="status" className="rounded-xl border border-line bg-white p-4">{ASSIST_NOTICES[q.assist]}</p>}
-        <AssistBox documentId={id} action={assistAction} />
-        {q.error && <p role="alert" className="rounded-lg border border-red-700 bg-white p-4 text-red-800">{q.error}</p>}
-        <dl className="space-y-3 rounded-xl border border-line bg-white p-4">
-          {summarize(t, data).map((s, i) => (
-            <div key={s.label}>
-              <dt className="font-semibold">{s.label}</dt>
-              <dd>{s.value} <Link className="ml-2 inline-flex min-h-12 items-center text-brand-dark underline" href={`/workspace/${id}?step=${i + 1}`}>Ubah</Link></dd>
-            </div>
-          ))}
-        </dl>
-        {preview ? <DocumentPreview doc={preview} /> : <p>Lengkapi dulu pertanyaan yang wajib diisi untuk melihat pratinjau.</p>}
-        {missing ? (
-          <Link className="inline-flex min-h-12 items-center rounded-lg bg-brand px-6 font-semibold text-white" href={`/workspace/${id}?step=${missing.index}`}>Lanjutkan mengisi</Link>
-        ) : (
-          <form action={freezeAction} className="space-y-3">
-            <input type="hidden" name="documentId" value={id} />
-            <input type="hidden" name="token" value={randomUUID()} />
-            <button type="submit" className="min-h-12 w-full rounded-lg bg-brand px-6 text-lg font-semibold text-white">Buat dokumen</button>
-            <p>Dokumen yang dibuat tidak dapat diubah. Jika perlu perubahan, Anda membuat versi baru.</p>
-          </form>
-        )}
-        {doc.versions.length > 0 && <Link className="inline-flex min-h-12 items-center text-brand-dark underline" href={`/documents/${id}`}>Lihat versi yang sudah dibuat</Link>}
-      </main>
-    );
-  }
-
-  if (!q.step && bar.done === 0) {
-    return (
-      <main className="max-w-2xl space-y-5">
-        <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-3xl">{t.title}</h1>
-        {q.assist && ASSIST_NOTICES[q.assist] && <p role="status" className="rounded-xl border border-line bg-white p-4">{ASSIST_NOTICES[q.assist]}</p>}
-        <StoryFirst documentId={id} action={assistAction} manualHref={`/workspace/${id}?step=1`} example={STORY_EXAMPLE[doc.category]} />
-      </main>
-    );
-  }
-  const steps = buildSteps(t);
-  const index = Math.min(Math.max(Number(q.step) || missing?.index || 1, 1), steps.length);
-  const step = steps[index - 1];
-  const rows = renderPartial(t, data);
-  const preview = <PartialPreview title={t.title} rows={rows} />;
   return (
     <main className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-8">
       <div className="max-w-2xl space-y-5">
         <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-3xl">{t.title}</h1>
-        <StepIndicator current={index} total={steps.length} percent={bar.percent} />
-        {q.assist && ASSIST_NOTICES[q.assist] && <p role="status" className="rounded-xl border border-line bg-white p-4">{ASSIST_NOTICES[q.assist]}</p>}
-        <Card>
-          <WizardStep
-            step={step}
-            documentId={id}
-            revision={doc.draft.revision}
-            action={saveStepAction}
-            value={data[step.field.key]}
-            error={q.error}
-            backHref={index > 1 ? `/workspace/${id}?step=${index - 1}` : undefined}
-          />
-        </Card>
-        {bar.done > 0 && <p role="status" className="text-sm font-semibold text-success">✓ Tersimpan. {bar.done} dari {bar.total} pertanyaan wajib sudah terisi.</p>}
-        <AssistBox documentId={id} action={assistAction} />
+        <StepIndicator current={bar.done} total={bar.total} percent={bar.percent} label={`${bar.done} dari ${bar.total} kolom wajib terisi`} />
+        {notice && <p role="alert" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold">{notice}</p>}
+        {q.error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{q.error}</p>}
+
+        {ready && (
+          <Card aria-label="Dokumen siap dibuat" className="space-y-4 border-green-300 bg-green-50">
+            <h2 className="text-xl font-bold text-navy">Dokumen siap dibuat</h2>
+            <details>
+              <summary className="inline-flex min-h-12 cursor-pointer items-center font-semibold text-brand-dark">Lihat ringkasan jawaban</summary>
+              <dl className="mt-2 space-y-2">
+                {summarize(t, data).map((s) => (
+                  <div key={s.label}>
+                    <dt className="text-sm font-semibold text-muted">{s.label}</dt>
+                    <dd className="font-medium">{s.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+            <p>Ada yang perlu diubah? Tulis saja di percakapan di bawah, misalnya “ganti nama pihak kedua jadi …”.</p>
+            <form action={freezeAction} className="space-y-3">
+              <input type="hidden" name="documentId" value={id} />
+              <input type="hidden" name="token" value={randomUUID()} />
+              <Button type="submit" className="w-full text-lg">Buat dokumen</Button>
+              <p className="text-sm text-muted">Dokumen yang dibuat tidak dapat diubah. Jika perlu perubahan, Anda membuat versi baru.</p>
+            </form>
+          </Card>
+        )}
+
+        <ChatPanel
+          documentId={id}
+          lines={messages.map((m) => ({ id: m.id, role: m.role, content: m.content }))}
+          greeting={GREETING[doc.category]}
+          action={sendMessageAction}
+          sendKey={randomUUID()}
+          retryKey={randomUUID()}
+          hasUnanswered={Boolean(hasUnanswered)}
+          placeholder={PLACEHOLDER[doc.category]}
+        />
+        {doc.versions.length > 0 && <Link className="inline-flex min-h-12 items-center font-semibold text-brand-dark underline" href={`/documents/${id}`}>Lihat versi yang sudah dibuat</Link>}
         <details className="rounded-2xl border border-line bg-white p-4 lg:hidden">
           <summary className="inline-flex min-h-12 cursor-pointer items-center font-semibold text-brand-dark">Lihat draf dokumen</summary>
           <div className="mt-3">{preview}</div>

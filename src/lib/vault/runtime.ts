@@ -9,7 +9,7 @@ import { createMockEmailSender, type EmailSender } from "./outbox";
 import { createRateLimiter } from "./rate-limit";
 import { createPgReminderService } from "./reminders";
 import { createPgShareService } from "./share";
-import type { AssistDeps } from "@/lib/ai/assist";
+import type { ChatTurnDeps } from "@/lib/ai/chat-turn";
 import type { AiReviewDeps } from "@/lib/ai/prereview";
 import { createPgVerificationService } from "@/lib/verification/service";
 import { getSessionRoles } from "@/lib/supabase/server";
@@ -29,8 +29,8 @@ export const emailSender = (): EmailSender | null => (process.env.NODE_ENV === "
 export const publicLimiter = createRateLimiter({ limit: 30, windowMs: 60_000 });
 export const ackLimiter = createRateLimiter({ limit: 10, windowMs: 60_000 });
 
-const assistInflight = new Set<string>();
-export function assistDeps(): AssistDeps {
+const chatInflight = new Set<string>();
+export function chatTurnDeps(): ChatTurnDeps {
   return {
     getUserId: async () => {
       const s = await getSessionRoles();
@@ -40,15 +40,16 @@ export function assistDeps(): AssistDeps {
     },
     service: documentsService(),
     store: createPgUsageStore(getPool()),
+    pool: getPool(),
     chat,
-    inflight: assistInflight,
+    inflight: chatInflight,
     attempts: createPgAttemptLimiter(getPool()),
   };
 }
 
 const aiReviewInflight = new Set<string>();
 export function aiReviewDeps(): AiReviewDeps {
-  const base = assistDeps();
+  const base = chatTurnDeps();
   return {
     getUserId: base.getUserId,
     service: documentsService(),

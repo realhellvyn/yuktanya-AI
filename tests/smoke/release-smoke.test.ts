@@ -1,7 +1,7 @@
 // Smoke rilis (tanpa browser, tanpa jaringan). Dijalankan sekali sebelum pilot/rilis lewat `npm run test:smoke`, bukan bagian `npm run check`.
 // Wajib: E01, E02, E03, E08, E13, E14. Ditambahkan karena wajib sebelum flag Deep/Enhanced dinyalakan: E04, E05, E09, E10, E11.
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { handleAssist } from "@/lib/ai/assist";
+import { handleChatTurn } from "@/lib/ai/chat-turn";
 import { GatewayError } from "@/lib/ai/gateway";
 import { createChatCache, handleChat } from "@/lib/ai/handle-chat";
 import { handleAiReview } from "@/lib/ai/prereview";
@@ -56,7 +56,7 @@ describe("E01 login sebelum AI", () => {
   it("anonim ditolak di semua pintu AI dan gateway tidak dipanggil; rute AI terlindungi di proxy", async () => {
     const chat = vi.fn(async () => ({ text: "x", requestId: "r" }));
     const c1 = await handleChat({ getUserId: async () => null, store, chat: chat as never, recordMetric: async () => {}, cache: createChatCache(), inflight: new Set() }, post({ messages: [{ role: "user", content: "halo" }] }));
-    const c2 = await handleAssist({ getUserId: async () => null, service: kit.docs, store, chat: chat as never, inflight: new Set() }, post({ story: "x".repeat(30) }), { id: ID });
+    const c2 = await handleChatTurn({ getUserId: async () => null, service: kit.docs, store, pool, chat: chat as never, inflight: new Set() }, post({ message: "x".repeat(30) }), { id: ID });
     const c3 = await handleAiReview({ getUserId: async () => null, service: kit.docs, store, chat: chat as never, pool, verification, inflight: new Set(), enabled: () => true }, post({ consent: true }), { versionId: ID });
     expect([c1.status, c2.status, c3.status]).toEqual([401, 401, 401]);
     expect(chat).not.toHaveBeenCalled();

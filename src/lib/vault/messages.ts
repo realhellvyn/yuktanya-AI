@@ -20,11 +20,12 @@ export const PANEL_NOTICES: Record<string, string> = {
   offsets: "Pilih 1 sampai 5 hari pengingat.",
 };
 
-export const ASSIST_NOTICES: Record<string, string> = {
-  ok: "AI mengisi sebagian kolom dari cerita Anda. Periksa setiap jawaban sebelum membuat dokumen.",
-  none: "AI tidak menemukan isian yang tertulis jelas di cerita Anda. Silakan isi satu per satu.",
-  manual: "AI belum dapat membaca cerita Anda. Silakan isi satu per satu; kuota Anda tidak terpakai.",
-  quota: "Batas pesan AI hari ini sudah tercapai. Anda tetap dapat mengisi satu per satu.",
+// Kode ringkas dari giliran percakapan → pesan tetap; teks dari URL tidak pernah ditampilkan.
+export const CHAT_NOTICES: Record<string, string> = {
+  quota: "Batas pesan AI hari ini sudah tercapai. Percakapan Anda tetap tersimpan dan bisa dilanjutkan besok mulai pukul 00.00 WIB.",
   busy: "Masih ada permintaan AI yang berjalan. Coba lagi sebentar.",
-  down: "Layanan AI sedang sibuk. Jawaban Anda aman; coba lagi atau isi satu per satu.",
+  down: "Layanan AI sedang sibuk. Pesan Anda sudah tersimpan dan jatah AI Anda tidak terpakai. Tekan Coba lagi.",
+  stale: "Draf berubah di tab lain. Muat ulang halaman, lalu kirim pesan lagi.",
+  limit: "Terlalu banyak percobaan dalam waktu singkat. Tunggu satu menit, lalu coba lagi.",
+  incomplete: "Masih ada kolom wajib yang belum terisi. Lanjutkan percakapan agar lengkap.",
 };

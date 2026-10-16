@@ -71,26 +71,40 @@ export function startFakeSupabase({ databaseUrl, port }) {
   return new Promise((r) => server.listen(port, "127.0.0.1", () => r({ server, close: () => { server.close(); return pool.end(); } })));
 }
 
-// LLM palsu (pengganti FreeLLMAPI): menjawab JSON dari cerita pengguna lewat aturan sederhana, dan sengaja menambahkan
-// satu nilai karangan (disputeCity) agar lapisan "hanya yang tertulis di cerita" teruji. Mencatat model yang diminta.
+// LLM palsu (pengganti FreeLLMAPI): menjawab JSON dari pesan terakhir pengguna lewat aturan sederhana, dan sengaja
+// menambahkan satu nilai karangan (disputeCity) saat pesan tidak menyebut pengadilan, agar lapisan "hanya yang tertulis" teruji.
+// control.fail = jumlah permintaan berikutnya yang dijawab 500 (untuk menguji kegagalan gateway).
+const MONTH = { januari: 1, februari: 2, maret: 3, april: 4, mei: 5, juni: 6, juli: 7, agustus: 8, september: 9, oktober: 10, november: 11, desember: 12 };
 export function startFakeLlm({ port }) {
   const seen = [];
+  const control = { fail: 0 };
   const server = http.createServer(async (req, res) => {
     let d = "";
     for await (const c of req) d += c;
     const body = d ? JSON.parse(d) : {};
     seen.push({ path: req.url, model: body.model, auth: req.headers.authorization });
-    const story = String((body.messages ?? []).filter((m) => m.role === "user").at(0)?.content ?? "");
-    const person = (re) => re.exec(story)?.[1];
+    if (control.fail > 0) {
+      control.fail--;
+      res.writeHead(500, { "content-type": "application/json" });
+      return res.end(JSON.stringify({ error: "gagal sengaja" }));
+    }
+    const msgs = body.messages ?? [];
+    const last = String(msgs.filter((m) => m.role === "user").at(-1)?.content ?? "");
+    const system = String(msgs[0]?.content ?? "");
+    const person = (re) => re.exec(last)?.[1];
+    const date = /Tanggal (\d{1,2}) ([A-Za-z]+) (\d{4})/.exec(last);
     const out = {
       disclosingParty: person(/Saya ([A-Z][a-z]+ [A-Z][a-z]+)/),
-      receivingParty: person(/dari ([A-Z][a-z]+ [A-Z][a-z]+)/),
-      confidentialInfo: person(/rahasia (daftar pelanggan)/),
+      receivingParty: person(/pihak kedua (?:jadi|adalah) ([A-Z][a-z]+ [A-Z][a-z]+)/) ?? person(/dari ([A-Z][a-z]+ [A-Z][a-z]+)/),
+      confidentialInfo: person(/rahasia(?:nya)? (?:adalah )?(daftar pelanggan)/),
       termMonths: Number(person(/selama (\d+) bulan/)) || null,
-      disputeCity: "Jakarta Selatan",
+      signingDate: date ? `${date[3]}-${String(MONTH[date[2].toLowerCase()]).padStart(2, "0")}-${date[1].padStart(2, "0")}` : null,
+      purpose: person(/tujuannya ([^,.]+)/),
+      disputeCity: person(/pengadilan (?:di )?([A-Z][a-z]+(?: [A-Z][a-z]+)?)/) ?? "Jakarta Selatan",
     };
+    const missing = /belum terisi: ([^\n]+)/.exec(system)?.[1] ?? "";
     res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify({ id: "fake-1", choices: [{ message: { role: "assistant", content: JSON.stringify(out) } }] }));
+    res.end(JSON.stringify({ id: "fake-1", choices: [{ message: { role: "assistant", content: JSON.stringify({ reply: `Baik, saya catat. Tersisa: ${missing}`, fields: out }) } }] }));
   });
-  return new Promise((r) => server.listen(port, "127.0.0.1", () => r({ seen, close: () => server.close() })));
+  return new Promise((r) => server.listen(port, "127.0.0.1", () => r({ seen, control, close: () => server.close() })));
 }

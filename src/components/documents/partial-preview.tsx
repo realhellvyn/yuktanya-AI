@@ -10,7 +10,7 @@ export function PartialPreview({ title, rows }: { title: string; rows: PartialRo
       {rows.map((r) => (
         <section key={r.id} className="space-y-1">
           {r.heading && <h3 className="font-semibold text-navy">{r.heading}</h3>}
-          {r.complete ? <p className="whitespace-pre-wrap">{r.text}</p> : <p className="rounded-lg border border-dashed border-line px-3 py-2 text-muted">Akan terisi setelah pertanyaan terkait dijawab.</p>}
+          <p className={r.complete ? "whitespace-pre-wrap" : "whitespace-pre-wrap rounded-lg border border-dashed border-line px-3 py-2 text-muted"}>{r.text}</p>
         </section>
       ))}
     </article>

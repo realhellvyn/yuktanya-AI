@@ -2,27 +2,17 @@
 
 import { randomUUID } from "node:crypto";
 import { notFound, redirect } from "next/navigation";
-import { FormatError, parseDateId, parseIdr } from "@/lib/documents/format";
 import { UnsupportedCharactersError } from "@/lib/documents/export";
 import { documentsService } from "@/lib/documents/runtime";
 import { StaleRevisionError } from "@/lib/documents/service";
 import { requireUserId } from "@/lib/documents/session";
-import { TemplateNotApprovedError, TEMPLATES } from "@/lib/documents/templates/registry";
-import type { Category, Data, FieldKind } from "@/lib/documents/types";
+import { handleChatTurn } from "@/lib/ai/chat-turn";
+import { chatTurnDeps } from "@/lib/vault/runtime";
+import { TemplateNotApprovedError } from "@/lib/documents/templates/registry";
+import type { Category } from "@/lib/documents/types";
 
 const CATEGORIES: Category[] = ["PKS", "UTANG_PIUTANG", "NDA"];
 const str = (f: FormData, k: string) => String(f.get(k) ?? "");
-
-function parseField(kind: FieldKind, raw: string): string | number {
-  const v = raw.trim();
-  if (kind === "idr") return parseIdr(v);
-  if (kind === "date") return parseDateId(v);
-  if (kind === "integer") {
-    if (!/^\d+$/.test(v)) throw new FormatError("Isi dengan angka bulat, contoh: 24");
-    return Number(v);
-  }
-  return v;
-}
 
 export async function createDocumentAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
@@ -39,42 +29,25 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
   redirect(`/workspace/${documentId}`);
 }
 
-export async function saveStepAction(formData: FormData): Promise<void> {
+export async function sendMessageAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
   const documentId = str(formData, "documentId");
-  const fieldKey = str(formData, "fieldKey");
-  const stepIndex = Number(str(formData, "stepIndex"));
-  const revision = Number(str(formData, "revision"));
-  const svc = documentsService();
-  const doc = await svc.get(userId, documentId);
-  if (!doc || !Number.isInteger(revision) || revision < 0) notFound();
-  const t = TEMPLATES[doc.category];
-  const field = t.fields.find((f) => f.key === fieldKey);
-  if (!field) notFound();
-  const back = (msg: string): never => redirect(`/workspace/${documentId}?step=${stepIndex}&error=${encodeURIComponent(msg)}`);
-
-  const data: Data = { ...doc.draft.data };
-  const raw = str(formData, "value");
-  if (raw.trim() === "") {
-    delete data[fieldKey];
-    if (field.required) back("Wajib diisi");
-  } else {
-    try {
-      data[fieldKey] = parseField(field.kind, raw);
-    } catch (e) {
-      back(e instanceof FormatError ? e.message : "Isian belum sesuai");
-    }
+  const retry = str(formData, "retry") === "1";
+  const message = str(formData, "message");
+  const key = str(formData, "key") || randomUUID();
+  const res = await handleChatTurn(
+    chatTurnDeps(),
+    new Request("http://internal/chat", { method: "POST", headers: { "content-type": "application/json", "idempotency-key": key }, body: JSON.stringify(retry ? { retry: true } : { message }) }),
+    { id: documentId },
+  );
+  if (res.status === 404) notFound();
+  let notice = "";
+  if (res.status !== 200) {
+    const code = ((await res.json().catch(() => ({}))) as { code?: string }).code;
+    notice = res.status === 502 ? "down" : res.status === 409 ? "stale" : code === "AI_BUSY" ? "busy" : code === "TOO_MANY_ATTEMPTS" ? "limit" : res.status === 429 ? "quota" : "down";
   }
-  const checked = t.validate(data);
-  if (!checked.ok && checked.errors[fieldKey]) back(checked.errors[fieldKey]);
-
-  try {
-    await svc.saveDraft(userId, documentId, data, revision);
-  } catch (e) {
-    if (e instanceof StaleRevisionError) back("Draf ini sudah berubah di tab lain. Muat ulang halaman, lalu coba lagi.");
-    throw e;
-  }
-  redirect(stepIndex < t.fields.length ? `/workspace/${documentId}?step=${stepIndex + 1}` : `/workspace/${documentId}?step=ringkasan`);
+  void userId;
+  redirect(`/workspace/${documentId}${notice ? `?notice=${notice}` : ""}`);
 }
 
 export async function freezeAction(formData: FormData): Promise<void> {
@@ -84,15 +57,12 @@ export async function freezeAction(formData: FormData): Promise<void> {
   const svc = documentsService();
   const doc = await svc.get(userId, documentId);
   if (!doc || token.length < 8) notFound();
-  const summary = (msg: string): never => redirect(`/workspace/${documentId}?step=ringkasan&error=${encodeURIComponent(msg)}`);
+  const summary = (msg: string): never => redirect(`/workspace/${documentId}?error=${encodeURIComponent(msg)}`);
 
   const r = await svc.freeze(userId, documentId, token);
   if (r.ok) redirect(`/documents/${documentId}?version=${r.versionId}&baru=1`);
   if (r.code === "VALIDATION_FAILED") {
-    const fields = TEMPLATES[doc.category].fields;
-    const idx = fields.findIndex((f) => r.errors[f.key]);
-    const key = fields[idx]?.key ?? "";
-    redirect(`/workspace/${documentId}?step=${idx + 1}&error=${encodeURIComponent(r.errors[key] ?? "Data belum lengkap")}`);
+    redirect(`/workspace/${documentId}?notice=incomplete`);
   }
   if (r.code === "DOCUMENT_DAILY_QUOTA_REACHED") summary("Batas pembuatan dokumen baru hari ini sudah tercapai. Draf Anda aman, dan Anda bisa melanjutkan besok mulai pukul 00.00 WIB.");
   summary("Template ini belum tersedia.");

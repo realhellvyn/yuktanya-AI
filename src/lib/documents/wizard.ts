@@ -29,3 +29,8 @@ export function summarize(t: Template, data: Data): { label: string; value: stri
     return { label: f.label, value: String(v) };
   });
 }
+
+// Kunci kolom wajib yang masih kosong (dasar pertanyaan lanjutan AI dan status "siap dibuat").
+export function missingRequired(t: Template, data: Data): string[] {
+  return t.fields.filter((f) => f.required && blank(data[f.key])).map((f) => f.key);
+}
