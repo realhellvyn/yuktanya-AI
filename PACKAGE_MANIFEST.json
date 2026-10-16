@@ -4,13 +4,13 @@
   "files": [
     {
       "path": ".env.example",
-      "sha256": "fe21878adc957ab714d820d31bbf30ce3dcfac953fe98955543c370c7ef266aa",
-      "bytes": 470
+      "sha256": "e7526453b611342557a06270a947f831b6f6b1c759497f245772ed36bd78de28",
+      "bytes": 728
     },
     {
       "path": ".gitignore",
-      "sha256": "21308b56e9cb1a04987f5fc03de75123e0fafd9957d122ec8937c2ab7bc9d391",
-      "bytes": 73
+      "sha256": "5ee0fe88e049b66fc30a0d21f2ab65b3acf975486266b7c5084256cf50d795b0",
+      "bytes": 96
     },
     {
       "path": "CLAUDE.md",
@@ -154,8 +154,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "fd04914221b5a5cc11fccd43b83953532810a14cdd6e22168ca9edca92259918",
-      "bytes": 3769
+      "sha256": "f881af5bc23ecc804ca13d98df9ed4b6aa1fd36c22b86e00df918021cc411798",
+      "bytes": 4562
     },
     {
       "path": "scripts/validate_package.py",

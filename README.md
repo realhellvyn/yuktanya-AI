@@ -65,3 +65,9 @@ npm run dev
 ```
 CI GitHub hanya manual (`workflow_dispatch`) sampai kuota Actions reset (~1 Nov 2026).
 Ketersediaan Postgres 16 di runner GitHub belum diverifikasi; cek pada run manual pertama.
+
+## Alur dokumen (Fase 2)
+Pengguna terdaftar memilih PKS, Utang Piutang, atau NDA, menjawab pertanyaan satu per satu (`/workspace/[id]`), memeriksa ringkasan, lalu membuat versi yang tidak dapat diubah. Setiap versi punya SHA-256 yang dihitung database atas byte kanonik; ekspor DOCX/PDF punya hash sendiri. Kuota dokumen baru dipakai saat versi pertama berhasil dibuat.
+
+Variabel lingkungan: `DOCUMENT_BLOB_DIR` (berkas ekspor lokal, default `.data/blobs`), `ALLOW_UNAPPROVED_TEMPLATES=true` (hanya di luar produksi; ketiga template berstatus DRAFT sintetis menunggu persetujuan mitra hukum), `SUPABASE_STORAGE_BUCKET` (produksi; adapter belum diverifikasi).
+Di produksi template hanya dipakai bila baris `document_templates` berstatus `APPROVED` dengan `content_hash` yang sama dengan kode.
