@@ -1,4 +1,6 @@
 export type Category = "PKS" | "UTANG_PIUTANG" | "NDA";
+// Dokumen unggahan pengguna (bukan dari template): versi tunggal yang dibekukan, tidak dapat diubah atau disalin.
+export type DocCategory = Category | "UPLOAD";
 export type FieldKind = "text" | "longtext" | "idr" | "date" | "integer" | "choice";
 export type Data = Record<string, string | number>;
 

@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { handleAiReview } from "@/lib/ai/prereview";
+import { aiReviewStatus } from "@/lib/ai/review-status";
 import { requireUserId } from "@/lib/documents/session";
 import { aiReviewDeps } from "@/lib/vault/runtime";
 
@@ -19,6 +20,5 @@ export async function aiReviewAction(formData: FormData): Promise<void> {
     }),
     { versionId },
   );
-  const code = res.status === 200 ? "ok" : res.status === 429 ? "quota" : "down";
-  redirect(`/documents/${documentId}?version=${versionId}&ai=${code}`);
+  redirect(`/documents/${documentId}?version=${versionId}&ai=${aiReviewStatus(res.status)}#analisis-ai`);
 }

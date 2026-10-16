@@ -6,6 +6,7 @@ import { formatDateId, wibDate } from "@/lib/documents/format";
 import { documentsService } from "@/lib/documents/runtime";
 import { requireUserId } from "@/lib/documents/session";
 import { formatIdr, PRICING } from "@/lib/pricing/catalog";
+import { flags } from "@/lib/flags";
 import { reviewService } from "@/lib/reviews/runtime";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, EmptyState } from "@/components/ui/card";
@@ -71,6 +72,11 @@ export default async function DashboardPage() {
           </>
         )}
         <p className="text-sm text-muted">{AI_DRAFT_LABEL} AI bukan pengacara.</p>
+        {flags.aiPreReview && (
+          <div className="border-t border-blue-200 pt-4">
+            <ButtonLink href="/documents/upload" variant="secondary">Periksa dokumen yang sudah Anda punya</ButtonLink>
+          </div>
+        )}
       </Card>
 
       <section aria-labelledby="doc-h" className="space-y-3">

@@ -13,7 +13,7 @@ const ERR: Record<string, string> = {
   FORBIDDEN: "Tidak berwenang.", REVIEWER_NOT_AUTHORIZED: "Reviewer tidak memiliki otorisasi aktif.", REVIEWER_AT_CAPACITY: "Reviewer sudah penuh.",
   NOT_FOUND: "Permintaan tidak ditemukan.", NOT_ASSIGNABLE: "Permintaan ini tidak dapat ditugaskan lagi.",
 };
-const CATEGORY: Record<string, string> = { PKS: "Perjanjian Kerja Sama", UTANG_PIUTANG: "Surat Utang Piutang", NDA: "Perjanjian Kerahasiaan (NDA)" };
+const CATEGORY: Record<string, string> = { PKS: "Perjanjian Kerja Sama", UTANG_PIUTANG: "Surat Utang Piutang", NDA: "Perjanjian Kerahasiaan (NDA)", UPLOAD: "Dokumen unggahan" };
 
 // Admin hanya merutekan pekerjaan (termasuk permintaan tanpa firma); tidak pernah memeriksa atau menerbitkan hasil.
 export default async function RoutingPage({ searchParams }: { searchParams: Promise<{ e?: string; ok?: string }> }) {

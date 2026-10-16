@@ -22,6 +22,8 @@ export function createPgReminderService(pool: Pool, docs: DocumentsService): Rem
   async function options(userId: string, versionId: string): Promise<ReminderOption[]> {
     const v = await docs.getVersion(userId, versionId);
     if (!v) throw new NotFoundError();
+    // Dokumen unggahan tidak punya tenggat terstruktur.
+    if (v.doc.category === "UPLOAD") return [];
     const t = TEMPLATES[v.doc.category];
     return t.reminders.flatMap((r) => {
       const dueDate = r.date(v.structuredData);

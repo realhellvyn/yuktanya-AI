@@ -72,7 +72,8 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
   if (!key || !/^[\x21-\x7e]{8,128}$/.test(key) || !parsed.success || (!parsed.data.message && !parsed.data.retry)) return json({ code: "INVALID_REQUEST" }, 400);
 
   const doc = await deps.service.get(userId, params.id);
-  if (!doc) return json({ code: "NOT_FOUND" }, 404);
+  // Dokumen unggahan tidak memakai wawancara template.
+  if (!doc || doc.category === "UPLOAD") return json({ code: "NOT_FOUND" }, 404);
   const template = TEMPLATES[doc.category];
 
   const existing = await findTurnByKey(deps.pool, userId, params.id, key);

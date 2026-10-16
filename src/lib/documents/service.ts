@@ -6,7 +6,7 @@ import { qrPng, verifyUrl } from "@/lib/verification/qr";
 import { exportDocx, exportPdf, sha256Hex, type ExportVerification } from "./export";
 import { canonicalize, parseCanonical, renderDocument, type RenderedDoc } from "./render";
 import { getTemplate, TemplateNotApprovedError, TEMPLATES, type ApprovalCheck } from "./templates/registry";
-import type { Category, Data } from "./types";
+import type { Category, Data, DocCategory } from "./types";
 
 export class NotFoundError extends Error {
   constructor() {
@@ -41,8 +41,8 @@ export type FreezeResult =
   | { ok: false; code: "TEMPLATE_NOT_APPROVED" };
 
 export type VersionSummary = { id: string; versionNo: number; sha256: string; createdAt: string };
-export type DocSummary = { id: string; category: Category; title: string; createdAt: string; versionCount: number; latestVersionNo: number | null };
-export type DocDetail = { id: string; category: Category; title: string; draft: { data: Data; revision: number }; versions: VersionSummary[] };
+export type DocSummary = { id: string; category: DocCategory; title: string; createdAt: string; versionCount: number; latestVersionNo: number | null };
+export type DocDetail = { id: string; category: DocCategory; title: string; draft: { data: Data; revision: number }; versions: VersionSummary[] };
 export type VersionDetail = VersionSummary & { documentId: string; canonicalText: string; doc: RenderedDoc; structuredData: Data };
 
 export interface DocumentsService {
@@ -77,7 +77,12 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
         where d.id = $1 and d.owner_id = $2`,
       [documentId, userId],
     );
-    return rows[0] as { id: string; category: Category; title: string; structured_data: Data; revision: number } | undefined;
+    return rows[0] as { id: string; category: DocCategory; title: string; structured_data: Data; revision: number } | undefined;
+  }
+  // Draf template yang dapat diubah/dibekukan; dokumen unggahan (UPLOAD) hanya punya satu versi beku.
+  async function ownedTemplate(userId: string, documentId: string) {
+    const doc = await owned(userId, documentId);
+    return doc && doc.category !== "UPLOAD" ? { ...doc, category: doc.category } : undefined;
   }
 
   const toVersion = (r: { id: string; version_no: number; sha256: string; created_at: Date }): VersionSummary => ({
@@ -114,7 +119,7 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
     },
 
     async saveDraft(userId, documentId, data, revision) {
-      const doc = await owned(userId, documentId);
+      const doc = await ownedTemplate(userId, documentId);
       if (!doc) throw new NotFoundError();
       // Hanya field skema dengan nilai string/angka yang disimpan; sisanya dibuang.
       const known = new Set(TEMPLATES[doc.category].fields.map((f) => f.key));
@@ -131,7 +136,7 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
     },
 
     async freeze(userId, documentId, key, now = new Date()) {
-      const doc = await owned(userId, documentId);
+      const doc = await ownedTemplate(userId, documentId);
       if (!doc) throw new NotFoundError();
       let resolved;
       try {
@@ -189,7 +194,8 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
         const { rows } = await pool.query("select clone_document($1, $2, $3) as id", [userId, versionId, key]);
         return { documentId: rows[0].id };
       } catch (e) {
-        if (isNotFound(e)) return null;
+        // Dokumen unggahan tidak dapat disalin menjadi draf template.
+        if (isNotFound(e) || (e instanceof Error && e.message.includes("UPLOAD_IMMUTABLE"))) return null;
         throw e;
       }
     },

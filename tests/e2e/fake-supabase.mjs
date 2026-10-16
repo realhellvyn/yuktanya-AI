@@ -120,6 +120,18 @@ export function startFakeLlm({ port }) {
     const msgs = body.messages ?? [];
     const last = String(msgs.filter((m) => m.role === "user").at(-1)?.content ?? "");
     const system = String(msgs[0]?.content ?? "");
+    // Analisis awal AI (src/lib/ai/prereview.ts): balas JSON sesuai skema tiga larik. Teks dokumen ada di blok <<<DOKUMEN.
+    if (system.includes("pertanyaanUntukPengacara")) {
+      const doc = /<<<DOKUMEN\n([\s\S]*)\nDOKUMEN>>>/.exec(last)?.[1] ?? "";
+      control.prereview = (control.prereview ?? 0) + 1;
+      const report = {
+        perhatian: [`Dokumen memuat ${doc.split(/\n\n/).length} bagian; belum ada batas tanggung jawab (contoh sintetis).`],
+        belumJelas: ["Tanggal mulai dan cara pembayaran belum jelas."],
+        pertanyaanUntukPengacara: ["Apakah perlu klausul denda keterlambatan?"],
+      };
+      res.writeHead(200, { "content-type": "application/json" });
+      return res.end(JSON.stringify({ id: "fake-pre", choices: [{ message: { role: "assistant", content: JSON.stringify(report) } }] }));
+    }
     const person = (re) => re.exec(last)?.[1];
     const date = /Tanggal (\d{1,2}) ([A-Za-z]+) (\d{4})/.exec(last);
     const out = {

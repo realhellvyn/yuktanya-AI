@@ -22,14 +22,18 @@ import { cloneAction, exportAction, startNewVersionAction } from "../actions";
 import { requestReviewAction } from "../../checkout/actions";
 import { aiReviewAction } from "../ai-review-action";
 import { casesService } from "@/lib/cases/runtime";
-import { SPECIAL_CASE_NOTE } from "@/lib/copy";
+import { AI_REVIEW_CONSENT, SPECIAL_CASE_NOTE } from "@/lib/copy";
+import { AiReviewResult } from "@/components/ai-review/ai-review-result";
+import { latestAiReport } from "@/lib/ai/prereview";
+import { AI_REVIEW_STATUS_TEXT, type AiReviewStatus } from "@/lib/ai/review-status";
+import { uploadRepo } from "@/lib/uploads/runtime";
 
 // Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
 export const dynamic = "force-dynamic";
 
 const LABEL = { changed: "Diubah", added: "Ditambah", removed: "Dihapus", same: "Sama" } as const;
 
-export default async function DocumentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ai?: string; version?: string; against?: string; exported?: string; baru?: string; error?: string; pack?: string; notice?: string }> }) {
+export default async function DocumentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ai?: string; unggah?: string; version?: string; against?: string; exported?: string; baru?: string; error?: string; pack?: string; notice?: string }> }) {
   const { id } = await params;
   const q = await searchParams;
   const userId = await requireUserId();
@@ -55,7 +59,12 @@ export default async function DocumentPage({ params, searchParams }: { params: P
   }
   // Kasus khusus terbuka: Review Standar diblokir di database (order dan pratinjau harga); tampilkan arah ke kasusnya.
   const openCase = await casesService().openForDocument(userId, id);
-  const quote = selected && !openCase ? await billingService().preview(userId, "STANDARD_REVIEW", selected.id).catch(() => null) : null;
+  const upload = doc.category === "UPLOAD" ? await uploadRepo().meta(userId, id) : null;
+  const highRisk = upload?.riskLevel === "HIGH";
+  const aiReport = selected ? await latestAiReport(pool, userId, selected.id) : null;
+  const aiVerified = verifications.some((v) => v.kind === "AI" && v.status === "ACTIVE");
+  const aiStatus = q.ai && q.ai in AI_REVIEW_STATUS_TEXT ? (q.ai as AiReviewStatus) : null;
+  const quote = selected && !openCase && !highRisk ? await billingService().preview(userId, "STANDARD_REVIEW", selected.id).catch(() => null) : null;
   const changes = selected && against ? diffRendered(against.doc, selected.doc).filter((c) => c.change !== "same") : null;
 
   const when = (iso: string) => new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(iso));
@@ -70,6 +79,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
         </p>
       )}
       {q.baru && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-success">✓ Dokumen berhasil dibuat. Versi ini tidak dapat diubah.</p>}
+      {q.unggah && upload && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-success">✓ Berkas berhasil diunggah dan disimpan sebagai dokumen yang tidak dapat diubah.</p>}
       {doc.versions.length === 0 && (
         <EmptyState title="Belum ada versi" action={<ButtonLink href={`/workspace/${id}`}>Lanjutkan mengisi</ButtonLink>} />
       )}
@@ -99,6 +109,14 @@ export default async function DocumentPage({ params, searchParams }: { params: P
             </div>
           </Card>
 
+          {upload && (
+            <Card className="space-y-2" aria-label="Berkas asli">
+              <h2 className="text-lg font-bold text-navy">Berkas asli</h2>
+              <p className="break-words">{upload.filename} · {upload.kind} · {(upload.byteSize / 1024).toFixed(1).replace(".", ",")} KB{upload.pages ? ` · ${upload.pages} halaman` : ""}</p>
+              <p className="break-all text-sm text-muted">Kode berkas asli (SHA-256): {upload.originalSha256}</p>
+              <p className="text-sm text-muted">Di bawah ini teks hasil pembacaan berkas. Format asli (tabel, gambar, tanda tangan) tidak ikut terbaca.</p>
+            </Card>
+          )}
           <DocumentPreview doc={selected.doc} />
           {changes && (
             <Card className="space-y-2">
@@ -114,6 +132,13 @@ export default async function DocumentPage({ params, searchParams }: { params: P
           <section aria-labelledby="periksa-h" className="space-y-3">
             <h2 id="periksa-h" className="text-2xl font-bold text-navy">Pemeriksaan</h2>
             <VerificationPanel verifications={verifications} qrDataUrls={qrs} urls={urls} />
+            {highRisk && !openCase && (
+              <Card className="space-y-3 border-amber-300 bg-amber-50/60">
+                <p className="text-lg font-semibold text-navy">Dokumen ini memerlukan penilaian khusus</p>
+                <p>Topiknya berisiko tinggi ({upload!.riskReasons.join(", ").toLowerCase()}), jadi tidak dianalisis AI dan tidak dapat dipesan untuk Review Standar. {SPECIAL_CASE_NOTE}</p>
+                <ButtonLink href={`/cases/new?document=${id}`}>Ajukan penilaian khusus</ButtonLink>
+              </Card>
+            )}
             {openCase && (
               <Card className="space-y-3 border-amber-300 bg-amber-50/60">
                 <p className="text-lg font-semibold text-navy">Dokumen ini memerlukan penilaian khusus</p>
@@ -130,23 +155,26 @@ export default async function DocumentPage({ params, searchParams }: { params: P
                 </form>
               </Card>
             )}
-            {!openCase && (
+            {!openCase && !highRisk && (
               <div className="flex flex-wrap items-center gap-x-2 text-muted"><span>Dokumen Anda rumit atau berisiko tinggi?</span><ButtonLink href={`/cases/new?document=${id}`} variant="quiet" className="!px-0">Ajukan penilaian khusus</ButtonLink></div>
             )}
-            {flags.aiPreReview && (
-              <Card>
-                <form action={aiReviewAction} className="space-y-3">
-                  <input type="hidden" name="versionId" value={selected.id} />
-                  <input type="hidden" name="documentId" value={id} />
-                  <label className="flex min-h-12 items-center gap-3">
-                    <input type="checkbox" name="consent" value="yes" required className="h-6 w-6" />
-                    <span>Saya setuju isi dokumen ini dikirim ke layanan AI untuk dianalisis.</span>
-                  </label>
-                  <Button type="submit" variant="secondary">Analisis awal AI</Button>
-                </form>
-              </Card>
-            )}
-            {q.ai && <p role="status" className="rounded-xl border border-line bg-white p-3">{q.ai === "ok" ? "Analisis awal AI selesai dan tercatat di atas." : q.ai === "quota" ? "Batas analisis AI hari ini sudah tercapai." : "Analisis AI belum berhasil. Kuota Anda tidak terpakai."}</p>}
+            <div id="analisis-ai" className="space-y-3">
+              {aiStatus && <p role="status" className="rounded-xl border border-line bg-white p-3 font-semibold">{AI_REVIEW_STATUS_TEXT[aiStatus]}</p>}
+              {aiReport && <AiReviewResult report={aiReport.report} completedAt={aiReport.completedAt} verified={aiVerified} />}
+              {flags.aiPreReview && !highRisk && (
+                <Card>
+                  <form action={aiReviewAction} className="space-y-3">
+                    <input type="hidden" name="versionId" value={selected.id} />
+                    <input type="hidden" name="documentId" value={id} />
+                    <label className="flex min-h-12 items-start gap-3">
+                      <input type="checkbox" name="consent" value="yes" required className="mt-1 h-6 w-6 shrink-0" />
+                      <span>{AI_REVIEW_CONSENT}</span>
+                    </label>
+                    <Button type="submit" variant="secondary">{aiReport ? "Analisis ulang dengan AI" : "Analisis awal AI"}</Button>
+                  </form>
+                </Card>
+              )}
+            </div>
           </section>
 
           <details className="rounded-2xl border border-line bg-white p-4" open={Boolean(q.pack || q.notice)}>
@@ -166,7 +194,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
             </div>
           </details>
 
-          <details className="rounded-2xl border border-line bg-white p-4">
+          {!upload && <details className="rounded-2xl border border-line bg-white p-4">
             <summary className="inline-flex min-h-12 cursor-pointer items-center text-lg font-bold text-navy">Ubah atau salin dokumen ({doc.versions.length} versi)</summary>
             <div className="mt-4 space-y-4">
               <div className="flex flex-wrap gap-3">
@@ -182,7 +210,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
               </div>
               <VersionList documentId={id} versions={doc.versions} />
             </div>
-          </details>
+          </details>}
         </>
       )}
     </main>

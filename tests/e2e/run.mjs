@@ -27,7 +27,7 @@ const env = {
   DATABASE_URL: process.env.TEST_DATABASE_URL, AI_MOCK_MODE: "false", FREELLM_BASE_URL: "http://127.0.0.1:54998", FREELLM_API_KEY: "uji", ALLOW_UNAPPROVED_TEMPLATES: "true",
   NEXT_PUBLIC_APP_URL: `http://localhost:${APP}`, DOCUMENT_BLOB_DIR: mkdtempSync(path.join(tmpdir(), "yk-blob-")),
   MANUAL_PAYMENT_INSTRUCTIONS: "Transfer ke rekening uji 000-000", NEXT_TELEMETRY_DISABLED: "1",
-  DEEP_REVIEW_PURCHASE: "true", ENHANCED_ISSUANCE: "true",
+  DEEP_REVIEW_PURCHASE: "true", ENHANCED_ISSUANCE: "true", AI_PREREVIEW_ENABLED: "true",
 };
 const db = new Pool({ connectionString: process.env.TEST_DATABASE_URL, max: 2 });
 const dev = spawn("npx", ["next", "dev", "-p", String(APP)], { env, stdio: ["ignore", "pipe", "pipe"], detached: true });
@@ -39,7 +39,7 @@ try {
   for (let i = 0; i < 90; i++) { try { const r = await fetch(`http://localhost:${APP}/login`); if (r.ok) break; } catch {} await new Promise((r) => setTimeout(r, 1000)); }
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM ?? undefined });
   const viewports = JSON.parse(process.env.VIEWPORTS ?? '[{"name":"desktop","width":1280,"height":800}]');
-  const files = (process.env.JOURNEY ?? "./journey.mjs,./journey-roles.mjs,./journey-public.mjs,./journey-ui-roles.mjs,./journey-cases.mjs").split(",");
+  const files = (process.env.JOURNEY ?? "./journey.mjs,./journey-roles.mjs,./journey-public.mjs,./journey-ui-roles.mjs,./journey-cases.mjs,./journey-ai-review.mjs").split(",");
   for (const file of files) {
     const mod = await import(file);
     for (const vp of viewports.filter((v) => !mod.onlyViewport || v.name === mod.onlyViewport)) {

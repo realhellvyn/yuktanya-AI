@@ -1,13 +1,13 @@
 import { AI_DRAFT_LABEL } from "@/lib/copy";
 import { formatDateId, formatIdr } from "./format";
 import { stableStringify } from "./stable";
-import type { Category, Data, FieldSpec, Template } from "./types";
+import type { Data, DocCategory, FieldSpec, Template } from "./types";
 
 export type Block = { id: string; kind: "title" | "heading" | "paragraph"; text: string };
 export type RenderedDoc = {
   templateId: string;
   templateVersion: number;
-  category: Category;
+  category: DocCategory;
   approval: "APPROVED" | "DRAFT";
   label: string;
   blocks: Block[];

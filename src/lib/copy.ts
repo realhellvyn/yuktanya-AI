@@ -2,6 +2,9 @@
 export const SLOGAN = "Legal Service Seharga Secangkir Kopi.";
 export const AI_DRAFT_LABEL = "Dibuat dengan bantuan AI. Belum diperiksa oleh profesional hukum.";
 export const AI_PREREVIEW_LABEL = "Analisis awal AI bersifat informasional dan dapat keliru.";
+// Persetujuan eksplisit sebelum teks dokumen dikirim ke gateway AI (docs/SECURITY_AND_LEGAL.md).
+export const AI_REVIEW_CONSENT =
+  "Saya setuju teks dokumen ini dikirim ke gateway AI FreeLLMAPI milik Yuktanya, yang meneruskannya ke penyedia model AI pihak ketiga, untuk analisis awal.";
 export const SPECIAL_CASE_NOTE = "Biaya dan ruang lingkup ditentukan setelah asesmen profesional.";
 export const CHECKOUT_NOTE =
   "Pembayaran adalah biaya pemeriksaan. Tidak menjamin hasil positif atau penerbitan verifikasi Enhanced.";

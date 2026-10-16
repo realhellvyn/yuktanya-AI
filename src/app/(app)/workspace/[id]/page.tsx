@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ChatPanel } from "@/components/documents/chat-panel";
 import { PartialPreview } from "@/components/documents/partial-preview";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,8 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
   const userId = await requireUserId();
   const doc = await documentsService().get(userId, id);
   if (!doc) notFound();
+  // Dokumen unggahan tidak punya wawancara/draf: langsung ke halaman dokumennya.
+  if (doc.category === "UPLOAD") redirect(`/documents/${id}`);
   const t = TEMPLATES[doc.category];
   const data = doc.draft.data;
   const messages = await listMessages(getPool(), userId, id);

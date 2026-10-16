@@ -48,7 +48,7 @@ describe("analisis awal AI", () => {
     expect((await setup(u).call("bukan-uuid")).status).toBe(404);
   });
 
-  it("sukses: satu laporan, satu verifikasi AI, kuota pesan dan review +1, label dan bahasa wajib AI", async () => {
+  it("sukses (dokumen template berbantuan AI): satu laporan, kuota pesan dan review +1, label wajib; TANPA AI Verified", async () => {
     const u = await createUser(pool);
     const v = await kit.frozen(u);
     const before = await usage(u);
@@ -58,12 +58,14 @@ describe("analisis awal AI", () => {
     const b = await res.json();
     expect(b.report.perhatian).toEqual(["Jangka waktu 24 bulan"]);
     expect(b.label).toBe(AI_PREREVIEW_LABEL);
-    expect(b.statement).toBe(VERIFICATION_STATEMENTS.AI);
-    expect(b.verification.url).toBe(`https://y.example/verify/${b.verification.code}`);
+    // Konten yang ikut dihasilkan AI tidak pernah diberi AI Verified (AI Verified hanya untuk dokumen unggahan; tests/db/uploads.test.ts).
+    expect(b.statement).toBeNull();
+    expect(b.verification).toBeNull();
+    expect(VERIFICATION_STATEMENTS.AI).toBeTruthy();
     const after = await usage(u);
     expect(after.messagesUsed - before.messagesUsed).toBe(1);
     expect(after.aiReviewsUsed - before.aiReviewsUsed).toBe(1);
-    expect((await pool.query("select kind from document_verifications where version_id = $1", [v.versionId])).rows.map((r) => r.kind)).toEqual(["AI"]);
+    expect((await pool.query("select kind from document_verifications where version_id = $1", [v.versionId])).rows.map((r) => r.kind)).toEqual([]);
     expect((await pool.query("select count(*) from ai_review_reports where user_id = $1", [u])).rows[0].count).toBe("1");
     expect((await pool.query("select count(*) from document_verifications where kind = 'LEGAL' and version_id = $1", [v.versionId])).rows[0].count).toBe("0");
   });
