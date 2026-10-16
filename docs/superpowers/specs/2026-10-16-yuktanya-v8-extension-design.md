@@ -73,7 +73,20 @@ dicadangkan atomik saat order dan dilepas saat gagal atau kedaluwarsa. **Asumsi 
 dikonfirmasi pemilik):** kredit hanya untuk review standar yang memenuhi syarat; Deep
 Review tetap mengikuti aturan v8 dan tidak memakai kredit.
 
-### 4.3 Perpanjangan membership
+### 4.3 Harga layanan review (keputusan pemilik, 16 Oktober 2026)
+Harga review **hanya** yang terkunci di v8, tanpa jenis review berbayar baru:
+
+| Layanan | Biaya |
+|---|---|
+| Review standar | Free Rp50.000; Member pertama per periode Rp30.000, berikutnya Rp35.000 |
+| Review mendalam (Deep) | Tambahan Rp200.000 (Free) / Rp150.000 (Member aktif), hanya setelah standar selesai dengan Legal Note actionable |
+| Total standar + Deep | Free Rp250.000; Member Rp180.000 (standar pertama) / Rp185.000 (berikutnya); Rp19.000 membership tidak termasuk |
+| Special Legal Case | Penawaran khusus setelah asesmen |
+
+Bundle dan paket tahunan hanya mengubah **cara membayar/mendapat hak** atas review di atas,
+bukan menambah jenis review baru.
+
+### 4.4 Perpanjangan membership
 Default **manual**: pengingat menjelang habis, lalu bayar sekali klik. **Auto-debit
 opsional**, dipilih user sendiri dengan persetujuan eksplisit, dan hanya jika penyedia
 mendukung. Dashboard admin hanya memakai istilah "MRR" ketika auto-debit aktif
@@ -147,11 +160,9 @@ catatan sistem, **bukan jaminan nilai pembuktian di pengadilan**. Redaksi final
   sama. Tidak memakai jatah dokumen harian (sesuai v8: pembaruan versi tidak mengonsumsi
   kuota dokumen) dan **tidak mewarisi badge** apa pun.
 - Diff per klausul dihitung deterministik dari data terstruktur, tanpa AI.
-- **Review perubahan saja** (cakupan `DELTA`): permintaan review yang merujuk versi dasar
-  yang sudah diperiksa. Penjagaan wajib: teks laporan dan badge menyebut cakupan
-  "perubahan terhadap versi X", tidak boleh terbaca sebagai pemeriksaan seluruh dokumen.
-  Definisi, harga, dan syarat kelayakan **[UNKNOWN]**, butuh persetujuan partner. Fitur
-  ini di balik flag, default OFF.
+- Diff hanya alat bantu tampilan (untuk user dan reviewer). **Tidak ada jenis review
+  berbayar baru**: versi yang diedit setelah diperiksa dikenai **review standar baru**
+  dengan harga normal v8 (§4.3).
 
 ### 6.4 Pengingat (`vault.reminders`)
 Field tanggal di skema template (jatuh tempo, akhir masa NDA, akhir kerja sama) ditandai
@@ -177,8 +188,7 @@ dipertimbangkan nanti, butuh persetujuan pengguna dan **[UNKNOWN]** penyedia/bia
 `products`, `product_grants`, `entitlement_ledger` (tahunan: 12 slot; bundle: kredit),
 `feature_plan_map`, `share_links`, `share_access_events`, `acknowledgements`,
 `evidence_packs`, `reminders`, `payment_adapter_events`. Tambahan kolom: `payments.fee_idr`,
-`orders.tax_idr` (nullable), `review_requests.scope` (nilai awal `FULL`, tambah `DELTA`),
-`profiles`/`product_events` untuk atribusi sumber.
+`orders.tax_idr` (nullable), `profiles`/`product_events` untuk atribusi sumber.
 
 Invarian: uang dalam integer IDR; satu `idempotency_key` per user; unik
 `(provider, provider_ref)`; konsumsi slot/kredit hanya dalam transaksi settlement;
@@ -251,7 +261,8 @@ Fase 2 berdiri; Deep, Enhanced, QR/revocation sesuai peta v8.
 **UNKNOWN (dicatat, tidak menghambat kode sintetis):**
 - Tarif, metode bayar, dan dukungan debit berulang Midtrans/Xendit; syarat merchant.
 - Harga tahunan dan bundle; default pemetaan Free vs Member untuk kunci fitur.
-- Definisi, harga, dan syarat review perubahan saja.
+- Jumlah putaran revisi yang termasuk dalam biaya, aturan Deep berulang, dan kredit/refund
+  bila temuan masih ada (tidak dihargai terpisah; mengikuti open questions v8).
 - Redaksi final: pernyataan paket bukti, label konfirmasi baca.
 - Aturan refund dan masa berlaku kredit.
 - Struktur kepemilikan dan aliran uang antar pihak; aspek etika profesi advokat.
@@ -274,7 +285,6 @@ permintaan dulu). Tidak ada deployment atau pembayaran sungguhan.
 3. Bundle tidak pernah ditumpuk dengan diskon review pertama.
 4. Hak hanya diberikan setelah payment `VERIFIED` oleh settlement terverifikasi.
 5. Link berbagi tidak pernah menampilkan versi selain yang diikat; pencabutan langsung.
-6. Versi baru tidak mewarisi badge; review `DELTA` tidak pernah tampil sebagai pemeriksaan
-   seluruh dokumen.
+6. Versi baru tidak mewarisi badge dan dikenai review standar baru dengan harga v8.
 7. Paket bukti tidak memuat catatan privat profesional.
 8. Smoke rilis = 6 skenario di §10, dengan penjagaan flag Deep/Enhanced.
