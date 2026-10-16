@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AUTH_MESSAGES } from "@/lib/auth/messages";
+import { isRecoverySession } from "@/lib/auth/recovery";
 import { hasSupabaseEnv } from "@/lib/supabase/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { updatePassword } from "../actions";
@@ -22,8 +23,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     );
   }
   // Halaman ini hanya berguna dengan sesi pemulihan dari tautan email.
-  const user = hasSupabaseEnv() ? (await (await createSupabaseServerClient()).auth.getUser()).data.user : null;
-  if (!user) {
+  const supabase = hasSupabaseEnv() ? await createSupabaseServerClient() : null;
+  const user = supabase ? (await supabase.auth.getUser()).data.user : null;
+  const recovery = user && supabase ? isRecoverySession((await supabase.auth.getSession()).data.session?.access_token) : false;
+  if (!user || !recovery) {
     return (
       <AuthShell title="Kata sandi baru" footer={<Link className={linkClass} href="/login">Kembali ke halaman masuk</Link>}>
         <p role="alert" className="rounded-xl border border-amber-400 bg-amber-50 p-4 text-amber-900">{AUTH_MESSAGES.session_missing}</p>

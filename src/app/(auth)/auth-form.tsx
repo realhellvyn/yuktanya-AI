@@ -66,10 +66,10 @@ export function AuthForm({ mode, action, error, sent, resent, returnTo }: Props)
           <form action={resendConfirmation} className="space-y-3 border-t border-line pt-5">
             <input type="hidden" name="returnTo" value={returnTo} />
             <input type="hidden" name="page" value={mode} />
+            <p className="font-semibold">Belum menerima email konfirmasi?</p>
             <label className="block">
-              <span className="font-semibold">Belum menerima email konfirmasi?</span>
-              <span className="mt-1 block text-muted">Tulis email Anda, lalu kirim ulang.</span>
-              <input name="email" type="email" required autoComplete="email" aria-label="Email untuk kirim ulang konfirmasi" className="mt-2 block min-h-12 w-full rounded-xl border border-slate-400 bg-white px-4 text-lg" />
+              <span>Email untuk kirim ulang konfirmasi</span>
+              <input name="email" type="email" required autoComplete="email" className="mt-2 block min-h-12 w-full rounded-xl border border-slate-400 bg-white px-4 text-lg" />
             </label>
             <Button type="submit" variant="secondary" className="w-full">Kirim ulang email konfirmasi</Button>
           </form>

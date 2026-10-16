@@ -73,7 +73,7 @@ export async function journey({ page, step, shot, base, vp, issues, fake, newAct
   await step(tag("kirim ulang konfirmasi dari halaman masuk yang gagal menampilkan pesan sukses"), async () => {
     await page.goto(base + "/login?error=failed");
     await page.waitForSelector("text=Belum menerima email konfirmasi?");
-    await page.fill('input[aria-label="Email untuk kirim ulang konfirmasi"]', email);
+    await page.getByLabel("Email untuk kirim ulang konfirmasi").fill(email);
     await Promise.all([page.waitForURL(/resent=1/, { timeout: 20000 }), page.click("button:has-text('Kirim ulang email konfirmasi')")]);
     await page.waitForSelector("text=Email konfirmasi dikirim ulang");
     if (!fake.outbox.some((o) => o.kind === "resend" && o.email === email)) throw new Error("resend tidak sampai ke penyedia");
@@ -101,17 +101,31 @@ export async function journey({ page, step, shot, base, vp, issues, fake, newAct
     await actor.shot("p-settings");
   });
 
-  await step(tag("mengganti kata sandi: sandi tak sama ditolak, sandi baru berhasil lalu bisa masuk lagi"), async () => {
+  await step(tag("sesi masuk biasa DITOLAK mengganti kata sandi di /reset-password (tanpa tautan pemulihan)"), async () => {
     await ap.goto(base + "/reset-password");
-    await ap.fill("input[name=password]", NEW_PASSWORD);
-    await ap.fill("input[name=confirm]", NEW_PASSWORD + "x");
-    await Promise.all([ap.waitForURL(/error=mismatch/, { timeout: 20000 }), ap.click("button[type=submit]")]);
-    await ap.waitForSelector("text=Kedua kata sandi belum sama");
-    await ap.fill("input[name=password]", NEW_PASSWORD);
-    await ap.fill("input[name=confirm]", NEW_PASSWORD);
-    await Promise.all([ap.waitForURL(/done=1/, { timeout: 20000 }), ap.click("button[type=submit]")]);
-    await ap.waitForSelector("text=Kata sandi berhasil diganti");
-    // Kata sandi lama tak lagi berlaku, yang baru berlaku (konteks bersih = tanpa cookie sesi).
+    await ap.waitForSelector("text=Tautan atur ulang sudah tidak berlaku");
+    if (await ap.locator("input[name=password]").count()) throw new Error("form ganti sandi tampil untuk sesi biasa");
+  });
+
+  await step(tag("lewat tautan pemulihan: sandi tak sama ditolak, sandi baru berhasil, lama tak berlaku"), async () => {
+    const rec = await newActor("pemulihan");
+    const rp = rec.page;
+    await rp.goto(base + "/forgot-password");
+    await rp.fill("input[name=email]", user);
+    await Promise.all([rp.waitForURL(/sent=1/, { timeout: 20000 }), rp.click("button[type=submit]")]);
+    const mail = [...fake.outbox].reverse().find((o) => o.kind === "recover" && o.email === user);
+    if (!mail?.code) throw new Error("kode pemulihan tidak ada");
+    await rp.goto(`${base}/auth/callback?code=${mail.code}&next=${encodeURIComponent("/reset-password")}`);
+    await rp.waitForURL(/\/reset-password/, { timeout: 20000 });
+    await rp.waitForSelector("input[name=confirm]");
+    await rp.fill("input[name=password]", NEW_PASSWORD);
+    await rp.fill("input[name=confirm]", NEW_PASSWORD + "x");
+    await Promise.all([rp.waitForURL(/error=mismatch/, { timeout: 20000 }), rp.click("button[type=submit]")]);
+    await rp.waitForSelector("text=Kedua kata sandi belum sama");
+    await rp.fill("input[name=password]", NEW_PASSWORD);
+    await rp.fill("input[name=confirm]", NEW_PASSWORD);
+    await Promise.all([rp.waitForURL(/done=1/, { timeout: 20000 }), rp.click("button[type=submit]")]);
+    await rp.waitForSelector("text=Kata sandi berhasil diganti");
     const fresh = await newActor("masuk-ulang");
     const tryLogin = async (pw) => {
       await fresh.page.goto(base + "/login");

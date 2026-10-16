@@ -22,10 +22,11 @@ export function startFakeSupabase({ databaseUrl, port }) {
   const pool = new Pool({ connectionString: databaseUrl, max: 3 });
   const users = new Map(); // email -> { id, email, password }
   const outbox = []; // email palsu yang "terkirim": { kind: "recover" | "resend", email }
-  const session = (u) => {
+  const codes = new Map(); // kode PKCE pemulihan -> email
+  const session = (u, method = "password") => {
     const exp = Math.floor(Date.now() / 1000) + 3600;
     const user = { id: u.id, aud: "authenticated", role: "authenticated", email: u.email, app_metadata: { provider: "email" }, user_metadata: {}, created_at: new Date().toISOString() };
-    return { access_token: sign({ sub: u.id, email: u.email, role: "authenticated", aud: "authenticated", exp }), token_type: "bearer", expires_in: 3600, expires_at: exp, refresh_token: sign({ sub: u.id, rt: true, exp: exp + 86400 }), user };
+    return { access_token: sign({ sub: u.id, email: u.email, role: "authenticated", aud: "authenticated", exp, amr: [{ method, timestamp: Math.floor(Date.now() / 1000) }] }), token_type: "bearer", expires_in: 3600, expires_at: exp, refresh_token: sign({ sub: u.id, rt: true, exp: exp + 86400, method }), user };
   };
   const body = (req) => new Promise((r) => { let d = ""; req.on("data", (c) => (d += c)); req.on("end", () => r(d ? JSON.parse(d) : {})); });
   const send = (res, code, obj) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(obj)); };
@@ -47,14 +48,23 @@ export function startFakeSupabase({ databaseUrl, port }) {
         if (url.searchParams.get("grant_type") === "refresh_token") {
           const pl = verify(b.refresh_token);
           const u = pl && [...users.values()].find((x) => x.id === pl.sub);
-          return u ? send(res, 200, session(u)) : send(res, 400, { error_code: "refresh_token_not_found", msg: "bad refresh" });
+          return u ? send(res, 200, session(u, pl.method)) : send(res, 400, { error_code: "refresh_token_not_found", msg: "bad refresh" });
+        }
+        if (url.searchParams.get("grant_type") === "pkce") {
+          // Tukar kode dari tautan email pemulihan: sesi yang lahir di sini bertanda amr "recovery".
+          const email = codes.get(b.auth_code);
+          const u = email && users.get(email);
+          return u ? send(res, 200, session(u, "recovery")) : send(res, 400, { error_code: "flow_state_not_found", msg: "bad code" });
         }
         const u = users.get(b.email);
         return u && u.password === b.password ? send(res, 200, session(u)) : send(res, 400, { error_code: "invalid_credentials", msg: "Invalid login credentials" });
       }
       // Lupa kata sandi / kirim ulang konfirmasi: selalu 200 (seperti Supabase, tidak membocorkan keberadaan akun).
       if (url.pathname === "/auth/v1/recover" && req.method === "POST") {
-        outbox.push({ kind: "recover", email: (await body(req)).email });
+        const email = (await body(req)).email;
+        const code = randomUUID();
+        if (users.has(email)) codes.set(code, email);
+        outbox.push({ kind: "recover", email, code });
         return send(res, 200, {});
       }
       if (url.pathname === "/auth/v1/resend" && req.method === "POST") {

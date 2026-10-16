@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { googleAuthEnabled, googleRedirectTo } from "@/lib/auth/google";
 import { authErrorCode, normalizeEmail } from "@/lib/auth/messages";
+import { isRecoverySession } from "@/lib/auth/recovery";
 import { safeReturnTo } from "@/lib/auth/permissions";
 import { recordAttribution } from "@/lib/auth/record-attribution";
 import { recordEvent } from "@/lib/analytics/events";
@@ -81,11 +82,8 @@ export async function requestPasswordReset(formData: FormData) {
   const { error } = await supabase.auth.resetPasswordForEmail(email!, {
     redirectTo: `${appOrigin()}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
   });
-  if (error) {
-    const code = authErrorCode(error);
-    // Hanya kegagalan yang tidak terkait akun yang ditampilkan; selebihnya tetap dijawab "terkirim".
-    if (code === "rate_limited") redirect("/forgot-password?error=rate_limited");
-  }
+  // Semua hasil (termasuk batas kirim per email) dijawab sama agar keberadaan akun tidak bocor.
+  void error;
   redirect("/forgot-password?sent=1");
 }
 
@@ -99,6 +97,9 @@ export async function updatePassword(formData: FormData) {
   const supabase = await createSupabaseServerClient();
   const { data } = await supabase.auth.getUser();
   if (!data.user) redirect("/reset-password?error=session_missing");
+  // Hanya sesi dari tautan pemulihan email; sesi masuk biasa tidak boleh mengganti kata sandi tanpa kata sandi lama.
+  const { data: sess } = await supabase.auth.getSession();
+  if (!isRecoverySession(sess.session?.access_token)) redirect("/reset-password?error=session_missing");
   const { error } = await supabase.auth.updateUser({ password });
   if (error) redirect(`/reset-password?error=${authErrorCode(error)}`);
   redirect("/reset-password?done=1");

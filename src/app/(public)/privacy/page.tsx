@@ -19,7 +19,8 @@ export default function Page() {
               <li>Pemakaian harian (jumlah pesan, dokumen, dan analisis AI) untuk menerapkan batas harian.</li>
               <li>Pesanan dan status pembayaran, permintaan pemeriksaan pengacara, serta hasil pemeriksaan dan verifikasinya.</li>
               <li>Catatan kejadian (audit) untuk tindakan penting seperti penerbitan dan pencabutan verifikasi.</li>
-              <li>Peristiwa penggunaan yang bersifat ringkas (nama kejadian, tanpa isi dokumen) dan sumber iklan saat Anda mendaftar, bila ada, disimpan sementara di cookie hingga 30 hari.</li>
+              <li>Peristiwa penggunaan yang bersifat ringkas (nama kejadian, tanpa isi dokumen), disimpan di basis data.</li>
+              <li>Sumber iklan, bila Anda datang lewat tautan iklan: disimpan sementara di cookie browser hingga 30 hari, lalu dicatat pada akun saat Anda mendaftar.</li>
             </ul>
           ),
         },
