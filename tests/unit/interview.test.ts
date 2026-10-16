@@ -26,7 +26,7 @@ describe("parseInterviewJson", () => {
   });
 
   it("JSON valid tetapi skema salah (jumlah negatif) diperlakukan sebagai gagal dan diperbaiki", async () => {
-    const repair = vi.fn(async () => good);
+    const repair = vi.fn<(raw: string, error: string) => Promise<string>>(async () => good);
     const r = await parseInterviewJson(schema, JSON.stringify({ party: "A", amountIdr: -5 }), repair);
     expect(repair).toHaveBeenCalledTimes(1);
     expect(repair.mock.calls[0][1]).toMatch(/amountIdr/);
