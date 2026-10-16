@@ -1,11 +1,17 @@
 import Link from "next/link";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { Card, EmptyState, PageHeading } from "@/components/ui/card";
+import { fieldClass, labelText } from "@/components/ui/field";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getSessionRoles } from "@/lib/supabase/server";
 import { deepService } from "@/lib/deep/runtime";
+import { ageHours as age, categoryLabel } from "@/lib/partner/labels";
 import { reviewService } from "@/lib/reviews/runtime";
 import { assignAction, reassignAction } from "./actions";
 import { assignDeepAction } from "./deep-actions";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Antrean Review Standar & Pemeriksaan Mendalam | Mitra Hukum Yuktanya" };
 const ERR: Record<string, string> = {
   FORBIDDEN: "Anda tidak berwenang menugaskan permintaan ini.",
   REVIEWER_NOT_AUTHORIZED: "Reviewer ini tidak memiliki otorisasi aktif untuk firma ini.",
@@ -13,8 +19,23 @@ const ERR: Record<string, string> = {
   NOT_FOUND: "Permintaan tidak ditemukan.",
   NOT_ASSIGNABLE: "Permintaan ini tidak dapat ditugaskan lagi.",
 };
-const CATEGORY: Record<string, string> = { PKS: "Perjanjian Kerja Sama", UTANG_PIUTANG: "Surat Utang Piutang", NDA: "Perjanjian Kerahasiaan (NDA)" };
-const age = (iso: string) => `${Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 3_600_000))} jam`;
+const DONE: Record<string, string> = {
+  WITH_NOTES: "Selesai — Dengan Legal Note", WITHIN_SCOPE: "Selesai — Tanpa Legal Note", INCONCLUSIVE: "Belum dapat disimpulkan", DECLINED: "Tidak dapat memeriksa",
+  ENHANCED_APPROVED: "Enhanced disetujui", COMPLETED_WITH_NOTES: "Selesai dengan catatan (tanpa Enhanced)", REFERRED_SPECIAL_CASE: "Dirujuk sebagai kasus khusus",
+};
+const H2 = "text-xl font-bold text-navy md:text-2xl";
+const statusText = (s: string) => (s === "IN_REVIEW" ? "Sedang diperiksa" : "Ditugaskan, belum dibuka");
+
+function ReviewerSelect({ reviewers, label }: { reviewers: { reviewerId: string; email: string; active: number }[]; label: string }) {
+  return (
+    <label className="block min-w-0 flex-1 basis-56">
+      <span className={labelText}>{label}</span>
+      <select name="reviewerId" className={fieldClass}>
+        {reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>{rv.email} ({rv.active} aktif)</option>)}
+      </select>
+    </label>
+  );
+}
 
 export default async function PartnerPage({ searchParams }: { searchParams: Promise<{ e?: string; ok?: string; done?: string }> }) {
   const q = await searchParams;
@@ -29,104 +50,117 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
   const coord = isCoordinator ? { requests: await svc.unassigned(s.userId), reviewers: await svc.reviewers(s.userId), inflight: await svc.inflight(s.userId) } : null;
   const nameOf = (id: string) => coord?.reviewers.find((x) => x.reviewerId === id)?.email ?? id.slice(0, 8);
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
-      <h1 className="text-3xl font-semibold">Dashboard Mitra Hukum</h1>
-      {q.e && <p role="alert" className="font-semibold text-danger">{ERR[q.e] ?? "Terjadi kendala. Coba lagi."}</p>}
-      {q.done && <p role="status" className="rounded-lg border border-line bg-white p-3">Pemeriksaan diselesaikan dengan hasil: {q.done}. Pemilik dokumen sudah diberi tahu.</p>}
-      {q.ok && <p role="status" className="rounded-lg border border-line bg-white p-3">Penugasan disimpan.</p>}
+    <main className="max-w-4xl space-y-8">
+      <PageHeading title="Dashboard Mitra Hukum" lead="Antrean Review Standar dan Pemeriksaan Mendalam yang menjadi tanggung jawab Anda."
+        actions={isReviewer ? <ButtonLink href="/partner/approvals" variant="secondary">Lihat yang siap diputuskan</ButtonLink> : undefined} />
+      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{ERR[q.e] ?? "Terjadi kendala. Coba lagi."}</p>}
+      {q.done && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">Pemeriksaan diselesaikan dengan hasil: {DONE[q.done] ?? q.done}. Pemilik dokumen sudah diberi tahu.</p>}
+      {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">Penugasan disimpan.</p>}
+
       {isReviewer && (
         <section aria-labelledby="antrean-h" className="space-y-3">
-          <h2 id="antrean-h" className="text-2xl font-semibold">Antrean saya</h2>
-          {queue.length === 0 ? <p>Belum ada pekerjaan yang ditugaskan kepada Anda.</p> : (
+          <h2 id="antrean-h" className={H2}>Review Standar saya</h2>
+          {queue.length === 0 ? <EmptyState title="Belum ada pekerjaan" text="Belum ada Review Standar yang ditugaskan kepada Anda." /> : (
             <ul className="space-y-3">
               {queue.map((r) => (
-                <li key={r.requestId} className="rounded-lg border border-line bg-white p-4">
-                  <Link className="inline-flex min-h-12 items-center text-lg font-semibold underline" href={`/partner/reviews/${r.requestId}`}>{CATEGORY[r.category] ?? r.category}</Link>
-                  <p>Status: {r.status === "IN_REVIEW" ? "Sedang diperiksa" : "Ditugaskan"} · Usia {age(r.createdAt)}</p>
+                <li key={r.requestId}>
+                  <Card className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <Link className="inline-flex min-h-12 items-center text-lg font-semibold text-brand underline underline-offset-4" href={`/partner/reviews/${r.requestId}`}>{categoryLabel(r.category)}</Link>
+                      <p className="text-muted">Review Standar · Usia {age(r.createdAt)}</p>
+                    </div>
+                    <StatusBadge tone={r.status === "IN_REVIEW" ? "info" : "warning"}>{statusText(r.status)}</StatusBadge>
+                  </Card>
                 </li>
               ))}
             </ul>
           )}
         </section>
       )}
-      {coord && (
-        <section aria-labelledby="tugas-h" className="space-y-3">
-          <h2 id="tugas-h" className="text-2xl font-semibold">Permintaan belum ditugaskan</h2>
-          {coord.requests.length === 0 ? <p>Tidak ada permintaan yang menunggu penugasan.</p> : (
-            <ul className="space-y-3">
-              {coord.requests.map((r) => (
-                <li key={r.requestId} className="space-y-2 rounded-lg border border-line bg-white p-4">
-                  <p className="font-semibold">{CATEGORY[r.category] ?? r.category} · Usia {age(r.createdAt)}</p>
-                  {coord.reviewers.length === 0 ? <p>Belum ada reviewer di firma Anda.</p> : (
-                    <form action={assignAction} className="flex flex-wrap items-end gap-3">
-                      <input type="hidden" name="requestId" value={r.requestId} />
-                      <label className="block">
-                        <span className="font-medium">Tugaskan kepada</span>
-                        <select name="reviewerId" className="mt-1 block min-h-12 rounded-lg border border-slate-400 px-3">
-                          {coord.reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>{rv.email} ({rv.active} aktif)</option>)}
-                        </select>
-                      </label>
-                      <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Tugaskan</button>
-                    </form>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
+
       {deepQueue.length > 0 && (
         <section aria-labelledby="deepq-h" className="space-y-3">
-          <h2 id="deepq-h" className="text-2xl font-semibold">Pemeriksaan mendalam saya</h2>
+          <h2 id="deepq-h" className={H2}>Pemeriksaan mendalam saya</h2>
           <ul className="space-y-3">
             {deepQueue.map((r) => (
-              <li key={r.deepId} className="rounded-lg border border-line bg-white p-4">
-                <Link className="inline-flex min-h-12 items-center text-lg font-semibold underline" href={`/partner/deep/${r.deepId}`}>{CATEGORY[r.category] ?? r.category}</Link>
-                <p>Status: {r.status === "IN_REVIEW" ? "Sedang diperiksa" : "Ditugaskan"} · Usia {age(r.createdAt)}</p>
+              <li key={r.deepId}>
+                <Card className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <Link className="inline-flex min-h-12 items-center text-lg font-semibold text-brand underline underline-offset-4" href={`/partner/deep/${r.deepId}`}>{categoryLabel(r.category)}</Link>
+                    <p className="text-muted">Pemeriksaan Mendalam · Usia {age(r.createdAt)}</p>
+                  </div>
+                  <StatusBadge tone={r.status === "IN_REVIEW" ? "info" : "warning"}>{statusText(r.status)}</StatusBadge>
+                </Card>
               </li>
             ))}
           </ul>
         </section>
       )}
+
+      {coord && (
+        <section aria-labelledby="tugas-h" id="penugasan" className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="tugas-h" className={H2}>Review Standar belum ditugaskan</h2>
+            <ButtonLink href="/partner/team" variant="quiet">Lihat tim firma</ButtonLink>
+          </div>
+          {coord.requests.length === 0 ? <EmptyState title="Tidak ada yang menunggu" text="Tidak ada permintaan yang menunggu penugasan." /> : (
+            <ul className="space-y-3">
+              {coord.requests.map((r) => (
+                <li key={r.requestId}>
+                  <Card className="space-y-3">
+                    <p className="font-semibold text-navy">{categoryLabel(r.category)} · Usia {age(r.createdAt)}</p>
+                    {coord.reviewers.length === 0 ? <p>Belum ada reviewer di firma Anda. Minta admin platform menambahkan reviewer.</p> : (
+                      <form action={assignAction} className="flex flex-wrap items-end gap-3">
+                        <input type="hidden" name="requestId" value={r.requestId} />
+                        <ReviewerSelect reviewers={coord.reviewers} label="Tugaskan kepada" />
+                        <Button type="submit">Tugaskan</Button>
+                      </form>
+                    )}
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
       {deepCoord && (deepCoord.requests.length > 0 || deepCoord.inflight.length > 0) && coord && (
         <section aria-labelledby="deepc-h" className="space-y-3">
-          <h2 id="deepc-h" className="text-2xl font-semibold">Pemeriksaan mendalam: penugasan</h2>
+          <h2 id="deepc-h" className={H2}>Pemeriksaan mendalam: penugasan</h2>
           {[...deepCoord.requests.map((r) => ({ id: r.deepId, mode: "assign", note: "Belum ditugaskan", ok: true, cat: r.category })), ...deepCoord.inflight.map((r) => ({ id: r.deepId, mode: "reassign", note: r.reviewerAuthorized ? `Dikerjakan ${nameOf(r.reviewerId)}` : `Dikerjakan ${nameOf(r.reviewerId)} (otorisasi tidak aktif)`, ok: r.reviewerAuthorized, cat: r.category }))].map((r) => (
-            <form key={r.id} action={assignDeepAction} className="flex flex-wrap items-end gap-3 rounded-lg border border-line bg-white p-4">
-              <input type="hidden" name="deepId" value={r.id} /><input type="hidden" name="mode" value={r.mode} />
-              <p className={`w-full font-semibold ${r.ok ? "" : "text-danger"}`}>{CATEGORY[r.cat] ?? r.cat} · {r.note}</p>
-              <label className="block"><span className="font-medium">{r.mode === "assign" ? "Tugaskan kepada" : "Pindahkan ke"}</span>
-                <select name="reviewerId" className="mt-1 block min-h-12 rounded-lg border border-slate-400 px-3">{coord.reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>{rv.email} ({rv.active} aktif)</option>)}</select>
-              </label>
-              <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Simpan</button>
-            </form>
+            <Card key={r.id}>
+              <form action={assignDeepAction} className="flex flex-wrap items-end gap-3">
+                <input type="hidden" name="deepId" value={r.id} /><input type="hidden" name="mode" value={r.mode} />
+                <p className={`w-full break-words font-semibold ${r.ok ? "text-navy" : "text-danger"}`}>{categoryLabel(r.cat)} · {r.note}</p>
+                <ReviewerSelect reviewers={coord.reviewers} label={r.mode === "assign" ? "Tugaskan kepada" : "Pindahkan ke"} />
+                <Button type="submit">Simpan</Button>
+              </form>
+            </Card>
           ))}
         </section>
       )}
+
       {coord && coord.inflight.length > 0 && (
         <section aria-labelledby="jalan-h" className="space-y-3">
-          <h2 id="jalan-h" className="text-2xl font-semibold">Sedang dikerjakan</h2>
+          <h2 id="jalan-h" className={H2}>Review Standar sedang dikerjakan</h2>
           <ul className="space-y-3">
             {coord.inflight.map((r) => (
-              <li key={r.requestId} className="space-y-2 rounded-lg border border-line bg-white p-4">
-                <p className="font-semibold">{CATEGORY[r.category] ?? r.category} · Usia {age(r.createdAt)} · Reviewer {nameOf(r.reviewerId)}</p>
-                {!r.reviewerAuthorized && <p role="alert" className="font-semibold text-danger">Otorisasi reviewer ini tidak aktif. Pindahkan penugasan.</p>}
-                <form action={reassignAction} className="flex flex-wrap items-end gap-3">
-                  <input type="hidden" name="requestId" value={r.requestId} />
-                  <label className="block">
-                    <span className="font-medium">Pindahkan ke</span>
-                    <select name="reviewerId" className="mt-1 block min-h-12 rounded-lg border border-slate-400 px-3">
-                      {coord.reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>{rv.email} ({rv.active} aktif)</option>)}
-                    </select>
-                  </label>
-                  <button type="submit" className="min-h-12 rounded-lg border border-slate-400 bg-white px-5 font-medium">Pindahkan</button>
-                </form>
+              <li key={r.requestId}>
+                <Card className="space-y-3">
+                  <p className="break-words font-semibold text-navy">{categoryLabel(r.category)} · Usia {age(r.createdAt)} · Reviewer {nameOf(r.reviewerId)}</p>
+                  {!r.reviewerAuthorized && <p role="alert" className="font-semibold text-danger">Otorisasi reviewer ini tidak aktif. Pindahkan penugasan.</p>}
+                  <form action={reassignAction} className="flex flex-wrap items-end gap-3">
+                    <input type="hidden" name="requestId" value={r.requestId} />
+                    <ReviewerSelect reviewers={coord.reviewers} label="Pindahkan ke" />
+                    <Button type="submit" variant="secondary">Pindahkan</Button>
+                  </form>
+                </Card>
               </li>
             ))}
           </ul>
         </section>
       )}
-      {!isReviewer && !coord && <p>Akun ini belum memiliki tugas di dashboard mitra.</p>}
+      {!isReviewer && !coord && <EmptyState title="Belum ada tugas" text="Akun ini belum memiliki tugas di dashboard mitra." />}
     </main>
   );
 }

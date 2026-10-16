@@ -27,7 +27,10 @@ export function guardPath(pathname: string, roles: Role[] | null): GuardResult {
   if (prefix === "/admin" || prefix === "/api/admin") return roles.includes("platform_admin") ? { allow: true } : { allow: false, redirect: home };
   if (prefix === "/partner" || prefix === "/api/partner") {
     const ok = roles.includes("reviewer") || roles.includes("partner_admin");
-    return ok ? { allow: true } : { allow: false, redirect: home };
+    if (!ok) return { allow: false, redirect: home };
+    // Tim firma hanya untuk koordinator; reviewer saja kembali ke dashboard mitra.
+    if (under(pathname, "/partner/team") && !roles.includes("partner_admin")) return { allow: false, redirect: "/partner" };
+    return { allow: true };
   }
   // Permukaan pemilik: hanya akun pemilik biasa; peran profesional/admin tidak memakai identitas pemilik yang sama.
   return home === "/dashboard" ? { allow: true } : { allow: false, redirect: home };

@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { parseCanonical, type RenderedDoc } from "@/lib/documents/render";
 import { ReviewError } from "@/lib/reviews/service";
+import { RUBRIC_VERSION } from "./rubric";
 
 type Code = ConstructorParameters<typeof ReviewError>[0];
 const CODES: Code[] = ["REVIEWER_NOT_AUTHORIZED", "REVIEWER_AT_CAPACITY", "STALE_REVISION", "VERSION_MISMATCH", "ATTESTATION_REQUIRED", "NOT_ASSIGNABLE", "FORBIDDEN", "NOT_FOUND"];
@@ -19,6 +20,7 @@ export type ChecklistRow = { item: string; result: string; reasoning: string; ev
 export type DispositionRow = { noteNo: number; disposition: string; evidence: string };
 export type OpenedDeep = {
   deepId: string; title: string; category: string; doc: RenderedDoc; revision: number; parentNotes: ParentNote[];
+  versionNo: number; sha256: string; parentScope: string; rubricApproved: boolean; authorized: boolean;
   extraWork: string; summary: string; dispositions: DispositionRow[]; checklist: ChecklistRow[];
 };
 export type OwnerDeep = {
@@ -83,8 +85,16 @@ export function createPgDeepService(pool: Pool): DeepService {
         const rep = (await pool.query("select id, extra_work, summary, revision from deep_reports where deep_id = $1", [deepId])).rows[0];
         const disp = (await pool.query("select parent_note_no, disposition, evidence from deep_dispositions where report_id = $1 order by parent_note_no", [rep.id])).rows;
         const chk = (await pool.query("select item, result, reasoning, evidence_ref from deep_checklist where report_id = $1 order by item", [rep.id])).rows;
+        const meta = (await pool.query(
+          `select v.version_no, d.version_sha256, coalesce(prp.scope, '') as parent_scope,
+                  exists (select 1 from rubric_approvals ra where ra.policy_version = $4) as rubric_approved,
+                  d.firm_id is not null and reviewer_has_authority($2, d.firm_id, $3) as authorized
+             from deep_requests d join document_versions v on v.id = d.version_id
+             left join review_reports prp on prp.request_id = d.parent_request_id
+            where d.id = $1`, [deepId, reviewerId, now, RUBRIC_VERSION])).rows[0];
         return {
           deepId, title: s.title, category: s.category, doc: parseCanonical(s.version_text), revision: rep.revision,
+          versionNo: meta.version_no, sha256: meta.version_sha256, parentScope: meta.parent_scope, rubricApproved: meta.rubric_approved, authorized: meta.authorized,
           parentNotes: (s.parent_notes as Record<string, unknown>[]).map((n) => ({
             noteNo: n.note_no as number, title: n.title as string, finding: n.finding as string, severity: n.severity as string,
             actionable: n.actionable as boolean, recommendedAction: (n.recommended_action as string | null) ?? null,

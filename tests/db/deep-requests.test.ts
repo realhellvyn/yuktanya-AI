@@ -89,7 +89,13 @@ describe("penugasan deep", () => {
     const running = (await pool.query("select id from review_requests where order_id = $1", [b2.order_id])).rows[0].id;
     await pool.query("select assign_review($1, $2, $3, $4)", [c.f.coordinator, running, rv.reviewer, NOW]);
     const ids = async (actor: string) => {
-      const q = async (sql: string, args: unknown[]) => (await pool.query(sql, args)).rows.map((r) => r.request_id ?? r.deep_id);
+      const q = async (sql: string, args: unknown[]) => {
+        const { rows, fields } = await pool.query(sql, args);
+        const col = /deep_/.test(sql) ? "deep_id" : "request_id";
+        // Kolom yang diharapkan wajib ada; tanpa ini `not.toContain` bisa lulus kosong karena nama kolom salah.
+        expect(fields.map((f) => f.name)).toContain(col);
+        return rows.map((r) => r[col] as string);
+      };
       return [
         ...(await q("select * from coordinator_unassigned($1)", [actor])), ...(await q("select * from coordinator_inflight($1, $2)", [actor, NOW])),
         ...(await q("select * from deep_unassigned($1)", [actor])),

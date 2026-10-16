@@ -118,6 +118,10 @@ export async function journey({ step, base, vp, db, newActor }) {
     await p.check("input[name=attest]");
     await revA.shot("04-editor");
     await p.click("button:has-text('Terbitkan hasil')");
+    await p.locator("dialog[open]").waitFor();
+    const confirmText = await p.locator("dialog[open]").innerText();
+    if (!/Versi 1/.test(confirmText) || !confirmText.includes("Dengan Legal Note") || !confirmText.includes("Kepatutan klausul kerahasiaan") || !/Catatan 1/.test(confirmText)) throw new Error("konfirmasi akhir tidak lengkap: " + confirmText.slice(0, 400));
+    await p.click("dialog[open] button:has-text('Ya, terbitkan sekarang')");
     await p.waitForURL(/done=|e=/, { timeout: 15000 });
     const r = await db.query("select v.code, v.status, v.outcome from document_verifications v where v.kind = 'LEGAL' order by issued_at desc limit 1");
     if (!r.rows[0] || r.rows[0].status !== "ACTIVE" || r.rows[0].outcome !== "WITH_NOTES") throw new Error(JSON.stringify(r.rows) + (await p.innerText("body")).slice(0, 300));
@@ -164,7 +168,7 @@ export async function journey({ step, base, vp, db, newActor }) {
     await r.click("section[aria-labelledby=deepq-h] a");
     await r.waitForSelector("text=Pekerjaan tambahan");
     await r.fill("textarea[name=extraWork]", "Memeriksa ulang klausul kerahasiaan dan kecukupan definisi terhadap catatan standar.");
-    await submit(r, r.locator("button:has-text('Simpan')").first());
+    await submit(r, r.locator("button:has-text('Simpan pekerjaan tambahan')"));
     await r.selectOption("form:has(input[name=noteNo]) select[name=disposition]", "RESOLVED");
     await r.fill("form:has(input[name=noteNo]) input[name=evidence]", "Klausul 1 telah diperluas");
     await submit(r, r.locator("button:has-text('Simpan tindak lanjut')").first());
@@ -178,7 +182,10 @@ export async function journey({ step, base, vp, db, newActor }) {
     await revA.shot("07-deep");
     await r.selectOption("select[name=decision]", "APPROVE");
     await r.check("input[name=attest]");
-    await submit(r, r.locator("button:has-text('Simpan keputusan')"));
+    await r.click("button:has-text('Simpan keputusan')");
+    await r.locator("dialog[open]").waitFor();
+    if (!(await r.locator("dialog[open]").innerText()).includes("Setujui Enhanced")) throw new Error("konfirmasi keputusan tidak menyebut keputusan");
+    await submit(r, r.locator("dialog[open] button:has-text('Ya, simpan keputusan')"));
     const q = await db.query("select code, status from document_verifications where kind = 'LEGAL_ENHANCED' order by issued_at desc limit 1");
     if (!q.rows[0] || q.rows[0].status !== "ACTIVE") {
       const dbg = await db.query("select d.status, d.order_id, rp.status as rs, rp.revision, rp.decision, (select count(*) from deep_checklist c where c.report_id = rp.id) as chk, (select string_agg(o.status || '/' || coalesce(p.status, '-'), ',') from orders o left join payments p on p.order_id = o.id where o.id = d.order_id) as pay from deep_requests d left join deep_reports rp on rp.deep_id = d.id order by d.created_at desc limit 1");
@@ -203,7 +210,9 @@ export async function journey({ step, base, vp, db, newActor }) {
     await pub.goto(base + "/verify/" + code);
     if (!(await pub.innerText("body")).includes("Dicabut")) throw new Error("tidak Dicabut");
     await pub.goto(base + "/verify/" + enhancedCode);
-    if (!/Ditangguhkan|Dicabut/.test(await pub.innerText("body"))) throw new Error("Enhanced tetap aktif padahal induk dicabut");
+    const enhancedText = await pub.innerText("body");
+    if (!/Ditangguhkan|Dicabut/.test(enhancedText)) throw new Error("Enhanced tetap aktif padahal induk dicabut");
+    if (/\bAktif\b/.test(enhancedText)) throw new Error("halaman Enhanced masih menampilkan Aktif setelah induk dicabut");
     await pub.close();
   });
 
@@ -219,6 +228,7 @@ export async function journey({ step, base, vp, db, newActor }) {
     if (!t.includes("Versi 2") || !t.includes("Versi baru belum diperiksa")) throw new Error("versi 2 tidak ditandai belum diperiksa: " + t.slice(0, 400));
     if (/Status: (Aktif|Dicabut|Ditangguhkan)|Yuktanya Legal Verified/.test(t)) throw new Error("versi baru mewarisi lencana: " + t.slice(0, 400));
     const v2 = new URL(p.url()).searchParams.get("version");
+    if (!v2) throw new Error("URL versi baru tanpa parameter version: " + p.url());
     const n = (await db.query("select count(*)::int as n from document_verifications where version_id = $1", [v2])).rows[0].n;
     const v1 = (await db.query("select count(*)::int as n from document_verifications v join document_versions dv on dv.id = v.version_id where dv.document_id = $1 and dv.version_no = 1", [docId])).rows[0].n;
     if (n !== 0 || v1 < 1) throw new Error(`verifikasi versi 2 = ${n}, versi 1 = ${v1}`);

@@ -36,7 +36,7 @@ export type OwnerReview = {
 export type OwnerReviewRow = { requestId: string; title: string; versionNo: number; status: string; outcome: string | null; createdAt: string };
 export type QueueRow = { requestId: string; status: string; createdAt: string; assignedAt: string; category: string };
 export type OpenedReview = {
-  requestId: string; title: string; category: string; doc: RenderedDoc; revision: number;
+  requestId: string; title: string; category: string; doc: RenderedDoc; revision: number; versionNo: number; sha256: string; authorized: boolean;
   scope: string; assumptions: string; summary: string; notes: NoteView[];
 };
 export type InflightRow = { requestId: string; status: string; createdAt: string; category: string; reviewerId: string; reviewerAuthorized: boolean };
@@ -99,8 +99,12 @@ export function createPgReviewService(pool: Pool): ReviewService {
         const s = rows[0];
         const rep = (await pool.query("select scope, assumptions, summary, revision from review_reports where request_id = $1", [requestId])).rows[0];
         const notes = (await pool.query("select * from legal_notes where report_id = (select id from review_reports where request_id = $1) order by note_no", [requestId])).rows;
+        const meta = (await pool.query(
+          `select v.version_no, r.version_sha256, r.firm_id is not null and reviewer_has_authority($2, r.firm_id, $3) as authorized
+             from review_requests r join document_versions v on v.id = r.version_id where r.id = $1`, [requestId, reviewerId, now])).rows[0];
         return {
           requestId, title: s.title, category: s.category, doc: parseCanonical(s.version_text), revision: rep.revision,
+          versionNo: meta.version_no, sha256: meta.version_sha256, authorized: meta.authorized,
           scope: rep.scope, assumptions: rep.assumptions, summary: rep.summary, notes: notes.map(noteRow),
         };
       } catch (e) {

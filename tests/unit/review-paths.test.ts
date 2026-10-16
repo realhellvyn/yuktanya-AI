@@ -11,7 +11,10 @@ describe("afterPublishPath", () => {
 
 describe("editor mitra", () => {
   it("kolom isian dan pilihan memenuhi target sentuh min-h-12", () => {
-    const src = readFileSync("src/app/(partner)/partner/reviews/[id]/page.tsx", "utf8");
-    expect(src).toMatch(/const input = "[^"]*min-h-12/);
+    expect(readFileSync("src/components/ui/field.ts", "utf8")).toMatch(/export const fieldClass = "[^"]*min-h-12/);
+    for (const p of ["src/app/(partner)/partner/reviews/[id]/page.tsx", "src/app/(partner)/partner/deep/[id]/page.tsx"]) {
+      const src = readFileSync(p, "utf8");
+      expect(src).toContain("fieldClass as input");
+    }
   });
 });

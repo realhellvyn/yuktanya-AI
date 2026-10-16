@@ -33,6 +33,16 @@ describe("guardPath", () => {
     expect(redirectOf(guardPath("/partner", ["user", "platform_admin"]))).toBe("/admin");
   });
 
+  it("/partner/team hanya untuk koordinator; reviewer saja dialihkan ke /partner", () => {
+    expect(guardPath("/partner/team", ["user", "partner_admin"])).toEqual({ allow: true });
+    expect(guardPath("/partner/team", ["reviewer", "partner_admin"])).toEqual({ allow: true });
+    expect(redirectOf(guardPath("/partner/team", ["user", "reviewer"]))).toBe("/partner");
+    expect(redirectOf(guardPath("/partner/team/x", ["reviewer"]))).toBe("/partner");
+    expect(redirectOf(guardPath("/partner/team", ["user"]))).toBe("/dashboard");
+    expect(redirectOf(guardPath("/partner/team", ["user", "platform_admin"]))).toBe("/admin");
+    expect(guardPath("/partner/teamwork", ["reviewer"])).toEqual({ allow: true });
+  });
+
   it("prefix mirip tidak ikut terlindungi", () => {
     expect(guardPath("/administrator-info", null)).toEqual({ allow: true });
   });
