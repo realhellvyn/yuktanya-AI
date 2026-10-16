@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { AUTH_MESSAGES } from "@/lib/auth/messages";
 import { requestPasswordReset } from "../actions";
 import { AuthShell, linkClass } from "../auth-shell";
+import { fixedText } from "@/lib/query-text";
 
 export const metadata = { title: "Lupa kata sandi | Yuktanya" };
 
@@ -17,7 +18,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       ) : (
         <>
           <p className="text-muted">Tulis email akun Anda. Kami akan mengirim tautan untuk membuat kata sandi baru.</p>
-          {q.error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{q.error === "invalid" ? "Email belum sesuai. Periksa penulisannya." : AUTH_MESSAGES[q.error] ?? AUTH_MESSAGES.failed}</p>}
+          {q.error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{q.error === "invalid" ? "Email belum sesuai. Periksa penulisannya." : fixedText(AUTH_MESSAGES, q.error) ?? AUTH_MESSAGES.failed}</p>}
           <form action={requestPasswordReset} className="space-y-5">
             <label className="block">
               <span className="font-semibold">Email <span className="font-normal text-muted">(Wajib)</span></span>

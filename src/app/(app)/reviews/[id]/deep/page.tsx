@@ -6,11 +6,14 @@ import { deepService } from "@/lib/deep/runtime";
 import { trackDeepOfferShown } from "@/lib/deep/offer-event";
 import { loadDeepOfferPage, offerViewProps } from "@/lib/deep/owner-pages";
 import { flags } from "@/lib/flags";
+import { deepNoticeText } from "@/lib/deep/notices";
+import { fixedText } from "@/lib/query-text";
 import { requireUserId } from "@/lib/documents/session";
 import { reviewService } from "@/lib/reviews/runtime";
 import { requestDeepAction } from "../../../checkout/actions";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Pemeriksaan Mendalam | Yuktanya" };
 const REASON: Record<string, string> = {
   PARENT_NOT_COMPLETED: "Pemeriksaan standar belum selesai.",
   NO_ACTIONABLE_NOTES: "Pemeriksaan standar tidak memiliki catatan yang perlu ditindaklanjuti, jadi pemeriksaan mendalam tidak ditawarkan.",
@@ -22,7 +25,8 @@ const REASON: Record<string, string> = {
 
 export default async function DeepOfferPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ notice?: string }> }) {
   const { id } = await params;
-  const q = await searchParams;
+  // Kode dari alamat → kalimat tetap; kode tidak dikenal tidak menampilkan apa pun (D-05).
+  const notice = deepNoticeText((await searchParams).notice);
   const userId = await requireUserId();
   const page = await loadDeepOfferPage({ service: deepService(), flag: flags.deepReviewPurchase, track: trackDeepOfferShown }, userId, id);
   if (page.kind === "notFound") notFound();
@@ -32,13 +36,13 @@ export default async function DeepOfferPage({ params, searchParams }: { params: 
   return (
     <main className="max-w-3xl space-y-6">
       <PageHeading title="Pemeriksaan mendalam" lead={`Untuk ${review.title}, versi ${review.versionNo}`} />
-      {q.notice && <p role="alert" className="font-semibold text-red-800">Pemeriksaan mendalam belum dapat dipesan ({q.notice}).</p>}
+      {notice && <p role="alert" className="font-semibold text-red-800">{notice}</p>}
       {page.kind === "offer" ? (
         <DeepOffer {...offerViewProps(page.eligibility)} action={requestDeepAction} parentRequestId={id} />
       ) : (
         <Card className="space-y-2">
           <h2 className="text-xl font-semibold">Belum dapat ditawarkan</h2>
-          <p role="status">{REASON[page.eligibility.reason] ?? "Pemeriksaan mendalam belum tersedia untuk pemeriksaan ini."}</p>
+          <p role="status">{fixedText(REASON, page.eligibility.reason) ?? "Pemeriksaan mendalam belum tersedia untuk pemeriksaan ini."}</p>
         </Card>
       )}
       <ButtonLink href={`/reviews/${id}`} variant="secondary">Kembali ke hasil pemeriksaan</ButtonLink>

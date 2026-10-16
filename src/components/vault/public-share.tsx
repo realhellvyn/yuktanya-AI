@@ -1,6 +1,7 @@
 import { DocumentPreview } from "@/components/documents/document-preview";
 import { ACK_ERROR_MESSAGES, ACK_RESULT_MESSAGES } from "@/lib/vault/messages";
 import type { ShareView } from "@/lib/vault/share";
+import { fixedText, maskEmail } from "@/lib/query-text";
 
 type Action = (formData: FormData) => Promise<void>;
 type Props = {
@@ -32,8 +33,11 @@ export function PublicShare({ view, token, requestAction, verifyAction, ackAvail
       </main>
     );
   }
-  const resultMsg = result ? ACK_RESULT_MESSAGES[result] : undefined;
-  const errorMsg = error ? ACK_ERROR_MESSAGES[error] : undefined;
+  // Email dari alamat (?e=) hanya dipakai bila berbentuk email dan ditampilkan tersamar (teks bebas tidak pernah tampil).
+  const shownEmail = maskEmail(email);
+  const safeEmail = shownEmail ? email!.trim() : "";
+  const resultMsg = result ? fixedText(ACK_RESULT_MESSAGES, result) : undefined;
+  const errorMsg = error ? fixedText(ACK_ERROR_MESSAGES, error) : undefined;
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">{view.title}</h1>
@@ -51,10 +55,10 @@ export function PublicShare({ view, token, requestAction, verifyAction, ackAvail
         {errorMsg && <p role="alert" className="font-semibold text-danger">{errorMsg}</p>}
         {step === "kode" ? (
           <div className="space-y-4">
-            <p>Kode dikirim ke {email}</p>
+            {shownEmail && <p>Kode dikirim ke {shownEmail}</p>}
             <form action={verifyAction} className="space-y-3">
               <input type="hidden" name="token" value={token} />
-              <input type="hidden" name="email" value={email ?? ""} />
+              <input type="hidden" name="email" value={safeEmail} />
               <label className="block">
                 <span className="font-medium">Kode 6 digit dari email Anda (Wajib)</span>
                 <input name="code" inputMode="numeric" pattern="\d{6}" maxLength={6} required autoComplete="one-time-code" className={box} />
@@ -64,7 +68,7 @@ export function PublicShare({ view, token, requestAction, verifyAction, ackAvail
             <div className="flex flex-wrap gap-3">
               <form action={requestAction}>
                 <input type="hidden" name="token" value={token} />
-                <input type="hidden" name="email" value={email ?? ""} />
+                <input type="hidden" name="email" value={safeEmail} />
                 <button type="submit" className="min-h-12 rounded-lg border border-slate-400 bg-white px-5 font-medium">Kirim ulang kode</button>
               </form>
               <a href={`/s/${encodeURIComponent(token)}`} className="inline-flex min-h-12 items-center rounded-lg border border-slate-400 bg-white px-5 font-medium">Ubah email</a>

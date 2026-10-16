@@ -8,6 +8,7 @@ import { getPool } from "@/lib/db";
 import { formatDateId, wibDate } from "@/lib/documents/format";
 import { requireUserId } from "@/lib/documents/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { fixedText } from "@/lib/query-text";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pengaturan | Yuktanya" };
@@ -22,14 +23,14 @@ const NOTICES: Record<string, string> = {
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ notice?: string }> }) {
   // Sesi dan peran diperiksa ulang di server; email hanya dari sesi, bukan dari parameter.
   const userId = await requireUserId();
-  const notice = NOTICES[(await searchParams).notice ?? ""];
+  const notice = fixedText(NOTICES, (await searchParams).notice);
   const { data } = await (await createSupabaseServerClient()).auth.getUser();
   const pool = getPool();
   const [usage, member] = await Promise.all([createPgUsageStore(pool).snapshot(userId), getMembershipState(pool, userId)]);
   return (
     <main className="max-w-3xl space-y-6">
       <PageHeading title="Pengaturan" lead="Data akun dan privasi Anda." />
-      {notice && <p role="alert" data-testid="settings-notice" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold">{notice}</p>}
+      {notice && <p role="alert" data-testid="settings-notice" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold">{notice} <Link className="inline-flex min-h-12 items-center underline" href="/bantuan">Buka Bantuan</Link></p>}
 
       <section aria-labelledby="akun">
         <Card className="space-y-4">

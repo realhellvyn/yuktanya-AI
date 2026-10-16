@@ -29,9 +29,12 @@ import { latestAiReport } from "@/lib/ai/prereview";
 import { AI_REVIEW_STATUS_TEXT, type AiReviewStatus } from "@/lib/ai/review-status";
 import { uploadRepo } from "@/lib/uploads/runtime";
 import { ackEmailAvailable } from "@/lib/vault/email-config";
+import { versionStatuses, versionStatusText, wasReviewed } from "@/lib/documents/version-status";
+import { fixedText, isUuid } from "@/lib/query-text";
 
 // Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Dokumen | Yuktanya" };
 
 const LABEL = { changed: "Diubah", added: "Ditambah", removed: "Dihapus", same: "Sama" } as const;
 
@@ -65,13 +68,20 @@ export default async function DocumentPage({ params, searchParams }: { params: P
   const highRisk = upload?.riskLevel === "HIGH";
   const aiReport = selected ? await latestAiReport(pool, userId, selected.id) : null;
   const aiVerified = verifications.some((v) => v.kind === "AI" && v.status === "ACTIVE");
-  const aiStatus = q.ai && q.ai in AI_REVIEW_STATUS_TEXT ? (q.ai as AiReviewStatus) : null;
+  const aiStatus = fixedText(AI_REVIEW_STATUS_TEXT, q.ai) ? (q.ai as AiReviewStatus) : null;
   const quote = selected && !openCase && !highRisk ? await billingService().preview(userId, "STANDARD_REVIEW", selected.id).catch(() => null) : null;
   const changes = selected && against ? diffRendered(against.doc, selected.doc).filter((c) => c.change !== "same") : null;
 
   const when = (iso: string) => new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(iso));
   const selectedMeta = selected ? doc.versions.find((v) => v.id === selected.id) : undefined;
-  const hasActive = verifications.some((v) => v.status === "ACTIVE");
+  const statuses = await versionStatuses(pool, userId, id);
+  const selectedIdx = selected ? doc.versions.findIndex((v) => v.id === selected.id) : -1;
+  const selectedStatus = selected
+    ? versionStatusText(statuses[selected.id], doc.versions.slice(0, Math.max(0, selectedIdx)).some((v) => wasReviewed(statuses[v.id])))
+    : null;
+  // Nilai dari alamat hanya dipakai bila berbentuk ID; teks bebas tidak pernah masuk tautan.
+  const exportedId = isUuid(q.exported) ? q.exported : null;
+  const packId = isUuid(q.pack) ? q.pack : undefined;
   return (
     <main className="max-w-3xl space-y-6">
       <PageHeading title={doc.title} lead={selectedMeta ? `Versi ${selectedMeta.versionNo} · dibuat ${when(selectedMeta.createdAt)} WIB` : undefined} />
@@ -90,11 +100,11 @@ export default async function DocumentPage({ params, searchParams }: { params: P
           <Card className="space-y-4" aria-label={`Versi ${selected.versionNo}`}>
             <div className="flex flex-wrap items-center gap-3">
               <StatusBadge tone="info">{`Versi ${selected.versionNo}`}</StatusBadge>
-              {!hasActive && <StatusBadge tone="warning">Versi baru belum diperiksa</StatusBadge>}
+              {selectedStatus && <StatusBadge tone={selectedStatus.tone}>{selectedStatus.text}</StatusBadge>}
             </div>
-            {q.exported && (
+            {exportedId && (
               <p role="status" className="rounded-xl border border-blue-300 bg-blue-50 p-4">
-                <a className="inline-flex min-h-12 items-center font-semibold text-brand-dark underline" href={`/api/documents/exports/${q.exported}`}>
+                <a className="inline-flex min-h-12 items-center font-semibold text-brand-dark underline" href={`/api/documents/exports/${exportedId}`}>
                   Berkas siap. Tekan di sini untuk mengunduh.
                 </a>
               </p>
@@ -137,14 +147,14 @@ export default async function DocumentPage({ params, searchParams }: { params: P
             {highRisk && !openCase && (
               <Card className="space-y-3 border-amber-300 bg-amber-50/60">
                 <p className="text-lg font-semibold text-navy">Dokumen ini memerlukan penilaian khusus</p>
-                <p>Topiknya berisiko tinggi ({upload!.riskReasons.join(", ").toLowerCase()}), jadi tidak dianalisis AI dan tidak dapat dipesan untuk Review Standar. {SPECIAL_CASE_NOTE}</p>
+                <p>Topiknya berisiko tinggi ({upload!.riskReasons.join(", ").toLowerCase()}), jadi tidak dianalisis AI dan tidak dapat dipesan untuk pemeriksaan standar oleh pengacara. {SPECIAL_CASE_NOTE}</p>
                 <ButtonLink href={`/cases/new?document=${id}`}>Ajukan penilaian khusus</ButtonLink>
               </Card>
             )}
             {openCase && (
               <Card className="space-y-3 border-amber-300 bg-amber-50/60">
                 <p className="text-lg font-semibold text-navy">Dokumen ini memerlukan penilaian khusus</p>
-                <p>Review Standar tidak tersedia selama penilaian khusus berjalan. {SPECIAL_CASE_NOTE}</p>
+                <p>Pemeriksaan standar oleh pengacara tidak tersedia selama penilaian khusus berjalan. {SPECIAL_CASE_NOTE}</p>
                 <ButtonLink href={`/cases/${openCase}`} variant="secondary">Lihat status penilaian khusus</ButtonLink>
               </Card>
             )}
@@ -179,7 +189,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
             </div>
           </section>
 
-          <details className="rounded-2xl border border-line bg-white p-4" open={Boolean(q.pack || q.notice)}>
+          <details className="rounded-2xl border border-line bg-white p-4" open={Boolean(packId || q.notice)}>
             <summary className="inline-flex min-h-12 cursor-pointer items-center text-lg font-bold text-navy">Berbagi, pengingat, dan paket bukti</summary>
             <div className="mt-4">
               <VaultPanel
@@ -189,7 +199,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
                 shares={shares}
                 acks={acks}
                 reminderOptions={reminderOptions}
-                packId={q.pack}
+                packId={packId}
                 notice={q.notice}
                 emailAvailable={ackEmailAvailable()}
                 actions={{ createShare: createShareAction, revokeShare: revokeShareAction, setReminder: setReminderAction, cancelReminder: cancelReminderAction, buildPack: buildPackAction }}
@@ -211,7 +221,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
                   <Button type="submit" variant="secondary">Salin menjadi dokumen baru</Button>
                 </form>
               </div>
-              <VersionList documentId={id} versions={doc.versions} />
+              <VersionList documentId={id} versions={doc.versions} statuses={statuses} />
             </div>
           </details>}
         </>

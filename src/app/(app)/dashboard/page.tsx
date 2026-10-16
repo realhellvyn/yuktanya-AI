@@ -13,6 +13,7 @@ import { Card, EmptyState } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Beranda | Yuktanya" };
 
 const REVIEW_STATUS: Record<string, { text: string; tone: "info" | "success" | "warning" | "neutral" }> = {
   QUEUED: { text: "Menunggu pemeriksaan", tone: "warning" },
@@ -22,6 +23,10 @@ const REVIEW_STATUS: Record<string, { text: string; tone: "info" | "success" | "
   DECLINED: { text: "Tidak dapat diperiksa", tone: "neutral" },
   CANCELLED: { text: "Dibatalkan", tone: "neutral" },
 };
+
+// Waktu reset dari backend (resetAt), ditampilkan dalam WIB.
+const resetText = (iso: string) =>
+  `pukul ${new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Jakarta" }).format(new Date(iso)).replace(":", ".")} WIB`;
 
 function Quota({ label, left, total }: { label: string; left: number; total: number }) {
   const pct = total > 0 ? Math.round((left / total) * 100) : 0;
@@ -67,16 +72,16 @@ export default async function DashboardPage() {
         ) : (
           <>
             <p className="text-lg font-semibold text-navy">Buat dokumen dengan bantuan AI. Gratis.</p>
-            <p className="text-muted">Pilih jenis dokumen, jawab beberapa pertanyaan satu per satu, lalu dokumen Anda siap diunduh.</p>
+            <p className="text-muted">Pilih jenis dokumen, lalu ceritakan isinya kepada AI. Belum tahu dokumen mana yang cocok? Pilih &ldquo;Saya belum tahu&rdquo;.</p>
             <div><ButtonLink href="/workspace/new">Buat dokumen baru (Gratis)</ButtonLink></div>
           </>
         )}
-        <p className="text-sm text-muted">{AI_DRAFT_LABEL} AI bukan pengacara.</p>
-        {flags.aiPreReview && (
-          <div className="border-t border-blue-200 pt-4">
-            <ButtonLink href="/documents/upload" variant="secondary">Periksa dokumen yang sudah Anda punya</ButtonLink>
-          </div>
-        )}
+        <p className="text-muted">{AI_DRAFT_LABEL} AI bukan pengacara.</p>
+        <div className="border-t border-blue-200 pt-4">
+          {flags.aiPreReview
+            ? <ButtonLink href="/documents/upload" variant="secondary">Periksa dokumen yang sudah Anda punya</ButtonLink>
+            : <ButtonLink href="/bantuan#pengacara" variant="secondary">Cara memeriksakan dokumen ke pengacara</ButtonLink>}
+        </div>
       </Card>
 
       <section aria-labelledby="doc-h" className="space-y-3">
@@ -136,7 +141,7 @@ export default async function DashboardPage() {
             <Quota label="Sisa pembuatan dokumen" left={usage.documentsRemaining} total={usage.documentLimit} />
             <Quota label="Sisa pemeriksaan awal AI" left={usage.aiReviewsRemaining} total={usage.aiReviewLimit} />
           </ul>
-          <p className="text-sm text-muted">Setiap pemeriksaan AI memakai 1 pesan AI. Jatah dihitung ulang pukul 00.00 WIB.</p>
+          <p className="text-sm text-muted">Setiap pemeriksaan AI memakai 1 pesan AI. Jatah dihitung ulang {resetText(usage.resetAt)}.</p>
         </Card>
         <Card className="space-y-3">
           {membership.active ? (
@@ -156,6 +161,14 @@ export default async function DashboardPage() {
           )}
         </Card>
       </div>
+
+      <Card className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold text-navy">Butuh bantuan?</h2>
+          <p className="text-muted">Cara membuat dokumen, batas harian, pemeriksaan pengacara, dan cara mengecek keaslian dokumen.</p>
+        </div>
+        <ButtonLink href="/bantuan" variant="secondary">Buka Bantuan</ButtonLink>
+      </Card>
     </main>
   );
 }

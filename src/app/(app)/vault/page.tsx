@@ -2,6 +2,8 @@ import Link from "next/link";
 import { documentsService } from "@/lib/documents/runtime";
 import { requireUserId } from "@/lib/documents/session";
 
+export const metadata = { title: "Legal Vault | Yuktanya" };
+
 // Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
 export const dynamic = "force-dynamic";
 
@@ -12,7 +14,7 @@ export default async function VaultPage() {
   const detailed = await Promise.all(docs.map((d) => svc.get(userId, d.id)));
   return (
     <main className="max-w-3xl space-y-6">
-      <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">Vault</h1>
+      <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">Legal Vault</h1>
       <p>Vault menyimpan versi dokumen yang sudah dibuat dan tidak dapat diubah. Dokumen yang masih diisi ada di Dokumen Saya.</p>
       {detailed.length === 0 ? <p>Belum ada versi yang tersimpan.</p> : (
         <ul className="space-y-4">

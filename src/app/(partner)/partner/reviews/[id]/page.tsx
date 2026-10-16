@@ -14,6 +14,7 @@ import { categoryLabel } from "@/lib/partner/labels";
 import { reviewService } from "@/lib/reviews/runtime";
 import { ReviewError } from "@/lib/reviews/service";
 import { deleteNoteAction, publishAction, saveDraftAction, upsertNoteAction } from "../../actions";
+import { fixedText } from "@/lib/query-text";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Review Standar — Editor reviewer | Mitra Hukum Yuktanya" };
@@ -66,8 +67,8 @@ export default async function ReviewEditorPage({ params, searchParams }: { param
           <span className="break-all font-mono text-sm text-muted" title="Sidik jari SHA-256 versi yang dibayar">SHA-256 {review.sha256.slice(0, 16)}…</span>
         </div>
       </header>
-      {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">{OK[q.ok] ?? "Tersimpan."}</p>}
-      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{ERR[q.e] ?? "Terjadi kendala."}{q.r && REASON[q.r] ? ` ${REASON[q.r]}` : ""}</p>}
+      {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">{fixedText(OK, q.ok) ?? "Tersimpan."}</p>}
+      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{fixedText(ERR, q.e) ?? "Terjadi kendala."}{fixedText(REASON, q.r) ? ` ${fixedText(REASON, q.r)}` : ""}</p>}
 
       <EditorTabs key={`${q.ok ?? ""}${q.e ?? ""}${review.revision}`} initial={initial} panels={[
         {

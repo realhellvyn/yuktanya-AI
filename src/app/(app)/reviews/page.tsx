@@ -4,6 +4,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { requireUserId } from "@/lib/documents/session";
 import { reviewService } from "@/lib/reviews/runtime";
 
+export const metadata = { title: "Review Saya | Yuktanya" };
+
 export const dynamic = "force-dynamic";
 const STATUS: Record<string, { text: string; tone: "info" | "success" | "warning" | "neutral" }> = {
   QUEUED: { text: "Menunggu pemeriksaan", tone: "warning" }, ASSIGNED: { text: "Menunggu pemeriksaan", tone: "warning" },
@@ -22,7 +24,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
       {q.notice === "deep-tidak-valid" && <p role="alert" className="font-semibold text-red-800">Pemeriksaan mendalam tidak dapat dipesan karena pemeriksaan standar tidak dikenali.</p>}
       {q.notice === "sudah" && <p role="status" className="rounded-xl border border-line bg-white p-4">Versi ini sudah punya permintaan pemeriksaan.</p>}
       {rows.length === 0 ? (
-        <EmptyState title="Belum ada dokumen yang diperiksa pengacara" text="Buka salah satu dokumen Anda lalu pilih “Minta pemeriksaan pengacara”." action={<ButtonLink href="/documents" variant="secondary">Lihat dokumen saya</ButtonLink>} />
+        <EmptyState title="Belum ada dokumen yang diperiksa pengacara" text="Buka salah satu dokumen Anda lalu pilih “Minta pemeriksaan pengacara”." action={<div className="flex flex-wrap gap-3"><ButtonLink href="/bantuan#pengacara" variant="secondary">Lihat cara pemeriksaan</ButtonLink><ButtonLink href="/documents" variant="quiet">Lihat dokumen saya</ButtonLink></div>} />
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => {

@@ -1,0 +1,18 @@
+import Link from "next/link";
+
+// Isi bersama halaman galat. Pesan galat dan jejak tumpukan tidak pernah ditampilkan; hanya kode rujukan pendek (digest)
+// yang dapat disebutkan ke tim bila diminta.
+export function ErrorView({ digest, onRetry }: { digest?: string; onRetry: () => void }) {
+  return (
+    <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-5 px-4 py-12">
+      <h1 className="text-[1.75rem] font-bold leading-tight text-navy md:text-4xl">Terjadi kendala</h1>
+      <p className="text-lg">Maaf, halaman ini belum dapat ditampilkan. Data yang sudah tersimpan tetap aman. Tekan Coba lagi, atau kembali ke Beranda.</p>
+      {digest && /^[A-Za-z0-9]{1,32}$/.test(digest) && <p className="text-muted">Kode rujukan: <span className="font-mono">{digest}</span></p>}
+      <div className="flex flex-wrap gap-3">
+        <button type="button" onClick={onRetry} className="inline-flex min-h-[52px] items-center justify-center rounded-xl bg-brand px-6 font-semibold text-white hover:bg-brand-dark">Coba lagi</button>
+        <Link href="/" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-400 bg-white px-6 font-semibold text-ink hover:bg-slate-50">Ke Beranda</Link>
+        <Link href="/bantuan" className="inline-flex min-h-12 items-center justify-center rounded-xl px-3 font-semibold text-brand underline">Bantuan</Link>
+      </div>
+    </main>
+  );
+}

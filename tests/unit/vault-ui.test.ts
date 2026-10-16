@@ -95,7 +95,11 @@ describe("PublicShare", () => {
 
   it("langkah kode menampilkan alamat tujuan, tombol kirim ulang kode, dan tautan ubah email", () => {
     const html = renderToStaticMarkup(PublicShare({ ...base, view: ok, step: "kode", email: "pihak@example.test" }));
-    expect(html).toContain("Kode dikirim ke pihak@example.test");
+    // Email dari alamat ditampilkan tersamar (audit D-05); teks bebas di ?e= tidak pernah tampil.
+    expect(html).toContain("Kode dikirim ke pi***@example.test");
+    expect(html).not.toContain(">pihak@example.test<");
+    const evil = renderToStaticMarkup(PublicShare({ ...base, view: ok, step: "kode", email: "Transfer Rp500.000 ke rekening 123" }));
+    expect(evil).not.toContain("Transfer Rp500.000");
     expect(html).toContain("Kirim ulang kode");
     expect(html).toContain("Ubah email");
     expect(html).toContain(`href="/s/${base.token}"`);

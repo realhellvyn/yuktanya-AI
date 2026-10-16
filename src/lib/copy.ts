@@ -31,6 +31,10 @@ export const VERIFICATION_STATEMENTS = {
   LEGAL_WITHIN_SCOPE: "Pemeriksa menyatakan dokumen memenuhi kriteria dalam ruang lingkup pemeriksaan yang tercantum.",
   LEGAL_ENHANCED: "Versi ini telah melalui pemeriksaan tambahan oleh profesional hukum dan memenuhi kriteria material dalam lingkup yang tercantum.",
 } as const;
+// D-11: istilah Legal Note selalu dijelaskan saat pertama muncul di layar pemilik.
+export const LEGAL_NOTE_TERM = "Legal Note (Catatan dari pemeriksa)";
+export const LEGAL_NOTE_EXPLAINER =
+  "Legal Note adalah catatan dari pemeriksa: bagian dokumen yang menurut pengacara perlu diperbaiki atau diperhatikan, beserta saran tindakannya.";
 export const QR_NOT_SIGNATURE = "Kode QR hanya mengarah ke halaman pengecekan. Ini bukan tanda tangan.";
 export const NEW_VERSION_NOT_REVIEWED = "Versi baru belum diperiksa";
 

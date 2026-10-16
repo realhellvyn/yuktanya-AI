@@ -7,6 +7,7 @@ import { assignAction, reassignAction } from "@/app/(partner)/partner/actions";
 import { assignDeepAction } from "@/app/(partner)/partner/deep-actions";
 import { deepService } from "@/lib/deep/runtime";
 import { INVALID_FORM_TEXT } from "@/lib/partner/form";
+import { fixedText } from "@/lib/query-text";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Perutean review | Admin Yuktanya" };
@@ -34,7 +35,7 @@ export default async function RoutingPage({ searchParams }: { searchParams: Prom
   return (
     <main className="max-w-5xl space-y-6">
       <PageHeading title="Perutean Review" />
-      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{ERR[q.e] ?? "Terjadi kendala."}</p>}
+      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{fixedText(ERR, q.e) ?? "Terjadi kendala."}</p>}
       {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">Penugasan disimpan.</p>}
       <section aria-labelledby="belum-h" className="space-y-3">
         <h2 id="belum-h" className="text-xl font-bold text-navy md:text-2xl">Belum ditugaskan ({unassigned.length})</h2>

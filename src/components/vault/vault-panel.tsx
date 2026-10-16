@@ -3,6 +3,7 @@ import { PANEL_NOTICES } from "@/lib/vault/messages";
 import type { AckRow, ShareRow } from "@/lib/vault/share";
 import type { ReminderOption } from "@/lib/vault/reminders";
 import { CreateShareForm, type CreateShareState } from "./create-share-form";
+import { fixedText } from "@/lib/query-text";
 
 type Action = (formData: FormData) => Promise<void>;
 type Props = {
@@ -39,7 +40,7 @@ function shareStatus(s: ShareRow): string {
 export function VaultPanel({ documentId, versionId, features, shares, acks, reminderOptions, packId, notice, emailAvailable, actions }: Props) {
   return (
     <div className="space-y-8">
-      {notice && PANEL_NOTICES[notice] && <p role="alert" className="rounded-lg border border-red-700 bg-white p-4 text-danger">{PANEL_NOTICES[notice]}</p>}
+      {fixedText(PANEL_NOTICES, notice) && <p role="alert" className="rounded-lg border border-red-700 bg-white p-4 text-danger">{fixedText(PANEL_NOTICES, notice)}</p>}
 
       <section aria-labelledby="share-h" className="space-y-3">
         <h2 id="share-h" className="text-2xl font-semibold">Bagikan ke pihak lawan</h2>

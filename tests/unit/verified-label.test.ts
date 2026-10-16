@@ -19,7 +19,9 @@ const SHA = "e".repeat(64);
 const review = (over: Partial<OwnerReview> = {}): OwnerReview => ({
   requestId: "r", versionId: "v", status: "COMPLETED", outcome: "WITH_NOTES", createdAt: "2026-10-16T05:00:00.000Z", completedAt: "2026-10-17T05:00:00.000Z",
   title: "NDA", versionNo: 2, scope: "Klausul kerahasiaan", assumptions: null, summary: null, notes: [],
-  verification: { id: "x", code: CODE, status: "ACTIVE" }, ...over,
+  verification: { id: "x", code: CODE, status: "ACTIVE" },
+  documentId: "d1", firmName: null, timeline: { orderedAt: null, paidAt: null, queuedAt: "2026-10-16T05:00:00.000Z", assignedAt: null, completedAt: "2026-10-17T05:00:00.000Z" },
+  credit: null, ...over,
 });
 const deep = (over: Partial<OwnerDeep> = {}): OwnerDeep => ({
   deepId: "d", parentRequestId: "p", versionId: "v", status: "COMPLETED", outcome: "ENHANCED_APPROVED", createdAt: "2026-10-16T05:00:00.000Z", completedAt: "2026-10-17T05:00:00.000Z",

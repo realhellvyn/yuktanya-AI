@@ -9,6 +9,8 @@ import { requireUserId } from "@/lib/documents/session";
 import { formatIdr, PRICING } from "@/lib/pricing/catalog";
 import { startMembershipAction } from "../checkout/actions";
 
+export const metadata = { title: "Membership | Yuktanya" };
+
 export const dynamic = "force-dynamic";
 
 export default async function MembershipPage() {

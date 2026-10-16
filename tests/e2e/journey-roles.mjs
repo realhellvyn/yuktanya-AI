@@ -163,7 +163,7 @@ export async function journey({ step, base, vp, db, newActor }) {
     await submit(adminA.page, adminA.page.locator("button:has-text('Catat persetujuan')"));
     await ownerA.page.goto(base + "/reviews");
     await ownerA.page.click("a[href^='/reviews/']");
-    await ownerA.page.waitForSelector("text=Pemeriksaan mendalam (opsional)");
+    await ownerA.page.waitForSelector("text=Pemeriksaan mendalam (tambahan)");
     const offer = await ownerA.page.innerText("body");
     if (!/200\.000/.test(offer) || !/tidak menjamin/i.test(offer)) throw new Error("tawaran tidak lengkap: " + offer.slice(0, 400));
     await ownerA.shot("06-tawaran-deep");

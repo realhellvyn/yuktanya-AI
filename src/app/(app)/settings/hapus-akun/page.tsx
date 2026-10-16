@@ -4,6 +4,7 @@ import { getPool } from "@/lib/db";
 import { requireUserId } from "@/lib/documents/session";
 import { CONFIRM_WORD, ERASE_BLOCK_MESSAGES, erasureBlockers } from "@/lib/retention/erasure";
 import { deleteAccountAction } from "../actions";
+import { fixedText } from "@/lib/query-text";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Hapus Akun | Yuktanya" };
@@ -20,7 +21,7 @@ export default async function DeleteAccountPage({ searchParams }: { searchParams
   const userId = await requireUserId();
   const { e } = await searchParams;
   const blockers = await erasureBlockers(getPool(), userId);
-  const error = e ? ERRORS[e] : undefined;
+  const error = fixedText(ERRORS, e);
 
   return (
     <main className="max-w-3xl space-y-6">

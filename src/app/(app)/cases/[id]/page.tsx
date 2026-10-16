@@ -9,6 +9,7 @@ import { CASE_STATUS_LABEL, CASE_STATUS_TONE, caseErrorText, caseTimeline, forma
 import { requireUserId } from "@/lib/documents/session";
 import { formatIdr } from "@/lib/pricing/catalog";
 import { acceptQuoteAction, declineQuoteAction, withdrawCaseAction } from "../actions";
+import { fixedText } from "@/lib/query-text";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Status Kasus Khusus | Yuktanya" };
@@ -34,7 +35,7 @@ export default async function CasePage({ params, searchParams }: { params: Promi
   return (
     <main className="max-w-3xl space-y-6">
       <PageHeading title="Kasus khusus" lead={c.documentTitle ? `Dokumen: ${c.documentTitle}` : "Tanpa dokumen terkait"} />
-      {q.ok && OK[q.ok] && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-success">{OK[q.ok]}</p>}
+      {fixedText(OK, q.ok) && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-success">{fixedText(OK, q.ok)}</p>}
       {error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{error}</p>}
       <Card className="space-y-3">
         <div className="flex flex-wrap items-center gap-3">

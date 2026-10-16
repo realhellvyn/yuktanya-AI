@@ -10,6 +10,7 @@ import { reviewService } from "@/lib/reviews/runtime";
 import { INVALID_FORM_TEXT } from "@/lib/partner/form";
 import { assignAction, declareConflictAction, reassignAction } from "./actions";
 import { assignDeepAction } from "./deep-actions";
+import { fixedText } from "@/lib/query-text";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Antrean Review Standar & Pemeriksaan Mendalam | Mitra Hukum Yuktanya" };
@@ -61,9 +62,9 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
     <main className="max-w-4xl space-y-8">
       <PageHeading title="Dashboard Mitra Hukum" lead="Antrean Review Standar dan Pemeriksaan Mendalam yang menjadi tanggung jawab Anda."
         actions={isReviewer ? <ButtonLink href="/partner/approvals" variant="secondary">Lihat yang siap diputuskan</ButtonLink> : undefined} />
-      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{ERR[q.e] ?? "Terjadi kendala. Coba lagi."}</p>}
-      {q.done && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">Pemeriksaan diselesaikan dengan hasil: {DONE[q.done] ?? q.done}. Pemilik dokumen sudah diberi tahu.</p>}
-      {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">{OK[q.ok] ?? "Tersimpan."}</p>}
+      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{fixedText(ERR, q.e) ?? "Terjadi kendala. Coba lagi."}</p>}
+      {fixedText(DONE, q.done) && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">Pemeriksaan diselesaikan dengan hasil: {fixedText(DONE, q.done)}. Pemilik dokumen sudah diberi tahu.</p>}
+      {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">{fixedText(OK, q.ok) ?? "Tersimpan."}</p>}
 
       {isReviewer && (
         <section aria-labelledby="antrean-h" className="space-y-3">

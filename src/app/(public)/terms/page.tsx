@@ -41,7 +41,7 @@ export default function Page() {
           body: (
             <>
               <p>Pemeriksaan standar: {formatIdr(PRICING.standard.free)}; untuk member aktif {formatIdr(PRICING.standard.memberFirst)} untuk yang pertama pada tiap periode dan {formatIdr(PRICING.standard.memberLater)} untuk berikutnya.</p>
-              <p>Pemeriksaan mendalam hanya ditawarkan setelah pemeriksaan standar selesai dan memuat Catatan Hukum yang perlu ditindaklanjuti. Tambahan biayanya {formatIdr(PRICING.deepAdditional.free)}, atau {formatIdr(PRICING.deepAdditional.member)} untuk member aktif.</p>
+              <p>Pemeriksaan mendalam hanya ditawarkan setelah pemeriksaan standar selesai dan memuat Legal Note (Catatan dari pemeriksa) yang perlu ditindaklanjuti. Tambahan biayanya {formatIdr(PRICING.deepAdditional.free)}, atau {formatIdr(PRICING.deepAdditional.member)} untuk member aktif.</p>
               <p>{CHECKOUT_NOTE}</p>
               <p>{SPECIAL_CASE_NOTE}</p>
             </>

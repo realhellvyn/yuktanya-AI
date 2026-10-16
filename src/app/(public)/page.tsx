@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { AI_DRAFT_LABEL, LEGAL_DISCLAIMER, SLOGAN } from "@/lib/copy";
 import { formatIdr, PRICING } from "@/lib/pricing/catalog";
 
+export const metadata = { title: "Yuktanya — Legal Service Seharga Secangkir Kopi" };
+
 const DOCS = [
   { title: "Perjanjian Kerja Sama", text: "Untuk kerja sama usaha atau proyek." },
   { title: "Surat Utang Piutang", text: "Untuk pinjam-meminjam uang." },

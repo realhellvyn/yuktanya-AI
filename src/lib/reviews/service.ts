@@ -36,6 +36,11 @@ export type OwnerReview = {
   requestId: string; versionId: string; status: string; outcome: string | null; createdAt: string; completedAt: string | null;
   title: string; versionNo: number; scope: string | null; assumptions: string | null; summary: string | null;
   notes: NoteView[]; verification: { id: string; code: string; status: string } | null;
+  // Task 14 (D-07/D-14). firmName: nama firma mitra yang menangani (tanpa identitas pribadi reviewer).
+  documentId: string; firmName: string | null;
+  timeline: { orderedAt: string | null; paidAt: string | null; queuedAt: string; assignedAt: string | null; completedAt: string | null };
+  // Kredit yang dibuat publish_standard saat hasil DECLINED (order dibatalkan); null bila tidak ada.
+  credit: { status: string; expiresAt: string } | null;
 };
 export type OwnerReviewRow = { requestId: string; title: string; versionNo: number; status: string; outcome: string | null; createdAt: string };
 export type QueueRow = { requestId: string; status: string; createdAt: string; assignedAt: string; category: string };
@@ -87,12 +92,23 @@ export function createPgReviewService(pool: Pool): ReviewService {
       const { rows } = await pool.query("select * from get_review_for_owner($1, $2)", [userId, requestId]);
       const r = rows[0];
       if (!r) return null;
-      const meta = (await pool.query("select d.title, v.version_no from document_versions v join documents d on d.id = v.document_id where v.id = $1", [r.version_id])).rows[0];
+      const meta = (await pool.query("select d.id as document_id, d.title, v.version_no from document_versions v join documents d on d.id = v.document_id where v.id = $1", [r.version_id])).rows[0];
+      const extra = (await pool.query(
+        `select f.name as firm_name, o.created_at as ordered_at, o.paid_at,
+                (select min(a.assigned_at) from review_assignments a where a.request_id = r.id) as assigned_at,
+                (select jsonb_build_object('status', c.status, 'expires_at', c.expires_at) from review_credits c
+                  where c.order_id = r.order_id and c.user_id = r.owner_id and r.status = 'DECLINED' order by c.expires_at desc limit 1) as credit
+           from review_requests r left join firms f on f.id = r.firm_id left join orders o on o.id = r.order_id
+          where r.id = $1 and r.owner_id = $2`, [requestId, userId])).rows[0] ?? {};
+      const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
       return {
         requestId: r.request_id, versionId: r.version_id, status: r.status, outcome: r.outcome, createdAt: r.created_at.toISOString(),
         completedAt: r.completed_at ? r.completed_at.toISOString() : null, title: meta.title, versionNo: meta.version_no,
         scope: r.scope, assumptions: r.assumptions, summary: r.summary, notes: (r.notes as Record<string, unknown>[]).map(noteRow),
         verification: r.verification_id ? { id: r.verification_id, code: r.verification_code, status: r.verification_status } : null,
+        documentId: meta.document_id, firmName: extra.firm_name ?? null,
+        timeline: { orderedAt: iso(extra.ordered_at), paidAt: iso(extra.paid_at), queuedAt: r.created_at.toISOString(), assignedAt: iso(extra.assigned_at), completedAt: r.completed_at ? r.completed_at.toISOString() : null },
+        credit: extra.credit ? { status: extra.credit.status, expiresAt: new Date(extra.credit.expires_at).toISOString() } : null,
       };
     },
 

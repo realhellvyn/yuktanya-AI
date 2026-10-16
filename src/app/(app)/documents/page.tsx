@@ -6,6 +6,8 @@ import { documentsService } from "@/lib/documents/runtime";
 import { requireUserId } from "@/lib/documents/session";
 import { flags } from "@/lib/flags";
 
+export const metadata = { title: "Dokumen Saya | Yuktanya" };
+
 // Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
 export const dynamic = "force-dynamic";
 

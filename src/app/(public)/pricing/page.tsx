@@ -3,6 +3,8 @@ import { SiteHeader } from "@/components/site-header";
 import { CHECKOUT_NOTE, SPECIAL_CASE_NOTE } from "@/lib/copy";
 import { PRICING, formatIdr } from "@/lib/pricing/catalog";
 
+export const metadata = { title: "Harga | Yuktanya" };
+
 const ROWS: { item: string; price: string; note?: string }[] = [
   { item: "Membuat dokumen dengan AI", price: "Gratis", note: "Dalam batas harian. Perlu daftar atau masuk." },
   { item: "Membership (opsional)", price: `${formatIdr(PRICING.membershipMonthlyIdr)} per periode`, note: "Kuota harian lebih besar dan harga pemeriksaan lebih rendah." },
@@ -12,7 +14,7 @@ const ROWS: { item: string; price: string; note?: string }[] = [
   {
     item: "Pemeriksaan mendalam (tambahan, bukan member)",
     price: formatIdr(PRICING.deepAdditional.free),
-    note: "Hanya ditawarkan setelah pemeriksaan standar selesai dan memiliki Catatan Hukum yang perlu ditindaklanjuti.",
+    note: "Hanya ditawarkan setelah pemeriksaan standar selesai dan memiliki Legal Note (Catatan dari pemeriksa) yang perlu ditindaklanjuti.",
   },
   { item: "Pemeriksaan mendalam (tambahan, member aktif)", price: formatIdr(PRICING.deepAdditional.member) },
   { item: "Kasus khusus", price: "Penawaran khusus", note: SPECIAL_CASE_NOTE },

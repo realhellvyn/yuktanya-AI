@@ -18,7 +18,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-white px-4 py-2 lg:hidden">
           <Link href="/dashboard" className="inline-flex min-h-12 items-center text-xl font-bold text-navy">Yuktanya</Link>
           <div className="flex items-center">
-            <Link href="/settings" className="inline-flex min-h-12 items-center rounded-lg px-3 font-semibold text-muted">Pengaturan</Link>
+            <Link href="/bantuan" className="inline-flex min-h-12 items-center rounded-lg px-3 font-semibold text-muted">Bantuan</Link>
             <SignOutForm>
               <button type="submit" className="inline-flex min-h-12 items-center rounded-lg px-3 font-semibold text-muted">Keluar</button>
             </SignOutForm>

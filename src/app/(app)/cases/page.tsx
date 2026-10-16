@@ -19,7 +19,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Promis
       {q.notice === "khusus" && <p role="alert" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold">{caseErrorText("SPECIAL_CASE_OPEN")}</p>}
       <p className="rounded-xl border border-line bg-white p-4">{SPECIAL_CASE_NOTE}</p>
       {rows.length === 0 ? (
-        <EmptyState title="Belum ada permintaan penilaian khusus" text="Gunakan bila dokumen Anda rumit atau berisiko tinggi dan tidak cocok untuk Review Standar." />
+        <EmptyState title="Belum ada permintaan penilaian khusus" text="Gunakan bila dokumen Anda rumit atau berisiko tinggi dan tidak cocok untuk pemeriksaan standar oleh pengacara." />
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => (

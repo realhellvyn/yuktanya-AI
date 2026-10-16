@@ -34,14 +34,14 @@ export default async function NewCasePage({ searchParams }: { searchParams: Prom
   }
   return (
     <main className="max-w-3xl space-y-6">
-      <PageHeading title="Ajukan penilaian khusus" lead="Untuk kebutuhan hukum yang rumit atau berisiko tinggi, yang tidak cocok untuk Review Standar." />
+      <PageHeading title="Ajukan penilaian khusus" lead="Untuk kebutuhan hukum yang rumit atau berisiko tinggi, yang tidak cocok untuk pemeriksaan standar oleh pengacara." />
       <Card className="space-y-3 border-amber-300 bg-amber-50/60">
         <p className="text-lg font-semibold text-navy">{SPECIAL_CASE_NOTE}</p>
         <ul className="list-disc space-y-1 pl-5">
           <li>Firma hukum mitra lebih dulu memeriksa konflik kepentingan, lalu menilai kebutuhan Anda.</li>
           <li>Bila dapat ditangani, firma mengirim penawaran: biaya, ruang lingkup, dan batas waktu penawaran.</li>
           <li>Anda bebas menerima atau menolak. Menerima penawaran belum membuat tagihan; pembayaran dan perjanjian kerja diatur terpisah dengan firma.</li>
-          <li>Selama permintaan ini berjalan, dokumen terkait tidak dapat dipesan untuk Review Standar.</li>
+          <li>Selama permintaan ini berjalan, dokumen terkait tidak dapat dipesan untuk pemeriksaan standar oleh pengacara.</li>
         </ul>
       </Card>
       <Card className="space-y-4">

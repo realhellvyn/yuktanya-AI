@@ -16,6 +16,7 @@ import { reviewService } from "@/lib/reviews/runtime";
 import { qrPng, verifyUrl } from "@/lib/verification/qr";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Hasil Pemeriksaan | Yuktanya" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function ReviewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ notice?: string }> }) {
@@ -44,7 +45,7 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
   return (
     <main className="max-w-3xl space-y-6">
       <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">{review.title} — versi {review.versionNo}</h1>
-      <ReviewTimeline status={review.status} />
+      <ReviewTimeline status={review.status} timeline={review.timeline} />
       <ResultPanel review={review} verifyUrl={url} qrDataUrl={qr} isLatestVersion={review.versionNo === latest} />
       {notice && <p role="alert" className="font-semibold text-red-800">{notice}</p>}
       {deep && <DeepResult deep={deep} verifyUrl={deepUrl} />}

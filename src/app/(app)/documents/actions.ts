@@ -22,8 +22,9 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
   try {
     ({ documentId } = await documentsService().create(userId, category, randomUUID()));
   } catch (e) {
-    if (e instanceof TemplateNotApprovedError) redirect(`/workspace/new?error=${encodeURIComponent("Dokumen ini belum tersedia.")}`);
-    if (e instanceof Error && e.message.includes("TOO_MANY_DRAFTS")) redirect(`/workspace/new?error=${encodeURIComponent("Anda punya terlalu banyak draf yang belum selesai. Selesaikan salah satunya dulu.")}`);
+    // Hanya kode; halaman memetakan kode ke kalimat tetap (teks dari alamat tidak pernah ditampilkan apa adanya).
+    if (e instanceof TemplateNotApprovedError) redirect("/workspace/new?error=template");
+    if (e instanceof Error && e.message.includes("TOO_MANY_DRAFTS")) redirect("/workspace/new?error=too-many-drafts");
     throw e;
   }
   redirect(`/workspace/${documentId}`);

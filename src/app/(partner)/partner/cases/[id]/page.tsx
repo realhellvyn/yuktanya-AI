@@ -11,6 +11,7 @@ import { categoryLabel } from "@/lib/partner/labels";
 import { formatIdr } from "@/lib/pricing/catalog";
 import { getSessionRoles } from "@/lib/supabase/server";
 import { closeCaseAction, quoteCaseAction, triageCaseAction } from "../actions";
+import { fixedText } from "@/lib/query-text";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Kasus Khusus — Triase & Penawaran | Mitra Hukum Yuktanya" };
@@ -35,7 +36,7 @@ export default async function PartnerCasePage({ params, searchParams }: { params
   return (
     <main className="max-w-3xl space-y-6">
       <PageHeading title="Kasus khusus" lead={`${c.category ? categoryLabel(c.category) : "Tanpa dokumen terkait"} · ${c.firmName}`} />
-      {q.ok && OK[q.ok] && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-success">{OK[q.ok]}</p>}
+      {fixedText(OK, q.ok) && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-success">{fixedText(OK, q.ok)}</p>}
       {error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{error}</p>}
       <Card className="space-y-3">
         <div className="flex flex-wrap items-center gap-3">

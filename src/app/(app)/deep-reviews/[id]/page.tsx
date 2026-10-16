@@ -9,6 +9,8 @@ import { deepService } from "@/lib/deep/runtime";
 import { requireUserId } from "@/lib/documents/session";
 import { verifyUrl } from "@/lib/verification/qr";
 
+export const metadata = { title: "Pemeriksaan Mendalam | Yuktanya" };
+
 export const dynamic = "force-dynamic";
 const HOLD: Record<string, string> = {
   ON_HOLD: "Pemeriksaan ditahan karena verifikasi pemeriksaan standar dicabut atau ditangguhkan. Kami akan memberi tahu bila berlanjut.",

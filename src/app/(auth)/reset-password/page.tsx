@@ -6,6 +6,7 @@ import { hasSupabaseEnv } from "@/lib/supabase/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { updatePassword } from "../actions";
 import { AuthShell, linkClass } from "../auth-shell";
+import { fixedText } from "@/lib/query-text";
 
 export const metadata = { title: "Kata sandi baru | Yuktanya" };
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   }
   return (
     <AuthShell title="Buat kata sandi baru">
-      {q.error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{q.error === "invalid" ? "Kata sandi minimal 8 karakter." : AUTH_MESSAGES[q.error] ?? AUTH_MESSAGES.failed}</p>}
+      {q.error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{q.error === "invalid" ? "Kata sandi minimal 8 karakter." : fixedText(AUTH_MESSAGES, q.error) ?? AUTH_MESSAGES.failed}</p>}
       <form action={updatePassword} className="space-y-5">
         <label className="block">
           <span className="font-semibold">Kata sandi baru <span className="font-normal text-muted">(Wajib, minimal 8 karakter)</span></span>

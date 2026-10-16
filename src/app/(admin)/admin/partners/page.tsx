@@ -4,6 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import { adminService } from "@/lib/admin/runtime";
 import { getSessionRoles } from "@/lib/supabase/server";
 import { addMemberAction, authorizeAction, registerFirmAction, revokeAuthorizationAction } from "./actions";
+import { fixedText } from "@/lib/query-text";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mitra hukum | Admin Yuktanya" };
@@ -22,7 +23,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       <PageHeading title="Mitra hukum" />
       <p>Admin hanya mencatat firma, anggota, dan otorisasi profesional yang sudah diverifikasi di luar sistem. Admin tidak dapat memberi dirinya kewenangan profesional dan tidak menerbitkan hasil pemeriksaan.</p>
       {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">Tersimpan.</p>}
-      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{MSG[q.e] ?? "Terjadi kendala."}</p>}
+      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{fixedText(MSG, q.e) ?? "Terjadi kendala."}</p>}
 
       <form action={registerFirmAction} className="space-y-3 rounded-2xl border border-line bg-white p-5">
         <h2 className="text-xl font-bold text-navy md:text-2xl">Daftarkan firma</h2>

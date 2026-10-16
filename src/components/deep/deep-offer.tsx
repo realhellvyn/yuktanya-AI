@@ -1,5 +1,6 @@
 import { CHECKOUT_NOTE, DEEP_PAYMENT_STATEMENT } from "@/lib/copy";
 import { formatIdr, PRICING } from "@/lib/pricing/catalog";
+import { fixedText } from "@/lib/query-text";
 
 const REASON: Record<string, string> = {
   PARENT_NOT_COMPLETED: "Pemeriksaan standar belum selesai.",
@@ -15,13 +16,13 @@ type Props = { eligible: boolean; reason: string; quote: { amountIdr: number; va
 // Tawaran hanya dirender oleh halaman bila fitur aktif. Tidak menjanjikan hasil Enhanced.
 export function DeepOffer({ eligible, reason, quote, action, parentRequestId, standardPaidIdr }: Props) {
   if (!eligible || !quote) {
-    return <p role="status" className="rounded-lg border border-line bg-white p-4">{REASON[reason] ?? "Pemeriksaan mendalam belum tersedia untuk pemeriksaan ini."}</p>;
+    return <p role="status" className="rounded-lg border border-line bg-white p-4">{fixedText(REASON, reason) ?? "Pemeriksaan mendalam belum tersedia untuk pemeriksaan ini."}</p>;
   }
   const member = quote.variant === "MEMBER";
   return (
     <section aria-labelledby="deep-h" className="space-y-3 rounded-lg border border-line bg-white p-4">
-      <h2 id="deep-h" className="text-xl font-semibold">Pemeriksaan mendalam (opsional)</h2>
-      <p>Pemeriksaan tambahan oleh profesional hukum atas catatan yang sudah ditemukan, sebagai tambahan setelah pemeriksaan standar Anda.</p>
+      <h2 id="deep-h" className="text-xl font-semibold">Pemeriksaan mendalam (tambahan)</h2>
+      <p>Pemeriksaan tambahan oleh profesional hukum atas Legal Note (Catatan dari pemeriksa) yang sudah ditemukan, sebagai tambahan setelah pemeriksaan standar Anda. Tidak wajib.</p>
       <dl className="space-y-1">
         <div><dt className="font-medium">Biaya tambahan</dt><dd className="text-2xl font-semibold">{formatIdr(quote.amountIdr)}</dd></div>
         <div><dt className="font-medium">Keterangan</dt><dd>{member ? "Harga Member aktif" : `Harga umum. Member aktif membayar ${formatIdr(PRICING.deepAdditional.member)}.`}</dd></div>

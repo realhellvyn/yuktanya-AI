@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getPool } from "@/lib/db";
 import { getSessionRoles } from "@/lib/supabase/server";
 import { revokeVerificationAction } from "./actions";
+import { fixedText } from "@/lib/query-text";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pencabutan verifikasi | Admin Yuktanya" };
@@ -25,7 +26,7 @@ export default async function VerificationsAdminPage({ searchParams }: { searchP
     <main className="max-w-5xl space-y-6">
       <PageHeading title="Pencabutan verifikasi" />
       {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">Verifikasi dicabut. Halaman publik langsung menampilkan status Dicabut.</p>}
-      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{ERR[q.e] ?? "Terjadi kendala."}</p>}
+      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{fixedText(ERR, q.e) ?? "Terjadi kendala."}</p>}
       <form className="flex flex-wrap items-end gap-3">
         <label className="block min-w-0 flex-1 basis-56"><span className={labelText}>Awalan kode (minimal 8 karakter)</span><input name="q" defaultValue={code} className={fieldClass} /></label>
         <button type="submit" className={buttonClass("secondary")}>Cari</button>

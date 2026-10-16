@@ -4,6 +4,8 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, PageHeading } from "@/components/ui/card";
 import { AI_DRAFT_LABEL, QR_NOT_SIGNATURE, SPECIAL_CASE_NOTE } from "@/lib/copy";
 import { formatIdr, PRICING, QUOTAS } from "@/lib/pricing/catalog";
+import { homeFor } from "@/lib/auth/permissions";
+import { getSessionRoles } from "@/lib/supabase/server";
 
 export const metadata = { title: "Bantuan | Yuktanya" };
 
@@ -14,7 +16,7 @@ const TOPICS: { id: string; title: string; body: React.ReactNode }[] = [
     body: (
       <ol className="list-decimal space-y-1.5 pl-6">
         <li>Daftar atau masuk. AI hanya bisa dipakai setelah masuk.</li>
-        <li>Tekan Buat Dokumen, lalu pilih jenis dokumen.</li>
+        <li>Tekan Buat Dokumen, lalu pilih jenis dokumen. Belum tahu dokumen mana yang cocok? Pilih &ldquo;Saya belum tahu&rdquo;, ceritakan keperluan Anda, dan AI membantu memilih.</li>
         <li>Jawab pertanyaan satu per satu dengan bahasa sehari-hari. Jawaban tersimpan otomatis.</li>
         <li>Saat semua terisi, tekan Buat dokumen. Anda bisa mengunduh dokumennya.</li>
       </ol>
@@ -46,7 +48,8 @@ const TOPICS: { id: string; title: string; body: React.ReactNode }[] = [
           <li>Setelah pembayaran dikonfirmasi, pemeriksa dari mitra hukum mengerjakan pemeriksaan. Hasilnya muncul di Review Saya.</li>
         </ol>
         <p>Pembayaran adalah biaya pemeriksaan. Pembayaran tidak menjamin hasil tertentu.</p>
-        <p>Pemeriksaan mendalam hanya ditawarkan setelah pemeriksaan standar selesai dan memuat Catatan Hukum yang perlu ditindaklanjuti. {SPECIAL_CASE_NOTE}</p>
+        <p>Hasil pemeriksaan dapat memuat Legal Note (Catatan dari pemeriksa): bagian dokumen yang menurut pengacara perlu diperbaiki atau diperhatikan, beserta saran tindakannya.</p>
+        <p>Pemeriksaan mendalam (tambahan) hanya ditawarkan setelah pemeriksaan standar selesai dan memuat Legal Note yang perlu ditindaklanjuti. {SPECIAL_CASE_NOTE}</p>
       </>
     ),
   },
@@ -56,7 +59,8 @@ const TOPICS: { id: string; title: string; body: React.ReactNode }[] = [
     body: (
       <>
         <p>Dokumen yang sudah diperiksa memuat kode QR dan kode verifikasi. Pindai QR atau buka tautan pengecekan yang tercetak di dokumen. Halaman itu menampilkan status terbaru: aktif, ditangguhkan, atau dicabut.</p>
-        <p>{QR_NOT_SIGNATURE} Jika dokumen diubah sedikit pun, hasil pengecekan akan menyatakan versi tidak sama.</p>
+        <p>Halaman itu juga menampilkan kode versi dokumen yang diperiksa. Cocokkan kode itu dengan kode versi yang tercetak di dokumen Anda. Jika berbeda, dokumen yang Anda pegang bukan versi yang diperiksa. Halaman pengecekan tidak membaca berkas Anda, jadi tidak dapat mendeteksi perubahan dengan sendirinya.</p>
+        <p>{QR_NOT_SIGNATURE}</p>
       </>
     ),
   },
@@ -78,10 +82,13 @@ const TOPICS: { id: string; title: string; body: React.ReactNode }[] = [
   },
 ];
 
-export default function Page() {
+export default async function Page() {
+  // Pengguna yang sudah masuk (dari menu aplikasi) mendapat tombol kembali ke aplikasinya, bukan "Masuk" / "Daftar Gratis".
+  const session = await getSessionRoles().catch(() => null);
+  const home = session ? homeFor(session.roles) : undefined;
   return (
     <>
-      <SiteHeader />
+      <SiteHeader home={home} />
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-8 md:px-8">
         <PageHeading title="Bantuan" lead="Jawaban singkat untuk pertanyaan yang paling sering muncul." />
         {TOPICS.map((t) => (
@@ -98,7 +105,7 @@ export default function Page() {
             <p>Saluran kontak belum disiapkan. Kami akan menampilkannya di halaman ini setelah tersedia.</p>
           </Card>
         </section>
-        <ButtonLink href="/register">Daftar Gratis</ButtonLink>
+        {home ? <ButtonLink href={home}>Kembali ke aplikasi</ButtonLink> : <ButtonLink href="/register">Daftar Gratis</ButtonLink>}
       </main>
       <SiteFooter />
     </>

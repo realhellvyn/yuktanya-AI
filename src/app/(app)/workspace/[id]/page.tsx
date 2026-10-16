@@ -15,6 +15,9 @@ import { TEMPLATES } from "@/lib/documents/templates/registry";
 import { missingRequired, progress, summarize } from "@/lib/documents/wizard";
 import { CHAT_NOTICES } from "@/lib/vault/messages";
 import { freezeAction, sendMessageAction } from "../../documents/actions";
+import { fixedText } from "@/lib/query-text";
+
+export const metadata = { title: "Percakapan Dokumen | Yuktanya" };
 
 // Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
 export const dynamic = "force-dynamic";
@@ -47,7 +50,7 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
   const ready = missing.length === 0 && validity.ok;
   const bar = progress(t, data);
   const preview = <PartialPreview title={t.title} rows={renderPartial(t, data)} />;
-  const notice = q.notice && CHAT_NOTICES[q.notice];
+  const notice = fixedText(CHAT_NOTICES, q.notice);
   const hasUnanswered = messages.at(-1)?.role === "user" && !messages.at(-1)?.answered;
 
   return (
@@ -55,7 +58,7 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
       <div className="max-w-2xl space-y-5">
         <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-3xl">{t.title}</h1>
         <StepIndicator current={bar.done} total={bar.total} percent={bar.percent} label={`${bar.done} dari ${bar.total} kolom wajib terisi`} />
-        {notice && <p role="alert" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold">{notice}</p>}
+        {notice && <p role="alert" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold">{notice} <Link className="inline-flex min-h-12 items-center underline" href="/bantuan">Bantuan</Link></p>}
         {missing.length === 0 && conflicts.length > 0 && (
           <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">Ada isian yang belum cocok: {conflicts.join(" ")} Sebutkan koreksinya di percakapan.</p>
         )}

@@ -5,6 +5,7 @@ import { googleAuthEnabled } from "@/lib/auth/google";
 import { AUTH_MESSAGES } from "@/lib/auth/messages";
 import { resendConfirmation, signInWithGoogle } from "./actions";
 import { PasswordField } from "./password-field";
+import { fixedText } from "@/lib/query-text";
 
 
 type Props = {
@@ -35,7 +36,7 @@ export function AuthForm({ mode, action, error, sent, resent, returnTo }: Props)
         )}
         {error && (
           <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">
-            {AUTH_MESSAGES[error] ?? AUTH_MESSAGES.failed}
+            {fixedText(AUTH_MESSAGES, error) ?? AUTH_MESSAGES.failed}
           </p>
         )}
         {googleAuthEnabled(process.env) && (

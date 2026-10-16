@@ -55,12 +55,29 @@ describe("DocumentPreview dan VersionList", () => {
     expect(html).toContain("Sinta Dewi");
   });
 
+  it("daftar versi: status nyata per versi (D-04) — versi diperiksa memegang hasilnya, versi baru belum diperiksa", () => {
+    const versions = [
+      { id: "v1", versionNo: 1, sha256: "a".repeat(64), createdAt: "2026-10-16T05:00:00.000Z" },
+      { id: "v2", versionNo: 2, sha256: "b".repeat(64), createdAt: "2026-10-16T06:00:00.000Z" },
+    ];
+    const reviewed = { review: "COMPLETED", outcome: "WITH_NOTES", legal: "ACTIVE" as const, enhanced: null, ai: false };
+    const h = renderToStaticMarkup(VersionList({ documentId: "d1", versions, statuses: { v1: reviewed } }));
+    expect(h.indexOf("Sudah diperiksa pengacara — Legal Verified aktif")).toBeGreaterThan(-1);
+    expect(h.indexOf("Sudah diperiksa pengacara")).toBeLessThan(h.indexOf("Versi 2"));
+    expect(h).toContain("Versi baru belum diperiksa");
+    const revoked = renderToStaticMarkup(VersionList({ documentId: "d1", versions: versions.slice(0, 1), statuses: { v1: { ...reviewed, legal: "REVOKED" } } }));
+    expect(revoked).toContain("verifikasi dicabut");
+    expect(revoked).not.toContain("belum diperiksa");
+    const inflight = renderToStaticMarkup(VersionList({ documentId: "d1", versions: versions.slice(0, 1), statuses: { v1: { review: "IN_REVIEW", outcome: null, legal: null, enhanced: null, ai: false } } }));
+    expect(inflight).toContain("Sedang dalam pemeriksaan pengacara");
+  });
+
   it("daftar versi: belum diperiksa, hash 12 karakter, tanpa badge", () => {
     const html = renderToStaticMarkup(VersionList({
       documentId: "d1",
       versions: [{ id: "v1", versionNo: 1, sha256: "a".repeat(64), createdAt: "2026-10-16T05:00:00.000Z" }],
     }));
-    expect(html).toContain("Versi baru belum diperiksa");
+    expect(html).toContain("Belum diperiksa pengacara");
     expect(html).toContain("aaaaaaaaaaaa");
     expect(html).not.toContain("aaaaaaaaaaaaa");
     expect(html).not.toMatch(/Verified/i);
