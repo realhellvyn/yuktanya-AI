@@ -1,0 +1,36 @@
+export type Role = "user" | "reviewer" | "partner_admin" | "platform_admin";
+export type Home = "/dashboard" | "/partner" | "/admin";
+export type GuardResult = { allow: true } | { allow: false; redirect: string };
+
+const PROTECTED = ["/dashboard", "/partner", "/admin", "/api/ai"] as const;
+
+const under = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
+
+export function homeFor(roles: Role[]): Home {
+  if (roles.includes("platform_admin")) return "/admin";
+  if (roles.includes("reviewer") || roles.includes("partner_admin")) return "/partner";
+  return "/dashboard";
+}
+
+export function guardPath(pathname: string, roles: Role[] | null): GuardResult {
+  const prefix = PROTECTED.find((p) => under(pathname, p));
+  if (!prefix) return { allow: true };
+  if (!roles) return { allow: false, redirect: `/login?returnTo=${encodeURIComponent(pathname)}` };
+
+  const home = homeFor(roles);
+  if (prefix === "/api/ai") return { allow: true };
+  if (prefix === "/admin") return roles.includes("platform_admin") ? { allow: true } : { allow: false, redirect: home };
+  if (prefix === "/partner") {
+    const ok = roles.includes("reviewer") || roles.includes("partner_admin");
+    return ok ? { allow: true } : { allow: false, redirect: home };
+  }
+  // /dashboard: hanya akun pemilik biasa; peran profesional/admin tidak memakai identitas pemilik yang sama.
+  return home === "/dashboard" ? { allow: true } : { allow: false, redirect: home };
+}
+
+export function safeReturnTo(raw: string | null | undefined): string {
+  const fallback = "/dashboard";
+  if (!raw || raw[0] !== "/" || raw[1] === "/" || raw[1] === "\\") return fallback;
+  if (/[\u0000-\u001f\u007f]/.test(raw)) return fallback;
+  return raw;
+}
