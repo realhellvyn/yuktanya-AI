@@ -260,6 +260,14 @@ pemicu manual per tag; `concurrency` dengan `cancel-in-progress` agar run lama d
 cache dependensi dan browser Playwright; tidak ada run terjadwal otomatis untuk E2E. Sisa
 kuota akun **[UNKNOWN]** dan dicek pemilik di Settings → Billing and plans → Usage.
 
+**Keputusan pemilik (16 Oktober 2026):** sampai kuota Actions reset (sekitar 1 November
+2026), workflow di repo ini hanya memakai `workflow_dispatch` (manual); tidak ada pemicu
+otomatis di push/PR. Pemeriksaan harian dijalankan lokal lewat satu perintah
+`npm run check` (lint, typecheck, unit/integrasi) dan hasilnya dilaporkan apa adanya. Setelah
+reset, CI ringan di PR (hanya unit/integrasi dengan filter path) dinyalakan setelah menit per
+run diukur. Kondisi kuota saat ini (≈95% jatah 2.000 menit terpakai pada 16 Oktober 2026,
+per tangkapan layar pemilik) adalah data akun, bukan jaminan.
+
 ## 11. Penanganan kegagalan
 
 Gateway AI mati: input tersimpan. Callback ganda: idempoten. Pembayaran kedaluwarsa:
