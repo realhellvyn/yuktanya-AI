@@ -133,11 +133,17 @@ describe("fungsi admin dan akses klien", () => {
     await expect(pool.query("select admin_add_member($1, $2, $1, 'reviewer')", [f.admin, f.firmId])).rejects.toThrow(/SELF_GRANT/);
     await expect(pool.query("select admin_authorize($1, $1, $2, 's', '2026-01-01', '2027-12-31')", [f.admin, f.firmId])).rejects.toThrow(/SELF_GRANT/);
     const second = await kit.admin();
-    await pool.query("select admin_add_member($1, $2, $3, 'reviewer')", [f.admin, f.firmId, second]);
-    await pool.query("select admin_authorize($1, $2, $3, 's', '2026-01-01', '2027-12-31')", [f.admin, second, f.firmId]);
-    expect((await pool.query("select reviewer_has_authority($1, $2, $3) as ok", [second, f.firmId, NOW])).rows[0].ok).toBe(false);
+    // Admin lain tidak dapat dijadikan anggota/otorisasi lewat fungsi admin.
+    await expect(pool.query("select admin_add_member($1, $2, $3, 'reviewer')", [f.admin, f.firmId, second])).rejects.toThrow(/SELF_GRANT/);
+    await expect(pool.query("select admin_authorize($1, $2, $3, 's', '2026-01-01', '2027-12-31')", [f.admin, second, f.firmId])).rejects.toThrow(/SELF_GRANT/);
+    // Promosi menjadi admin setelah dijadikan reviewer tetap tidak memberi kewenangan.
+    const promoted = await createUser(pool);
+    await pool.query("select admin_add_member($1, $2, $3, 'reviewer')", [f.admin, f.firmId, promoted]);
+    await pool.query("select admin_authorize($1, $2, $3, 's', '2026-01-01', '2027-12-31')", [f.admin, promoted, f.firmId]);
+    await pool.query("insert into user_roles(user_id, role) values ($1, 'platform_admin')", [promoted]);
+    expect((await pool.query("select reviewer_has_authority($1, $2, $3) as ok", [promoted, f.firmId, NOW])).rows[0].ok).toBe(false);
     const { r } = await paidRequest();
-    await expect(assign(f.coordinator, r.id, second)).rejects.toThrow(/REVIEWER_NOT_AUTHORIZED/);
+    await expect(assign(f.coordinator, r.id, promoted)).rejects.toThrow(/REVIEWER_NOT_AUTHORIZED/);
   });
 
   it("coordinator_inflight menampilkan permintaan yang tertahan karena otorisasi reviewer berakhir, dan reassign memindahkannya", async () => {

@@ -170,3 +170,33 @@ describe("akses", () => {
     await expect(asUser(pool, s.c.owner, (c) => c.query("select * from deep_reports"))).rejects.toThrow(/permission denied/);
   });
 });
+
+describe("balapan keputusan vs pencabutan induk", () => {
+  it("pencabutan yang menunggu keputusan yang sedang berjalan menangguhkan Enhanced yang baru terbit (tidak ada Enhanced ACTIVE di bawah induk dicabut)", async () => {
+    const s = await prepare();
+    const c1 = await pool.connect();
+    const c2 = await pool.connect();
+    try {
+      await c1.query("begin");
+      await c1.query("select * from decide_deep($1, $2, $3, 'APPROVE', null, true, $4)", [s.rv, s.deep.id, s.rev, NOW]);
+      const revoke = c2.query("select revoke_verification($1, $2, 'ERROR', null, $3)", [s.c.f.admin, s.c.verificationId, NOW]);
+      await new Promise((r) => setTimeout(r, 300));
+      await c1.query("commit");
+      await revoke;
+    } finally {
+      c1.release();
+      c2.release();
+    }
+    const enh = (await pool.query("select status from document_verifications where kind = 'LEGAL_ENHANCED' and request_id = $1", [s.c.req])).rows;
+    expect(enh.map((r) => r.status)).toEqual(["SUSPENDED"]);
+    expect((await pool.query("select status from document_verifications where id = $1", [s.c.verificationId])).rows[0].status).toBe("REVOKED");
+  });
+
+  it("pencarian publik menampilkan SUSPENDED untuk Enhanced bila induk tidak aktif walau barisnya masih ACTIVE", async () => {
+    const s = await prepare();
+    const r = (await s.decide("APPROVE")).rows[0];
+    await pool.query("update document_verifications set status = 'REVOKED' where id = $1", [s.c.verificationId]);
+    expect((await pool.query("select status from public_verification($1)", [r.code])).rows[0].status).toBe("SUSPENDED");
+  });
+});
+

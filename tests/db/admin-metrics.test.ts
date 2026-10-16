@@ -126,6 +126,64 @@ describe("admin_overview", () => {
   });
 });
 
+describe("keadilan angka (hasil review)", () => {
+  const WIDE_FROM = new Date("2026-10-15T17:00:00Z");
+  const WIDE_TO = new Date("2026-10-19T00:00:00Z");
+  it("uang yang pernah terverifikasi tetap dihitung setelah ditahan; refund tidak dikurangkan dua kali; refund dari transfer yang tak pernah terverifikasi tidak masuk", async () => {
+    const admin = await kit.admin();
+    const before = await overview(admin, WIDE_FROM, WIDE_TO);
+    const c = await kit.completedStandard();
+    const b = await kit.buy(c.owner, "DEEP_REVIEW", c.req);
+    const mid = await overview(admin, WIDE_FROM, WIDE_TO);
+    await pool.query("select revoke_verification($1, $2, 'ERROR', null, $3)", [c.f.admin, c.verificationId, NOW]);
+    const held = await overview(admin, WIDE_FROM, WIDE_TO);
+    expect(collected(held)).toBe(collected(mid));
+    expect(held.revenue.held - (mid.revenue.held ?? 0)).toBe(200000);
+    await pool.query("select admin_resolve_reconciliation($1, $2, 'REFUND_RECORDED', 'dikembalikan via bank', $3)", [c.f.admin, b.order_id, NOW]);
+    const refunded = await overview(admin, WIDE_FROM, WIDE_TO);
+    expect(refunded.revenue.refunds - (mid.revenue.refunds ?? 0)).toBe(200000);
+    expect(refunded.revenue.net - (mid.revenue.net ?? 0)).toBe(-200000);
+    expect(collected(refunded)).toBe(collected(mid));
+    // transfer tak cocok (tak pernah terverifikasi) lalu dikembalikan: bukan pendapatan, bukan pengurang
+    const u = await createUser(pool);
+    const o = await kit.order(u, "MEMBERSHIP_MONTHLY", null);
+    const p = await kit.pay(u, o.order_id);
+    await kit.settle("mock", p.ref, 5000);
+    await pool.query("select admin_resolve_reconciliation($1, $2, 'REFUND_RECORDED', 'dikembalikan via bank', $3)", [admin, o.order_id, NOW]);
+    const after = await overview(admin, WIDE_FROM, WIDE_TO);
+    expect(after.revenue.refunds).toBe(refunded.revenue.refunds);
+    expect(after.revenue.net).toBe(refunded.revenue.net);
+    void before;
+  });
+
+  it("usia antrean dihitung dari sekarang, bukan dari akhir rentang", async () => {
+    const admin = await kit.admin();
+    const to = new Date(Date.now() + 20 * 3_600_000);
+    const from = new Date(Date.now() - 86_400_000);
+    const before = await overview(admin, from, to);
+    const c = await kit.completedStandard({ noNotes: true });
+    void c;
+    await pool.query("update firms set is_default = false");
+    const f = await kit.firm({ isDefault: true });
+    void f;
+    const u = await createUser(pool);
+    const v = await kit.frozen(u);
+    const b = await kit.buy(u, "STANDARD_REVIEW", v.versionId);
+    await pool.query("update review_requests set created_at = now() - interval '11 hours' where order_id = $1", [b.order_id]);
+    const after = await overview(admin, from, to);
+    expect(after.reviews.backlog_by_age.lt_24h - before.reviews.backlog_by_age.lt_24h).toBe(1);
+    expect(after.reviews.backlog_by_age.d1_3 - before.reviews.backlog_by_age.d1_3).toBe(0);
+  });
+
+  it("Member aktif tetap terhitung walau tidak ada pembayaran pada rentang", async () => {
+    const admin = await kit.admin();
+    await kit.member("2026-01-01", "2031-01-01");
+    const o = await overview(admin, new Date("2030-01-01T00:00:00Z"), new Date("2030-01-02T00:00:00Z"));
+    expect(o.revenue).toBeNull();
+    expect(o.members.active).toBeGreaterThanOrEqual(1);
+  });
+});
+
 describe("admin_find_user dan admin_list_partners", () => {
   it("hanya admin; email tidak peka huruf besar; mitra terdaftar tampil dengan otorisasi", async () => {
     const f = await kit.firm();

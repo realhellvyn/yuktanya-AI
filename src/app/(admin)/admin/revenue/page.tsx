@@ -17,11 +17,12 @@ export default async function RevenuePage({ searchParams }: { searchParams: Prom
       {r === null && <p role="status">Belum ada pembayaran terverifikasi pada rentang ini.</p>}
       <div className="grid gap-4 md:grid-cols-3">
         <KpiCard label="Dikumpulkan" value={fmtIdr(r?.collected)} />
+        <KpiCard label="Sedang ditahan" value={fmtIdr(r?.held)} hint="Pernah terverifikasi, kini dalam rekonsiliasi" />
         <KpiCard label="Pengembalian dana (dicatat)" value={fmtIdr(r?.refunds)} />
         <KpiCard label="Bersih dikumpulkan" value={fmtIdr(r?.net)} />
         <KpiCard label="Biaya transaksi" value={fmtIdr(r?.fees)} hint="Ditampilkan terpisah" />
         <KpiCard label="Pengguna yang membayar" value={fmtCount(r?.paying_users)} />
-        <KpiCard label="Member aktif akhir rentang" value={fmtCount(r?.memberships_active)} />
+        <KpiCard label="Member aktif akhir rentang" value={fmtCount(o.members.active)} />
       </div>
       {r && (
         <table className="w-full border-collapse">

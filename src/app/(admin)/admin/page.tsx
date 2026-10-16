@@ -25,7 +25,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <KpiCard label="Dokumen dimulai" value={fmtCount(o.documents.started)} hint={`Versi dibuat: ${fmtCount(o.documents.versions)}`} />
           <KpiCard label="Review dibayar (kohort baru)" value={fmtCount(o.funnel.review_paid)} hint={`dari ${fmtCount(o.funnel.registered)} pengguna baru`} />
           <KpiCard label="Pendapatan dikumpulkan" value={fmtIdr(o.revenue?.collected)} hint="Dari pembayaran terverifikasi, bukan laba" />
-          <KpiCard label="Member aktif" value={fmtCount(o.revenue?.memberships_active)} />
+          <KpiCard label="Member aktif" value={fmtCount(o.members.active)} />
         </div>
       </section>
       <section aria-labelledby="ops-h" className="space-y-3">

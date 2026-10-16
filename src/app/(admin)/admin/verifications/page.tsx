@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { getPool } from "@/lib/db";
+import { getSessionRoles } from "@/lib/supabase/server";
 import { revokeVerificationAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +11,8 @@ const field = "mt-1 block min-h-12 w-full rounded-lg border border-slate-400 px-
 
 // Admin hanya mencabut secara operasional; admin tidak menilai temuan hukum. Daftar hanya memuat metadata (tanpa isi dokumen).
 export default async function VerificationsAdminPage({ searchParams }: { searchParams: Promise<{ q?: string; e?: string; ok?: string }> }) {
+  const session = await getSessionRoles();
+  if (!session || !session.roles.includes("platform_admin")) redirect("/login");
   const q = await searchParams;
   const code = (q.q ?? "").trim();
   const rows = /^[A-Za-z0-9_-]{8,128}$/.test(code)

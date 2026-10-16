@@ -7,7 +7,8 @@ export type Overview = {
   documents: { started: number; versions: number };
   funnel: { registered: number; ai_used: number; doc_started: number; version_created: number; review_requested: number; review_paid: number; review_completed: number };
   reviews: { unassigned: number; backlog_by_age: { lt_24h: number; d1_3: number; gt_3d: number }; completed: number; sla_median_hours: number | null; sla_p95_hours: number | null };
-  revenue: { collected_by_kind: Record<string, number>; collected: number; refunds: number; net: number; fees: number; paying_users: number; memberships_active: number } | null;
+  revenue: { collected_by_kind: Record<string, number>; collected: number; held: number; refunds: number; net: number; fees: number; paying_users: number } | null;
+  members: { active: number };
   incidents: { reconciliation: number; failed_outbox: number; ai_failures: number | null };
 };
 export type PartnerRow = {
