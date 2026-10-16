@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const svc = { saveDraft: vi.fn(), upsertNote: vi.fn(), deleteNote: vi.fn(), publish: vi.fn(), assign: vi.fn(), reassign: vi.fn(), declareConflict: vi.fn() };
 const deep = { saveDraft: vi.fn(), setDisposition: vi.fn(), setChecklist: vi.fn(), decide: vi.fn(), assign: vi.fn(), reassign: vi.fn() };
 vi.mock("next/navigation", () => ({ redirect: (to: string) => { throw new Error(`REDIRECT:${to}`); } }));
-vi.mock("@/lib/supabase/server", () => ({ getSessionRoles: async () => ({ userId: "u1", roles: ["reviewer", "partner_admin"] }) }));
+const session: { roles: string[] } = { roles: ["reviewer", "partner_admin"] };
+vi.mock("@/lib/supabase/server", () => ({ getSessionRoles: async () => ({ userId: "u1", roles: session.roles }) }));
 vi.mock("@/lib/reviews/runtime", () => ({ reviewService: () => svc }));
 vi.mock("@/lib/deep/runtime", () => ({ deepService: () => deep }));
 vi.mock("@/lib/flags", () => ({ flags: { enhancedIssuance: true } }));
@@ -17,7 +18,7 @@ const ID = "00000000-0000-4000-8000-000000000001";
 const RV = "00000000-0000-4000-8000-000000000002";
 const form = (v: Record<string, string>) => { const f = new FormData(); for (const [k, x] of Object.entries(v)) f.set(k, x); return f; };
 const BAD = ["bukan-uuid", "", "../x", "1' or 1=1"];
-beforeEach(() => { for (const f of [...Object.values(svc), ...Object.values(deep)]) f.mockReset(); });
+beforeEach(() => { session.roles = ["reviewer", "partner_admin"]; for (const f of [...Object.values(svc), ...Object.values(deep)]) f.mockReset(); });
 
 describe("aksi Review Standar", () => {
   it("requestId rusak → /partner dengan pemberitahuan INVALID_REQUEST; layanan tidak dipanggil", async () => {
@@ -71,5 +72,44 @@ describe("aksi Pemeriksaan Mendalam", () => {
   });
   it("teks pemberitahuan biasa, tanpa istilah teknis", () => {
     expect(INVALID_FORM_TEXT).toBe("Data formulir tidak valid. Muat ulang halaman lalu coba lagi.");
+  });
+});
+
+// Audit C (C8): aksi mitra memeriksa peran sesi, bukan hanya status masuk. Kewenangan akhir tetap di database.
+describe("aksi mitra memeriksa peran", () => {
+  const work = { requestId: ID, deepId: ID, revision: "1", noteNo: "1", decision: "DENY", reason: "alasan", attest: "yes", noConflict: "yes", confirm: "yes", reviewerId: RV };
+  const reviewerWork = () => [review.saveDraftAction, review.upsertNoteAction, review.deleteNoteAction, review.publishAction,
+    deepActions.saveDeepDraftAction, deepActions.setDispositionAction, deepActions.setChecklistAction, deepActions.decideDeepAction];
+  const routing = () => [review.assignAction, review.reassignAction, deepActions.assignDeepAction];
+  const allCalls = () => [...Object.values(svc), ...Object.values(deep)].reduce((n, f) => n + f.mock.calls.length, 0);
+
+  it("akun pemilik biasa ditolak di semua aksi mitra dan diarahkan ke /dashboard", async () => {
+    session.roles = ["user"];
+    for (const fn of [...reviewerWork(), ...routing(), review.declareConflictAction]) {
+      await expect(fn(form(work))).rejects.toThrow(/^REDIRECT:\/dashboard$/);
+    }
+    expect(allCalls()).toBe(0);
+  });
+
+  it("admin platform tidak dapat mengerjakan atau memutuskan review (tanpa peniruan reviewer) dan tidak mencatat konflik firma", async () => {
+    session.roles = ["user", "platform_admin"];
+    for (const fn of [...reviewerWork(), review.declareConflictAction]) await expect(fn(form(work))).rejects.toThrow(/^REDIRECT:\/admin$/);
+    expect(allCalls()).toBe(0);
+  });
+
+  it("koordinator tanpa peran reviewer tidak dapat menulis atau menerbitkan; reviewer tanpa peran koordinator tidak dapat menugaskan", async () => {
+    session.roles = ["user", "partner_admin"];
+    for (const fn of reviewerWork()) await expect(fn(form(work))).rejects.toThrow(/^REDIRECT:\/partner$/);
+    session.roles = ["user", "reviewer"];
+    for (const fn of [...routing(), review.declareConflictAction]) await expect(fn(form(work))).rejects.toThrow(/^REDIRECT:\/partner$/);
+    expect(allCalls()).toBe(0);
+  });
+
+  it("admin platform tetap dapat merutekan dari /admin/routing", async () => {
+    session.roles = ["user", "platform_admin"];
+    await expect(review.assignAction(form({ requestId: ID, reviewerId: RV }))).rejects.toThrow("REDIRECT:/admin/routing?ok=assigned");
+    await expect(deepActions.assignDeepAction(form({ deepId: ID, reviewerId: RV }))).rejects.toThrow("REDIRECT:/admin/routing?ok=assigned");
+    expect(svc.assign).toHaveBeenCalledTimes(1);
+    expect(deep.assign).toHaveBeenCalledTimes(1);
   });
 });

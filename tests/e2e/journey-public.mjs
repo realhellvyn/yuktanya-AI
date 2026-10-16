@@ -20,6 +20,27 @@ export async function journey({ page, step, shot, base, vp, issues, fake, newAct
         .map((e) => `${e.tagName.toLowerCase()}:${(e.textContent || e.getAttribute("name") || "").trim().slice(0, 24)}:${Math.round(e.getBoundingClientRect().height)}px`),
     );
 
+  // Audit C22: header keamanan di halaman utama; skrip berjalan dengan nonce (tanpa pelanggaran CSP di konsol).
+  await step(tag("/ mengirim header keamanan (CSP dengan nonce, frame-ancestors none, XFO, nosniff, referrer, permissions)"), async () => {
+    const r = await page.goto(base + "/");
+    const h = r.headers();
+    const csp = h["content-security-policy"] ?? "";
+    const want = [/script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/, /frame-ancestors 'none'/, /object-src 'none'/, /base-uri 'self'/, /form-action 'self'/];
+    for (const re of want) if (!re.test(csp)) throw new Error(`CSP tanpa ${re}: ${csp}`);
+    if (/script-src[^;]*'unsafe-inline'/.test(csp)) throw new Error("script-src tidak boleh 'unsafe-inline'");
+    const expect = { "x-frame-options": "DENY", "x-content-type-options": "nosniff", "referrer-policy": "strict-origin-when-cross-origin" };
+    for (const [k, v] of Object.entries(expect)) if (h[k] !== v) throw new Error(`${k}=${h[k]}`);
+    if (!/camera=\(\)/.test(h["permissions-policy"] ?? "") || !/geolocation=\(\)/.test(h["permissions-policy"] ?? "")) throw new Error("permissions-policy " + h["permissions-policy"]);
+    const nonce = /'nonce-([^']+)'/.exec(csp)[1];
+    // Semua <script> dalam HTML dari server membawa nonce permintaan ini (skrip yang dimuat kemudian diizinkan oleh 'strict-dynamic').
+    const tags = (await r.text()).match(/<script\b[^>]*>/g) ?? [];
+    const missing = tags.filter((t) => !t.includes(`nonce="${nonce}"`));
+    if (!tags.length || missing.length) throw new Error(`skrip tanpa nonce yang cocok: ${missing.slice(0, 2).join(" ")}`);
+    await page.waitForLoadState("networkidle");
+    const csp2 = issues.filter((i) => /Content Security Policy|Refused to/i.test(i));
+    if (csp2.length) throw new Error("pelanggaran CSP: " + csp2.join(" | "));
+  });
+
   for (const { path, markers, legal, noindex } of PUBLIC) {
     await step(tag(`${path} terbuka tanpa login, memuat penanda, tanpa overflow dan target sentuh >= 44px`), async () => {
       const r = await page.goto(base + path);

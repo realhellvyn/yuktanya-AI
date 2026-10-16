@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { PublicShare } from "@/components/vault/public-share";
 import { SiteHeader } from "@/components/site-header";
+import { ackEmailAvailable } from "@/lib/vault/email-config";
 import { publicLimiter, shareService } from "@/lib/vault/runtime";
 import { requestAckAction, verifyAckAction } from "./actions";
 
@@ -24,7 +25,7 @@ export default async function SharePage({ params, searchParams }: { params: Prom
   return (
     <>
       <SiteHeader />
-      <PublicShare view={view} token={token} requestAction={requestAckAction} verifyAction={verifyAckAction} step={q.step} email={q.e} result={q.result} error={q.error} />
+      <PublicShare view={view} token={token} requestAction={requestAckAction} verifyAction={verifyAckAction} ackAvailable={ackEmailAvailable()} step={q.step} email={q.e} result={q.result} error={q.error} />
     </>
   );
 }

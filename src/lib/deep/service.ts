@@ -44,7 +44,7 @@ export interface DeepService {
   setDisposition(reviewerId: string, deepId: string, revision: number, noteNo: number, disposition: string, evidence: string, now?: Date): Promise<number>;
   setChecklist(reviewerId: string, deepId: string, revision: number, item: string, result: string, reasoning: string, evidence: string, now?: Date): Promise<number>;
   decide(reviewerId: string, deepId: string, input: DecideInput, now?: Date): Promise<{ outcome: string; verificationId: string | null; code: string | null }>;
-  unassigned(actorId: string): Promise<{ deepId: string; createdAt: string; category: string }[]>;
+  unassigned(actorId: string): Promise<{ deepId: string; createdAt: string; category: string; conflict: boolean }[]>;
   inflight(actorId: string, now?: Date): Promise<{ deepId: string; status: string; createdAt: string; category: string; reviewerId: string; reviewerAuthorized: boolean }[]>;
   assign(actorId: string, deepId: string, reviewerId: string, now?: Date): Promise<void>;
   reassign(actorId: string, deepId: string, reviewerId: string, now?: Date): Promise<void>;
@@ -158,7 +158,12 @@ export function createPgDeepService(pool: Pool): DeepService {
 
     async unassigned(actorId) {
       const { rows } = await pool.query("select * from deep_unassigned($1)", [actorId]);
-      return rows.map((r) => ({ deepId: r.deep_id, createdAt: r.created_at.toISOString(), category: r.category }));
+      const ids = rows.map((r) => r.deep_id as string);
+      const conflicted = ids.length === 0 ? new Set<string>() : new Set((await pool.query(
+        `select d.id from deep_requests d where d.id = any($1) and exists (select 1 from firm_conflicts c where c.owner_id = d.owner_id
+            and (d.firm_id is null or c.firm_id = d.firm_id))`, [ids],
+      )).rows.map((r) => r.id as string));
+      return rows.map((r) => ({ deepId: r.deep_id, createdAt: r.created_at.toISOString(), category: r.category, conflict: conflicted.has(r.deep_id) }));
     },
 
     async inflight(actorId, now = new Date()) {

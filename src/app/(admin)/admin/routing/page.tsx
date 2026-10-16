@@ -13,9 +13,10 @@ export const metadata = { title: "Perutean review | Admin Yuktanya" };
 const ERR: Record<string, string> = {
   FORBIDDEN: "Tidak berwenang.", REVIEWER_NOT_AUTHORIZED: "Reviewer tidak memiliki otorisasi aktif.", REVIEWER_AT_CAPACITY: "Reviewer sudah penuh.",
   NOT_FOUND: "Permintaan tidak ditemukan.", NOT_ASSIGNABLE: "Permintaan ini tidak dapat ditugaskan lagi.",
-  CONFLICT_OF_INTEREST: "Firma ini mencatat konflik kepentingan dengan pemilik dokumen, jadi permintaan ini tidak dapat ditugaskan di firma tersebut. Pengalihan firma atau pengembalian dana belum tersedia di sistem dan perlu ditangani manual.",
+  CONFLICT_OF_INTEREST: "Reviewer ini berasal dari firma yang mencatat konflik kepentingan dengan pemilik dokumen. Pilih reviewer dari firma lain.",
   INVALID_REQUEST: INVALID_FORM_TEXT,
 };
+const CONFLICT_NOTE = "Konflik kepentingan firma tercatat. Jangan tugaskan ke reviewer firma yang berkonflik; pilih reviewer dari firma lain.";
 const CATEGORY: Record<string, string> = { PKS: "Perjanjian Kerja Sama", UTANG_PIUTANG: "Surat Utang Piutang", NDA: "Perjanjian Kerahasiaan (NDA)", UPLOAD: "Dokumen unggahan" };
 
 // Admin hanya merutekan pekerjaan (termasuk permintaan tanpa firma); tidak pernah memeriksa atau menerbitkan hasil.
@@ -41,6 +42,7 @@ export default async function RoutingPage({ searchParams }: { searchParams: Prom
           <form key={r.requestId} action={assignAction} className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-white p-5">
             <input type="hidden" name="requestId" value={r.requestId} />
             <p className="w-full break-words font-semibold text-navy">{CATEGORY[r.category] ?? r.category}</p>
+            {r.conflict && <p role="status" className="w-full rounded-xl border border-amber-400 bg-amber-50 p-3 text-amber-950">{CONFLICT_NOTE}</p>}
             <label className="block min-w-0 flex-1 basis-56"><span className={labelText}>Tugaskan kepada</span>{select}</label>
             <button type="submit" className={buttonClass("primary")}>Tugaskan</button>
           </form>
@@ -59,10 +61,11 @@ export default async function RoutingPage({ searchParams }: { searchParams: Prom
       </section>
       <section aria-labelledby="deep-h" className="space-y-3">
         <h2 id="deep-h" className="text-xl font-bold text-navy md:text-2xl">Pemeriksaan mendalam ({dUn.length + dIn.length})</h2>
-        {[...dUn.map((r) => ({ id: r.deepId, mode: "assign", note: "Belum ditugaskan", cat: r.category })), ...dIn.map((r) => ({ id: r.deepId, mode: "reassign", note: `Reviewer ${r.reviewerId.slice(0, 8)}${r.reviewerAuthorized ? "" : " · otorisasi tidak aktif"}`, cat: r.category }))].map((r) => (
+        {[...dUn.map((r) => ({ id: r.deepId, mode: "assign", note: "Belum ditugaskan", cat: r.category, conflict: r.conflict })), ...dIn.map((r) => ({ id: r.deepId, mode: "reassign", note: `Reviewer ${r.reviewerId.slice(0, 8)}${r.reviewerAuthorized ? "" : " · otorisasi tidak aktif"}`, cat: r.category, conflict: false }))].map((r) => (
           <form key={r.id} action={assignDeepAction} className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-white p-5">
             <input type="hidden" name="deepId" value={r.id} /><input type="hidden" name="mode" value={r.mode} />
             <p className="w-full break-words font-semibold text-navy">{CATEGORY[r.cat] ?? r.cat} · {r.note}</p>
+            {r.conflict && <p role="status" className="w-full rounded-xl border border-amber-400 bg-amber-50 p-3 text-amber-950">{CONFLICT_NOTE}</p>}
             <label className="block min-w-0 flex-1 basis-56"><span className={labelText}>{r.mode === "assign" ? "Tugaskan kepada" : "Pindahkan ke"}</span>{select}</label>
             <button type="submit" className={buttonClass("primary")}>Simpan</button>
           </form>

@@ -3,7 +3,7 @@ import type { Role } from "@/lib/auth/permissions";
 import { createManualAdapter, createMockAdapter } from "@/lib/billing/adapters";
 import { createOrderHandler, type BillingDeps } from "@/lib/billing/handlers";
 import { createPgBillingService } from "@/lib/billing/service";
-import { assignDeepHandler, decideHandler, deepQueueHandler, eligibilityHandler, getOwnerDeepHandler, openDeepHandler, saveDeepDraftHandler, setChecklistHandler, setDispositionHandler, type DeepDeps } from "@/lib/deep/handlers";
+import { assignDeepHandler, decideHandler, deepUnassignedHandler, reassignDeepHandler, deepQueueHandler, eligibilityHandler, getOwnerDeepHandler, openDeepHandler, saveDeepDraftHandler, setChecklistHandler, setDispositionHandler, type DeepDeps } from "@/lib/deep/handlers";
 import { createPgDeepService } from "@/lib/deep/service";
 import { ForbiddenError } from "@/lib/documents/handlers";
 import { createUser, getPool } from "./helpers";
@@ -105,6 +105,15 @@ describe("alur reviewer dan keputusan", () => {
     const refer = await decideHandler(rv, req({ revision: o.revision, decision: "REFER_SPECIAL", reason: "Perlu penilaian khusus", attest: true, noConflict: true }), { id: deep });
     expect(refer.status).toBe(200);
     expect((await refer.json()).verificationId).toBeNull();
+  });
+
+  it("admin platform tidak memakai API mitra untuk perutean Deep (403)", async () => {
+    const { c, deep } = await paid();
+    const adm = deps(c.f.admin, ["user", "platform_admin"]);
+    expect((await deepUnassignedHandler(adm, req())).status).toBe(403);
+    expect((await assignDeepHandler(adm, req({ reviewerId: c.r.reviewer }), { id: deep })).status).toBe(403);
+    expect((await reassignDeepHandler(adm, req({ reviewerId: c.r.reviewer }), { id: deep })).status).toBe(403);
+    expect((await pool.query("select count(*)::int as n from deep_assignments where deep_id = $1", [deep])).rows[0].n).toBe(0);
   });
 
   it("admin, koordinator, dan pemilik tidak dapat membuka atau memutuskan (403); reviewer bukan penugasan 404; N_A wajib M4 → 422", async () => {

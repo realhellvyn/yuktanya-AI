@@ -14,6 +14,8 @@ type Props = {
   reminderOptions: ReminderOption[];
   packId?: string;
   notice?: string;
+  // false = layanan email belum aktif: konfirmasi baca dan pengingat lewat email tidak dijanjikan.
+  emailAvailable: boolean;
   actions: {
     createShare: (prev: CreateShareState, formData: FormData) => Promise<CreateShareState>;
     revokeShare: Action;
@@ -34,7 +36,7 @@ function shareStatus(s: ShareRow): string {
   return new Date(s.expiresAt).getTime() <= Date.now() ? "Kedaluwarsa" : "Aktif";
 }
 
-export function VaultPanel({ documentId, versionId, features, shares, acks, reminderOptions, packId, notice, actions }: Props) {
+export function VaultPanel({ documentId, versionId, features, shares, acks, reminderOptions, packId, notice, emailAvailable, actions }: Props) {
   return (
     <div className="space-y-8">
       {notice && PANEL_NOTICES[notice] && <p role="alert" className="rounded-lg border border-red-700 bg-white p-4 text-danger">{PANEL_NOTICES[notice]}</p>}
@@ -44,7 +46,9 @@ export function VaultPanel({ documentId, versionId, features, shares, acks, remi
         {!features.share ? <Locked /> : (
           <>
             <p>Siapa pun yang punya link dapat membaca dokumen ini. Bagikan hanya kepada pihak yang Anda percaya. Anda dapat mencabut link kapan saja.</p>
-            <p>Pihak lawan dapat menekan konfirmasi baca lewat email. Konfirmasi baca hanya menyatakan seseorang sudah membaca versi ini dan bukan tanda tangan elektronik.</p>
+            {emailAvailable
+              ? <p>Pihak lawan dapat menekan konfirmasi baca lewat email. Konfirmasi baca hanya menyatakan seseorang sudah membaca versi ini dan bukan tanda tangan elektronik.</p>
+              : <p>Konfirmasi baca lewat email belum tersedia karena layanan email belum aktif. Pihak lawan tetap dapat membaca dokumen lewat link. (Konfirmasi baca nantinya hanya menyatakan seseorang sudah membaca versi ini dan bukan tanda tangan elektronik.)</p>}
             <CreateShareForm action={actions.createShare} versionId={versionId} documentId={documentId} />
             {shares.length > 0 && (
               <ul className="space-y-2">
@@ -75,6 +79,7 @@ export function VaultPanel({ documentId, versionId, features, shares, acks, remi
 
       <section aria-labelledby="rem-h" className="space-y-3">
         <h2 id="rem-h" className="text-2xl font-semibold">Pengingat tenggat</h2>
+        {features.reminders && !emailAvailable && <p role="status" className="rounded-lg border border-line bg-slate-50 p-3">Pengingat lewat email belum dapat dikirim karena layanan email belum aktif. Pengingat yang Anda atur tersimpan, tetapi belum ada email yang terkirim.</p>}
         {!features.reminders ? <Locked /> : reminderOptions.length === 0 ? <p>Dokumen ini tidak punya tenggat yang bisa diingatkan.</p> : (
           reminderOptions.map((o) => (
             <form key={o.specId} action={actions.setReminder} className="space-y-2 rounded-lg border border-line bg-white p-3">

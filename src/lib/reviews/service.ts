@@ -167,7 +167,10 @@ export function createPgReviewService(pool: Pool): ReviewService {
       const { rows } = await pool.query("select * from coordinator_unassigned($1)", [actorId]);
       const ids = rows.map((r) => r.request_id as string);
       const conflicted = ids.length === 0 ? new Set<string>() : new Set((await pool.query(
-        "select r.id from review_requests r join firm_conflicts c on c.firm_id = r.firm_id and c.owner_id = r.owner_id where r.id = any($1)", [ids],
+        // Konflik firma: firma permintaan ini berkonflik dengan pemiliknya, atau permintaan sudah dilepas ke perutean admin
+        // (firma kosong) dan pemiliknya punya konflik dengan suatu firma.
+        `select r.id from review_requests r where r.id = any($1) and exists (select 1 from firm_conflicts c where c.owner_id = r.owner_id
+            and (r.firm_id is null or c.firm_id = r.firm_id))`, [ids],
       )).rows.map((r) => r.id as string));
       return rows.map((r) => ({ requestId: r.request_id, createdAt: r.created_at.toISOString(), category: r.category, conflict: conflicted.has(r.request_id) }));
     },

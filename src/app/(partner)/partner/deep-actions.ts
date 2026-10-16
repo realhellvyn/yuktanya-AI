@@ -6,17 +6,12 @@ import { deepService } from "@/lib/deep/runtime";
 import { flags } from "@/lib/flags";
 import { formInt, formUuid } from "@/lib/partner/form";
 import { ReviewError } from "@/lib/reviews/service";
-import { getSessionRoles } from "@/lib/supabase/server";
+import { partnerActor } from "@/lib/partner/actor";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "");
 const page = (id: string, q = "") => `/partner/deep/${id}${q}`;
 const INVALID = "e=INVALID_REQUEST";
 
-async function actor() {
-  const s = await getSessionRoles();
-  if (!s) redirect("/login");
-  return s;
-}
 // ID pemeriksaan rusak → kembali ke antrean; revisi atau nomor rusak → kembali ke editor. Keduanya dengan pemberitahuan biasa.
 function deepId(f: FormData): string {
   const id = formUuid(f, "deepId");
@@ -38,7 +33,7 @@ async function run(id: string, fn: () => Promise<string>): Promise<never> {
 }
 
 export async function saveDeepDraftAction(formData: FormData): Promise<void> {
-  const s = await actor();
+  const s = await partnerActor("reviewer");
   const id = deepId(formData);
   const revision = intOr(formData, "revision", id);
   await run(id, async () => {
@@ -48,7 +43,7 @@ export async function saveDeepDraftAction(formData: FormData): Promise<void> {
 }
 
 export async function setDispositionAction(formData: FormData): Promise<void> {
-  const s = await actor();
+  const s = await partnerActor("reviewer");
   const id = deepId(formData);
   const revision = intOr(formData, "revision", id);
   const noteNo = intOr(formData, "noteNo", id, 1);
@@ -59,7 +54,7 @@ export async function setDispositionAction(formData: FormData): Promise<void> {
 }
 
 export async function setChecklistAction(formData: FormData): Promise<void> {
-  const s = await actor();
+  const s = await partnerActor("reviewer");
   const id = deepId(formData);
   const revision = intOr(formData, "revision", id);
   await run(id, async () => {
@@ -69,7 +64,7 @@ export async function setChecklistAction(formData: FormData): Promise<void> {
 }
 
 export async function decideDeepAction(formData: FormData): Promise<void> {
-  const s = await actor();
+  const s = await partnerActor("reviewer");
   const id = deepId(formData);
   const revision = intOr(formData, "revision", id);
   const decision = str(formData, "decision") as "APPROVE";
@@ -88,7 +83,7 @@ export async function decideDeepAction(formData: FormData): Promise<void> {
 }
 
 export async function assignDeepAction(formData: FormData): Promise<void> {
-  const s = await actor();
+  const s = await partnerActor("routing");
   const back = s.roles.includes("platform_admin") ? "/admin/routing" : "/partner";
   const id = formUuid(formData, "deepId");
   const reviewer = formUuid(formData, "reviewerId");

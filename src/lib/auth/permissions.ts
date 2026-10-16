@@ -4,10 +4,13 @@ export type GuardResult = { allow: true } | { allow: false; redirect: string };
 
 // Permukaan pemilik dokumen: hanya akun pemilik biasa (peran profesional/admin memakai permukaannya sendiri).
 const OWNER = [
-  "/dashboard", "/workspace", "/documents", "/vault", "/membership", "/settings", "/checkout", "/reviews", "/cases",
-  "/api/documents", "/api/orders", "/api/payments/mock", "/api/reviews", "/api/deep",
+  "/dashboard", "/workspace", "/documents", "/vault", "/membership", "/settings", "/checkout", "/reviews", "/deep-reviews", "/cases",
+  "/api/documents", "/api/orders", "/api/payments/mock", "/api/reviews", "/api/deep", "/api/usage", "/api/ai",
 ] as const;
-const PROTECTED = [...OWNER, "/partner", "/admin", "/api/ai", "/api/admin", "/api/partner"] as const;
+const PROTECTED = [...OWNER, "/partner", "/admin", "/api/admin", "/api/partner"] as const;
+// API tanpa sesi pengguna: job terjadwal (rahasia CRON_SECRET) dan webhook penyedia pembayaran (saat ini selalu 404).
+// API lain yang tidak terdaftar di atas tetap butuh login (tertutup bawaan) dan mengikuti aturan permukaan pemilik.
+const PUBLIC_API = ["/api/jobs", "/api/payments/webhook"] as const;
 
 const under = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
 
@@ -18,13 +21,14 @@ export function homeFor(roles: Role[]): Home {
 }
 
 export function guardPath(pathname: string, roles: Role[] | null): GuardResult {
-  const prefix = PROTECTED.find((p) => under(pathname, p));
+  const prefix = PROTECTED.find((p) => under(pathname, p))
+    ?? (under(pathname, "/api") && !PUBLIC_API.some((p) => under(pathname, p)) ? "/api" : undefined);
   if (!prefix) return { allow: true };
   if (!roles) return { allow: false, redirect: `/login?returnTo=${encodeURIComponent(pathname)}` };
 
   const home = homeFor(roles);
-  if (prefix === "/api/ai") return { allow: true };
   if (prefix === "/admin" || prefix === "/api/admin") return roles.includes("platform_admin") ? { allow: true } : { allow: false, redirect: home };
+  // Admin platform tidak memakai /api/partner: perutean admin hanya lewat /admin/routing (PERMISSIONS: routing, bukan kerja reviewer).
   if (prefix === "/partner" || prefix === "/api/partner") {
     const ok = roles.includes("reviewer") || roles.includes("partner_admin");
     if (!ok) return { allow: false, redirect: home };

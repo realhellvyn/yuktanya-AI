@@ -11,6 +11,7 @@ export const ACK_ERROR_MESSAGES: Record<string, string> = {
   email: "Alamat email belum benar. Contoh: nama@contoh.com",
   rate: "Terlalu banyak permintaan kode. Coba lagi nanti.",
   busy: "Terlalu banyak permintaan. Coba lagi sebentar.",
+  unavailable: "Konfirmasi baca lewat email belum tersedia karena layanan email belum aktif.",
 };
 
 export const PANEL_NOTICES: Record<string, string> = {

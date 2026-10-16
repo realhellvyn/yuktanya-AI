@@ -76,3 +76,24 @@ Refunds, re-review rounds, SLA and negative-outcome legal wording require signed
   and need partner policy.
 - Deep eligibility also rejects when the parent document has an open Special Legal Case (`SPECIAL_CASE_OPEN`).
 - `ENHANCED_ISSUANCE` is enforced twice: in the server handler/action and inside `decide_deep` (the server passes the flag value).
+
+## Security hardening (Task 13, audit C) — keputusan pengendali
+- `/api/ai/chat` (relai LLM umum tanpa dokumen, tidak dipakai UI) dihapus. AI hanya lewat jalur pemilik dokumen
+  (`/api/documents/[id]/chat`, aksi server dokumen, analisis awal unggahan). `/api/ai/*` kini permukaan pemilik.
+- Penjaga rute: API yang tidak terdaftar butuh login (tertutup bawaan), kecuali `/api/jobs/*` (CRON_SECRET) dan
+  `/api/payments/webhook/*`. Halaman di grup `(app)`, `(admin)`, `(partner)` wajib tercakup penjaga; tes struktural gagal bila
+  ada halaman/rute baru yang lolos. Halaman tak dikenal di luar grup itu tetap dibiarkan agar 404 tampil untuk anonim.
+- `/api/partner/*` hanya untuk peran mitra (proxy dan handler sama). Admin platform merutekan lewat `/admin/routing`
+  (aksi server) sesuai PERMISSIONS "operational routing"; admin tidak pernah mengerjakan atau memutuskan review.
+  Aksi server mitra memeriksa peran: kerja reviewer = `reviewer`; catat konflik firma = `partner_admin`;
+  tugaskan/pindahkan = `partner_admin` atau `platform_admin`.
+- Konflik firma berlaku untuk pasangan (firma, pemilik). Saat dicatat, semua permintaan Standar/Deep pemilik itu yang masih
+  berjalan di firma itu dilepas: penugasan aktif berakhir dan permintaan kembali ke perutean admin (firma dikosongkan).
+  Admin melihat tanda konflik dan menugaskan ke firma lain; reviewer firma yang berkonflik tetap ditolak. Pencabutan konflik
+  dan pengembalian dana karena konflik tetap belum ada di sistem (kebijakan mitra).
+- CSP memakai nonce per permintaan; semua halaman dirender dinamis (biaya: tanpa halaman statis/CDN). `'unsafe-inline'` hanya
+  untuk gaya (atribut style React); `'unsafe-eval'` dan `ws:` hanya di luar produksi.
+- Konfirmasi baca lewat email dinyatakan belum tersedia sampai ada adapter penyedia email nyata (`EMAIL_PROVIDER`); tanpa
+  itu tidak ada tantangan kode yang dibuat. Pengingat email juga ditandai belum terkirim.
+- Pembatas laju auth di aplikasi (Postgres, hash kunci) gagal-terbuka bila database pembatas tidak dapat dihubungi; batas
+  Supabase Auth tetap lapisan kedua.

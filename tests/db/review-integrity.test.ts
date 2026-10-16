@@ -140,14 +140,16 @@ describe("B-02: konflik kepentingan", () => {
     await expect(pool.query("select declare_firm_conflict($1, 'STANDARD', $2, $3)", [other.coordinator, x.req, NOW])).rejects.toThrow(/FORBIDDEN/);
     await expect(pool.query("select declare_firm_conflict($1, 'STANDARD', $2, $3)", [x.owner, x.req, NOW])).rejects.toThrow(/FORBIDDEN/);
     await pool.query("select declare_firm_conflict($1, 'STANDARD', $2, $3)", [x.f.coordinator, x.req, NOW]);
-    await expect(pool.query("select assign_review($1, $2, $3, $4)", [x.f.coordinator, x.req, x.A.reviewer, NOW])).rejects.toThrow(/CONFLICT_OF_INTEREST/);
+    // Task 13: permintaan dilepas dari firma yang berkonflik (kembali ke perutean admin); reviewer firma itu tetap ditolak.
+    await expect(pool.query("select assign_review($1, $2, $3, $4)", [x.f.coordinator, x.req, x.A.reviewer, NOW])).rejects.toThrow(/FORBIDDEN/);
+    await expect(pool.query("select assign_review($1, $2, $3, $4)", [x.f.admin, x.req, x.A.reviewer, NOW])).rejects.toThrow(/CONFLICT_OF_INTEREST/);
     const audit = (await pool.query("select metadata_safe from audit_events where event_type = 'firm_conflict_declared' and entity_id = $1", [x.req])).rows;
     expect(audit).toHaveLength(1);
-    // Konflik yang dicatat saat pekerjaan berjalan menahan penerbitan.
+    // Konflik yang dicatat saat pekerjaan berjalan menahan penerbitan (Task 13: penugasan reviewer itu juga diakhiri).
     const y = await standardAssigned();
     const rev = await readyToPublish(y);
     await pool.query("select declare_firm_conflict($1, 'STANDARD', $2, $3)", [y.f.coordinator, y.req, NOW]);
-    await expect(publish8(y.A.reviewer, y.req, rev, true)).rejects.toThrow(/CONFLICT_OF_INTEREST/);
+    await expect(publish8(y.A.reviewer, y.req, rev, true)).rejects.toThrow(/FORBIDDEN/);
   });
 
   it("reviewer yang juga pemilik dokumen tidak dapat ditugaskan", async () => {

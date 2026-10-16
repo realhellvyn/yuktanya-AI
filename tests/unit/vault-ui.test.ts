@@ -19,6 +19,7 @@ const panel = (over: Partial<Parameters<typeof VaultPanel>[0]> = {}) =>
     documentId: "d1", versionId: "v1", features: { share: true, reminders: true, evidence: true }, shares: [], acks: [],
     reminderOptions: [{ specId: "end", label: "Masa kerahasiaan berakhir", dueDate: "2028-10-16" }],
     actions: { createShare: noop as never, revokeShare: noop, setReminder: noop, cancelReminder: noop, buildPack: noop },
+    emailAvailable: true,
     ...over,
   }));
 
@@ -59,7 +60,7 @@ describe("VaultPanel", () => {
 });
 
 describe("PublicShare", () => {
-  const base = { token: "t".repeat(43), requestAction: noop, verifyAction: noop };
+  const base = { token: "t".repeat(43), requestAction: noop, verifyAction: noop, ackAvailable: true };
 
   it("menampilkan isi, kode versi, ajakan membuat dokumen, dan label bukan tanda tangan; tanpa data pemilik", () => {
     const html = renderToStaticMarkup(PublicShare({ ...base, view: ok }));
@@ -105,5 +106,32 @@ describe("PublicShare", () => {
     for (const tag of html.match(/<(a|button) [^>]*>/g) ?? []) expect(tag).toContain("min-h-12");
     const kode = renderToStaticMarkup(PublicShare({ ...base, view: ok, step: "kode", email: "a@b.co" }));
     for (const tag of kode.match(/<(a|button) [^>]*>/g) ?? []) expect(tag).toContain("min-h-12");
+  });
+});
+
+// Audit C17: tanpa penyedia email, konfirmasi baca lewat email dinyatakan belum tersedia (tanpa formulir dan tanpa janji kirim kode).
+describe("konfirmasi baca tanpa layanan email", () => {
+  it("halaman publik: pesan jelas, tanpa formulir email/kode, dokumen tetap terbaca", () => {
+    const html = renderToStaticMarkup(PublicShare({ token: "t".repeat(43), requestAction: noop, verifyAction: noop, ackAvailable: false, view: ok }));
+    expect(html).toContain("Konfirmasi baca lewat email belum tersedia");
+    expect(html).not.toContain("<form");
+    expect(html).not.toContain("Kirim kode");
+    expect(html).toContain("Sinta Dewi");
+    const kode = renderToStaticMarkup(PublicShare({ token: "t".repeat(43), requestAction: noop, verifyAction: noop, ackAvailable: false, view: ok, step: "kode", email: "a@b.co" }));
+    expect(kode).not.toContain("Kode dikirim");
+    expect(kode).not.toContain('name="code"');
+  });
+
+  it("panel pemilik: tidak menjanjikan konfirmasi baca atau pengingat lewat email", () => {
+    const html = panel({ emailAvailable: false });
+    expect(html).toContain("Konfirmasi baca lewat email belum tersedia");
+    expect(html).not.toContain("Pihak lawan dapat menekan konfirmasi baca lewat email");
+    expect(html).toContain("Pengingat lewat email belum dapat dikirim");
+    expect(html).not.toMatch(/\bcap\b/i);
+  });
+
+  it("dengan layanan email: alur konfirmasi baca seperti biasa", () => {
+    expect(panel({ emailAvailable: true })).toContain("Pihak lawan dapat menekan konfirmasi baca lewat email");
+    expect(panel({ emailAvailable: true })).not.toContain("belum tersedia");
   });
 });

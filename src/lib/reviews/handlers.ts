@@ -19,7 +19,8 @@ const readJson = (req: Request) => req.json().catch(() => null);
 function allowed(scope: Scope, roles: Role[]): boolean {
   if (scope === "owner") return homeFor(roles) === "/dashboard";
   if (scope === "reviewer") return roles.includes("reviewer");
-  return roles.includes("partner_admin") || roles.includes("platform_admin");
+  // API mitra hanya untuk koordinator firma. Admin platform merutekan lewat /admin/routing (aksi server), sama dengan proxy.
+  return roles.includes("partner_admin");
 }
 
 function mapError(e: unknown): Response {

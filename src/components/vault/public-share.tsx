@@ -8,6 +8,8 @@ type Props = {
   token: string;
   requestAction: Action;
   verifyAction: Action;
+  // false = layanan email belum aktif: tidak ada formulir dan tidak ada janji kode terkirim.
+  ackAvailable: boolean;
   step?: string;
   email?: string;
   result?: string;
@@ -21,7 +23,7 @@ const NOT_OK: Record<string, string> = {
 };
 const box = "mt-1 block min-h-12 w-full rounded-lg border border-slate-400 px-3 text-lg";
 
-export function PublicShare({ view, token, requestAction, verifyAction, step, email, result, error }: Props) {
+export function PublicShare({ view, token, requestAction, verifyAction, ackAvailable, step, email, result, error }: Props) {
   if (view.status !== "OK") {
     return (
       <main className="mx-auto max-w-3xl space-y-4 p-6">
@@ -42,6 +44,9 @@ export function PublicShare({ view, token, requestAction, verifyAction, step, em
       <section aria-labelledby="ack-h" className="space-y-3 rounded-lg border border-line bg-white p-4">
         <h2 id="ack-h" className="text-xl font-semibold">Konfirmasi baca (opsional)</h2>
         <p>Konfirmasi baca hanya menyatakan Anda sudah membaca versi ini. Ini bukan tanda tangan elektronik.</p>
+        {!ackAvailable ? (
+          <p role="status" className="rounded-lg border border-line bg-slate-50 p-3">{ACK_ERROR_MESSAGES.unavailable} Anda tetap dapat membaca dokumen ini.</p>
+        ) : <>
         {resultMsg && <p role="status" className="font-semibold">{resultMsg}</p>}
         {errorMsg && <p role="alert" className="font-semibold text-danger">{errorMsg}</p>}
         {step === "kode" ? (
@@ -75,6 +80,7 @@ export function PublicShare({ view, token, requestAction, verifyAction, step, em
             <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Kirim kode</button>
           </form>
         )}
+        </>}
       </section>
 
       <a href="/register" className="inline-flex min-h-12 items-center rounded-lg border border-slate-400 bg-white px-5 font-medium">Buat dokumen sendiri, gratis</a>

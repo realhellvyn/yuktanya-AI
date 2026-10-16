@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { appOrigin } from "@/lib/app-url";
 import { evidenceDeps, reminderService, shareService } from "@/lib/vault/runtime";
 import { requireUserId } from "@/lib/documents/session";
 import { NotFoundError } from "@/lib/documents/service";
@@ -18,8 +19,7 @@ export async function createShareAction(_prev: CreateShareState, formData: FormD
   const days = [1, 7, 30].includes(Number(str(formData, "days"))) ? Number(str(formData, "days")) : 7;
   try {
     const { token } = await shareService().create(userId, str(formData, "versionId"), days * 24 * 3600);
-    const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    return { link: `${origin}/s/${token}` };
+    return { link: `${appOrigin()}/s/${token}` };
   } catch (e) {
     if (e instanceof FeatureNotAvailableError) return { error: "Fitur ini tersedia untuk Member." };
     if (e instanceof NotFoundError) return { error: "Versi tidak ditemukan." };

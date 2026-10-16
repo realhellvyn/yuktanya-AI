@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { existsSync, readdirSync, statSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 import { guardPath, homeFor, safeReturnTo, type Role } from "@/lib/auth/permissions";
 
 const redirectOf = (r: ReturnType<typeof guardPath>) => (r.allow ? null : r.redirect);
@@ -125,5 +127,68 @@ describe("guardPath: halaman publik baru dan /settings", () => {
     expect(guardPath("/settings", ["user"])).toEqual({ allow: true });
     expect(redirectOf(guardPath("/settings", ["reviewer"]))).toBe("/partner");
     expect(redirectOf(guardPath("/settings", ["platform_admin"]))).toBe("/admin");
+  });
+});
+
+// Audit C (C7/C9/C21): penjaga rute tertutup secara bawaan untuk area yang butuh login.
+describe("guardPath: audit keamanan C", () => {
+  it("/deep-reviews dan /api/usage adalah permukaan pemilik", () => {
+    for (const p of ["/deep-reviews/abc", "/api/usage"]) {
+      expect(redirectOf(guardPath(p, null))).toBe(`/login?returnTo=${encodeURIComponent(p)}`);
+      expect(guardPath(p, ["user"])).toEqual({ allow: true });
+      expect(redirectOf(guardPath(p, ["reviewer"]))).toBe("/partner");
+      expect(redirectOf(guardPath(p, ["platform_admin"]))).toBe("/admin");
+    }
+  });
+
+  it("API yang tidak dikenal butuh login (tertutup bawaan); hanya job terjadwal dan webhook pembayaran yang terbuka", () => {
+    for (const p of ["/api/baru", "/api/x/y", "/api"]) expect(redirectOf(guardPath(p, null))).toContain("/login");
+    for (const p of ["/api/jobs/outbox", "/api/jobs/retention", "/api/payments/webhook/midtrans"]) expect(guardPath(p, null)).toEqual({ allow: true });
+    expect(guardPath("/apiku", null)).toEqual({ allow: true });
+  });
+
+  it("/api/ai hanya untuk pemilik dokumen (staf tidak memakai AI pemilik)", () => {
+    expect(redirectOf(guardPath("/api/ai/x", ["reviewer"]))).toBe("/partner");
+    expect(redirectOf(guardPath("/api/ai/x", ["platform_admin"]))).toBe("/admin");
+  });
+
+  it("platform_admin tidak masuk /api/partner (perutean admin lewat /admin/routing)", () => {
+    expect(redirectOf(guardPath("/api/partner/unassigned", ["user", "platform_admin"]))).toBe("/admin");
+    expect(guardPath("/api/partner/unassigned", ["partner_admin"])).toEqual({ allow: true });
+  });
+});
+
+// Setiap halaman/rute di area login harus tertutup untuk anonim; menambah rute baru tanpa penjaga membuat tes ini gagal.
+describe("guardPath: semua rute aplikasi dipetakan", () => {
+  const root = join(process.cwd(), "src/app");
+  const walk = (dir: string): string[] => readdirSync(dir).flatMap((n) => {
+    const p = join(dir, n);
+    return statSync(p).isDirectory() ? walk(p) : /^(page|route)\.tsx?$/.test(n) ? [p] : [];
+  });
+  const toUrl = (file: string) => "/" + relative(root, file).split(sep).slice(0, -1)
+    .filter((s) => !/^\(.*\)$/.test(s)).map((s) => (s.startsWith("[") ? "x" : s)).join("/");
+  const files = walk(root);
+  const PUBLIC_GROUPS = ["(public)", "(auth)"];
+  const PUBLIC_API = ["/api/jobs", "/api/payments/webhook"];
+
+  it("halaman di grup (app), (admin), (partner) dan semua /api (kecuali job & webhook) menolak anonim", () => {
+    const loose = files.filter((f) => {
+      const rel = relative(root, f);
+      const url = toUrl(f);
+      const isPublic = PUBLIC_GROUPS.some((g) => rel.startsWith(g + sep)) || url === "/auth/callback"
+        || PUBLIC_API.some((p) => url === p || url.startsWith(p + "/"));
+      return !isPublic && guardPath(url, null).allow;
+    }).map(toUrl);
+    expect(loose).toEqual([]);
+  });
+
+  it("halaman publik dan alur masuk tetap terbuka untuk anonim", () => {
+    const closed = files.filter((f) => PUBLIC_GROUPS.some((g) => relative(root, f).startsWith(g + sep))).map(toUrl).filter((u) => !guardPath(u, null).allow);
+    expect(closed).toEqual([]);
+  });
+
+  it("rute relai LLM umum /api/ai/chat sudah dihapus", () => {
+    expect(existsSync(join(root, "api/ai/chat/route.ts"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "src/lib/ai/handle-chat.ts"))).toBe(false);
   });
 });

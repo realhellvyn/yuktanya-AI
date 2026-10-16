@@ -5,18 +5,13 @@ import { formInt, formUuid } from "@/lib/partner/form";
 import { afterPublishPath } from "@/lib/reviews/paths";
 import { reviewService } from "@/lib/reviews/runtime";
 import { ReviewError } from "@/lib/reviews/service";
-import { getSessionRoles } from "@/lib/supabase/server";
+import { partnerActor } from "@/lib/partner/actor";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "");
 const opt = (f: FormData, k: string) => (str(f, k).trim() === "" ? null : str(f, k).trim());
 const page = (id: string, q = "") => `/partner/reviews/${id}${q}`;
 const INVALID = "e=INVALID_REQUEST";
 
-async function actor() {
-  const s = await getSessionRoles();
-  if (!s) redirect("/login");
-  return s;
-}
 
 // ID permintaan rusak → kembali ke antrean; revisi atau nomor rusak → kembali ke editor. Keduanya dengan pemberitahuan biasa.
 function requestId(f: FormData): string {
@@ -42,7 +37,7 @@ async function run(id: string, fn: () => Promise<string | void>): Promise<never>
 }
 
 export async function saveDraftAction(formData: FormData): Promise<void> {
-  const s = await actor();
+  const s = await partnerActor("reviewer");
   const id = requestId(formData);
   const revision = intOr(formData, "revision", id);
   await run(id, async () => {
@@ -52,7 +47,7 @@ export async function saveDraftAction(formData: FormData): Promise<void> {
 }
 
 export async function upsertNoteAction(formData: FormData): Promise<void> {
-  const s = await actor();
+  const s = await partnerActor("reviewer");
   const id = requestId(formData);
   const revision = intOr(formData, "revision", id);
   const no = formData.get("noteNo") ? intOr(formData, "noteNo", id) : 0;
@@ -67,7 +62,7 @@ export async function upsertNoteAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteNoteAction(formData: FormData): Promise<void> {
-  const s = await actor();
+  const s = await partnerActor("reviewer");
   const id = requestId(formData);
   const revision = intOr(formData, "revision", id);
   const noteNo = intOr(formData, "noteNo", id, 1);
@@ -78,7 +73,7 @@ export async function deleteNoteAction(formData: FormData): Promise<void> {
 }
 
 export async function publishAction(formData: FormData): Promise<void> {
-  const s = await actor();
+  const s = await partnerActor("reviewer");
   const id = requestId(formData);
   const revision = intOr(formData, "revision", id);
   let status: string;
@@ -96,7 +91,7 @@ export async function publishAction(formData: FormData): Promise<void> {
 }
 
 async function assignment(formData: FormData, mode: "assign" | "reassign"): Promise<never> {
-  const s = await actor();
+  const s = await partnerActor("routing");
   const back = s.roles.includes("platform_admin") ? "/admin/routing" : "/partner";
   const id = formUuid(formData, "requestId");
   const reviewer = formUuid(formData, "reviewerId");
@@ -121,7 +116,7 @@ export async function assignAction(formData: FormData): Promise<void> {
 
 // Koordinator mencatat bahwa firmanya memiliki konflik kepentingan dengan pemilik dokumen permintaan ini.
 export async function declareConflictAction(formData: FormData): Promise<void> {
-  const s = await actor();
+  const s = await partnerActor("coordinator");
   const id = formUuid(formData, "requestId");
   if (!id) redirect(`/partner?${INVALID}`);
   if (formData.get("confirm") !== "yes") redirect("/partner?e=CONFLICT_CONFIRM_REQUIRED");

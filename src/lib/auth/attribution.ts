@@ -10,3 +10,8 @@ export function parseAttribution(params: URLSearchParams): Attribution {
   }
   return out;
 }
+
+// Cookie atribusi sentuhan pertama (30 hari). secure di produksi.
+export function attributionCookieOptions(production: boolean = process.env.NODE_ENV === "production") {
+  return { httpOnly: true, sameSite: "lax" as const, secure: production, maxAge: 60 * 60 * 24 * 30, path: "/" };
+}

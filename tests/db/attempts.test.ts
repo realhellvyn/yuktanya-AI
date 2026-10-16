@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { createPgAttemptLimiter } from "@/lib/ai/attempts";
-import { createChatCache, handleChat, type ChatDeps } from "@/lib/ai/handle-chat";
+import { handleChatTurn, type ChatTurnDeps } from "@/lib/ai/chat-turn";
+import { createPgDocumentsService } from "@/lib/documents/service";
 import { createPgUsageStore } from "@/lib/ai/quota";
 import { GatewayError } from "@/lib/ai/gateway";
 import { createUser, getPool } from "./helpers";
@@ -29,16 +30,17 @@ describe("ai_attempt_allowed / pembatas percobaan", () => {
   });
 });
 
-describe("handleChat memakai pembatas percobaan", () => {
+describe("percakapan dokumen memakai pembatas percobaan", () => {
   it("percobaan gagal tetap dihitung: setelah batas → 429 TOO_MANY_ATTEMPTS tanpa memanggil gateway", async () => {
     const u = await createUser(pool);
+    const docs = createPgDocumentsService(pool, { ALLOW_UNAPPROVED_TEMPLATES: "true", NODE_ENV: "test" });
+    const id = (await docs.create(u, "NDA", `k-${Math.random().toString(36).slice(2)}-abcdef`)).documentId;
     const chat = vi.fn(async () => { throw new GatewayError("TIMEOUT"); });
-    const deps: ChatDeps = {
-      getUserId: async () => u, store: createPgUsageStore(pool), chat: chat as unknown as ChatDeps["chat"], recordMetric: async () => {},
-      cache: createChatCache(), inflight: new Set(), now: () => NOW,
+    const deps: ChatTurnDeps = {
+      getUserId: async () => u, service: docs, store: createPgUsageStore(pool), pool, chat: chat as unknown as ChatTurnDeps["chat"], inflight: new Set(), now: () => NOW,
       attempts: createPgAttemptLimiter(pool, { chat: { limit: 2, windowSeconds: 600 }, assist: { limit: 1, windowSeconds: 600 } }),
     };
-    const call = () => handleChat(deps, new Request("http://t/x", { method: "POST", headers: { "content-type": "application/json", "idempotency-key": `k-${Math.random().toString(36).slice(2)}-abcdef` }, body: JSON.stringify({ messages: [{ role: "user", content: "halo" }] }) }));
+    const call = () => handleChatTurn(deps, new Request("http://t/x", { method: "POST", headers: { "content-type": "application/json", "idempotency-key": `k-${Math.random().toString(36).slice(2)}-abcdef` }, body: JSON.stringify({ message: "Saya Sinta Dewi ingin NDA dengan Budi Santoso." }) }), { id });
     expect((await call()).status).toBe(502);
     expect((await call()).status).toBe(502);
     const third = await call();

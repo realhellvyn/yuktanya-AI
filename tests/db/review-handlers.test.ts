@@ -97,6 +97,15 @@ describe("handler review", () => {
     }
   });
 
+  it("admin platform tidak memakai API mitra untuk perutean (403; perutean admin lewat /admin/routing)", async () => {
+    const c = await setup();
+    const adm = as(c.f.admin, ["user", "platform_admin"]);
+    expect((await unassignedHandler(adm, req())).status).toBe(403);
+    expect((await assignHandler(adm, req({ reviewerId: c.reviewer }), { id: c.rid })).status).toBe(403);
+    expect((await reassignHandler(adm, req({ reviewerId: c.reviewer }), { id: c.rid })).status).toBe(403);
+    expect((await pool.query("select status from review_requests where id = $1", [c.rid])).rows[0].status).toBe("QUEUED");
+  });
+
   it("pemilik tidak dapat membaca review orang lain (404 identik) dan peran profesional tidak memakai rute pemilik", async () => {
     const c = await setup();
     const other = as(await createUser(pool), ["user"]);

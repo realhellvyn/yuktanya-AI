@@ -28,6 +28,7 @@ import { UploadHashes } from "@/components/ai-review/upload-hashes";
 import { latestAiReport } from "@/lib/ai/prereview";
 import { AI_REVIEW_STATUS_TEXT, type AiReviewStatus } from "@/lib/ai/review-status";
 import { uploadRepo } from "@/lib/uploads/runtime";
+import { ackEmailAvailable } from "@/lib/vault/email-config";
 
 // Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
 export const dynamic = "force-dynamic";
@@ -190,6 +191,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
                 reminderOptions={reminderOptions}
                 packId={q.pack}
                 notice={q.notice}
+                emailAvailable={ackEmailAvailable()}
                 actions={{ createShare: createShareAction, revokeShare: revokeShareAction, setReminder: setReminderAction, cancelReminder: cancelReminderAction, buildPack: buildPackAction }}
               />
             </div>

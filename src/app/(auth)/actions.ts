@@ -1,10 +1,13 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { appOrigin } from "@/lib/app-url";
 import { googleAuthEnabled, googleRedirectTo } from "@/lib/auth/google";
+import { authLimiter } from "@/lib/auth/limiter-runtime";
 import { authErrorCode, normalizeEmail } from "@/lib/auth/messages";
+import { clientIp, type AuthAction } from "@/lib/auth/rate-limit";
 import { isRecoverySession } from "@/lib/auth/recovery";
 import { safeReturnTo } from "@/lib/auth/permissions";
 import { recordAttribution } from "@/lib/auth/record-attribution";
@@ -24,6 +27,19 @@ function parse(formData: FormData) {
   return { returnTo, parsed };
 }
 
+// Pembatas laju aplikasi (audit C12), sebelum Supabase dipanggil: kunci IP+email/IP/email tanpa memeriksa keberadaan akun,
+// jadi jawaban "terlalu sering" sama untuk email terdaftar maupun tidak. Bila pembatas tidak dapat dihubungi (galat database
+// sesaat) permintaan tidak diblokir: batas Supabase Auth tetap berlaku, dan menutup semua login karena galat sementara lebih
+// merugikan. true = terlalu sering.
+async function rateLimited(action: AuthAction, email: string): Promise<boolean> {
+  try {
+    return !(await authLimiter().allow(action, clientIp(await headers()), email.trim().toLowerCase()));
+  } catch (e) {
+    console.error("auth_rate_limit_unavailable", e instanceof Error ? e.name : "error");
+    return false;
+  }
+}
+
 const back = (page: "login" | "register", code: string, returnTo: string) =>
   redirect(`/${page}?error=${code}&returnTo=${encodeURIComponent(returnTo)}`);
 
@@ -31,6 +47,7 @@ export async function signIn(formData: FormData) {
   const { returnTo, parsed } = parse(formData);
   if (!parsed.success) back("login", "invalid", returnTo);
   if (!hasSupabaseEnv()) back("login", "unconfigured", returnTo);
+  if (await rateLimited("login", parsed.data!.email)) back("login", "rate_limited", returnTo);
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data!);
   // Pesan sama untuk semua kegagalan agar tidak membocorkan keberadaan akun.
@@ -42,8 +59,9 @@ export async function signUp(formData: FormData) {
   const { returnTo, parsed } = parse(formData);
   if (!parsed.success) back("register", "invalid", returnTo);
   if (!hasSupabaseEnv()) back("register", "unconfigured", returnTo);
+  if (await rateLimited("signup", parsed.data!.email)) back("register", "rate_limited", returnTo);
   const supabase = await createSupabaseServerClient();
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const origin = appOrigin();
   const { data, error } = await supabase.auth.signUp({
     ...parsed.data!,
     options: { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(returnTo)}` },
@@ -61,7 +79,7 @@ export async function signInWithGoogle(formData: FormData) {
   const returnTo = safeReturnTo(String(formData.get("returnTo") ?? ""));
   if (!googleAuthEnabled(process.env) || !hasSupabaseEnv()) back("login", "unconfigured", returnTo);
   const supabase = await createSupabaseServerClient();
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const origin = appOrigin();
   const { data, error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: googleRedirectTo(origin, returnTo) } });
   if (error || !data.url) back("login", "failed", returnTo);
   redirect(data!.url!);
@@ -72,13 +90,12 @@ export async function signOut(): Promise<void> {
   redirect("/");
 }
 
-const appOrigin = () => process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
 // Lupa kata sandi: jawaban sukses sama untuk email terdaftar maupun tidak (tidak membocorkan keberadaan akun).
 export async function requestPasswordReset(formData: FormData) {
   const email = normalizeEmail(formData.get("email"));
   if (!email) redirect("/forgot-password?error=invalid");
   if (!hasSupabaseEnv()) redirect("/forgot-password?error=unconfigured");
+  if (await rateLimited("reset", email!)) redirect("/forgot-password?error=rate_limited");
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email!, {
     redirectTo: `${appOrigin()}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
@@ -114,6 +131,7 @@ export async function resendConfirmation(formData: FormData) {
   const to = (q: string) => redirect(`/${page}?${q}&returnTo=${encodeURIComponent(returnTo)}`);
   if (!email) to("error=invalid");
   if (!hasSupabaseEnv()) to("error=unconfigured");
+  if (await rateLimited("resend", email!)) to("error=rate_limited");
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.resend({
     type: "signup",
