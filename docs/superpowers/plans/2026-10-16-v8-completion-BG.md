@@ -133,3 +133,62 @@ Work that is already finished and passing is NOT redone: sub-project A (AI chat)
 - [ ] Run locally: `npm run check`, `bash scripts/e2e/run.sh` (default journey list, both viewports), release smoke (`npx vitest run tests/smoke`). Trigger CI via the GitHub MCP `actions_run_trigger` and read job result; fix failures. Report only what actually ran.
 - [ ] Update README status and RELEASE_CHECKLIST (what is built, what remains gate-blocked: legal approvals, privacy terms, real payment, real reviewers).
 - [ ] Commit and push.
+
+---
+
+## Audit fix wave (Task 10 audits A–D: files in `.superpowers/sdd/2026-10-16-v8-completion-BG/audit-{A,B,C,D}.md`, local only)
+
+Rulings (controller): B-04 (one admin can authorize a second account as reviewer) is a trust-model decision — not coded; recorded as a production blocker "dual control for professional authorization" in RELEASE_CHECKLIST. C17 (read-acknowledgement email cannot work without an email sender) — the feature must be honestly unavailable until an email provider is configured: UI says so, no promise of delivery; blocker recorded. Remaining Minor audit items not named below are recorded in the ledger and RELEASE_CHECKLIST "Celah", not coded.
+
+### Task 11: Billing integrity fixes (audit A: A15, A21, A22, A23, A17, A28)
+
+**Files:** new migration `supabase/migrations/20261016000035_billing_integrity.sql` (+ `supabase/staging/` variant ONLY if it contains DROP/delete), `src/lib/billing/*`, `src/app/(app)/membership`, `src/app/(app)/reviews/[id]/page.tsx`, `vercel.json` + a cron job route for `expire_orders`, tests in `tests/db`.
+
+- [ ] Read audit-A.md for A15, A21, A22, A23, A17, A28 (exact evidence and repro).
+- [ ] A15: ACTIVATE of a late payment on an expired Member-first order must not allow a second Rp30.000 first review in the same period (re-reserve the entitlement atomically or refuse/reprice and reconcile); TDD from the audit's repro.
+- [ ] A21: a second payment on an already-PAID order (DISPUTED) must appear in the admin reconciliation/manual lists and the revenue "held" figure; TDD.
+- [ ] A22: serialize membership fulfilment per user (advisory lock) so concurrent settlements cannot create overlapping periods; also make double-click "Lanjut ke pembayaran" reuse the pending order (idempotent per user+kind+ref window); TDD.
+- [ ] A23: schedule `expire_orders` (daily cron via the existing jobs-route pattern, same auth) and make price preview sweep/consider expiry so a screen never quotes Rp35.000 where the charge will be Rp30.000.
+- [ ] A17: pass the already-paid standard price to the deep offer and fix the misleading unit test.
+- [ ] A28: `/membership` benefit list must only list implemented, non-proposed benefits (check migration 0014 "proposed" defaults vs actual behavior); wording change only.
+- [ ] `npm run check` once; E2E once (all journeys). Commit, push.
+
+### Task 12: Review integrity fixes (audit B: B-01, B-02, B-03 and D-18, plus Minor B items)
+
+**Files:** new migration `20261016000036_review_integrity.sql`, `src/lib/reviews/*`, `src/lib/deep/*`, verification pages/components, `docs/DECISIONS_AND_PRECEDENCE.md`, tests.
+
+- [ ] Read audit-B.md (B-01, B-02, B-03, and Minor list).
+- [ ] B-01: record the author (reviewer user id) on checklist rows, note dispositions and Legal Notes drafts; on (re)assignment, work authored by a previous reviewer must not count for the new reviewer's sign-off: the new reviewer must re-confirm/re-enter (or approval requires every counted row authored by the deciding reviewer); TDD from the audit's repro (scratch file path is in audit-B.md).
+- [ ] B-02: conflict-of-interest: add a conflict declaration/check at assignment AND at issuance for standard and deep (reviewer cannot be the owner; firm-level conflict flag; explicit "no conflict" attestation stored with the decision) and add the open-special-case check to Deep eligibility; TDD; keep UI copy plain.
+- [ ] B-03/D-18: show the exact SECURITY_AND_LEGAL Verified label ("Dokumen versi ini telah diperiksa oleh profesional hukum sesuai ruang lingkup review yang tercantum. Tidak menjamin keabsahan atau hasil hukum tertentu.") on the Legal Verified result page, the public verification page for LEGAL/LEGAL_ENHANCED, and exports' verification block; add a DECISIONS entry; unit tests assert the exact string.
+- [ ] Minor B items worth doing now (each with a test): enforce `ENHANCED_ISSUANCE` flag inside the DB decision function too (pass flag as parameter from the server) ; block UPDATE of a revoked verification back to active (trigger); partner form actions with malformed IDs show a plain notice instead of a raw server error; audit entries for checklist edits and eligibility rejections.
+- [ ] `npm run check` once; E2E once. Commit, push.
+
+### Task 13: Security hardening (audit C: C12, C22, C21/C36, and Minor C items)
+
+**Files:** `next.config.ts` (security headers), `src/proxy.ts`/`src/lib/auth/permissions.ts`, auth actions, `src/app/api/ai/chat/route.ts`, acknowledgement UI, tests.
+
+- [ ] Read audit-C.md.
+- [ ] C22: add security headers (Content-Security-Policy compatible with Next 16 App Router — nonce or `'unsafe-inline'` for styles as needed, `frame-ancestors 'none'`, X-Frame-Options DENY, Referrer-Policy strict-origin-when-cross-origin, X-Content-Type-Options nosniff, Permissions-Policy, HSTS) without breaking the E2E journeys (they run `next dev`: allow dev-only relaxations for `unsafe-eval` only when NODE_ENV!=='production'); unit test of the header config; E2E asserts headers on `/`.
+- [ ] C12: app-level rate limit on login, signup, password-reset request, resend confirmation (per IP+email, DB- or memory-backed consistent with existing attempt limiters; prefer the existing DB `ai_attempts`-style limiter pattern); plain Indonesian message; tests. Note in RELEASE_CHECKLIST that CAPTCHA and Supabase-side limits need confirmation on the real project.
+- [ ] C21/C36: `/api/ai/chat` is unused and a general LLM relay: remove the route and its handler/tests if nothing else imports them; if something does, restrict to the document-owner chat path only.
+- [ ] C17: acknowledgement email: when no email provider is configured (detect via env), the share/ack UI states plainly that read-confirmation by email is not yet available and does not create challenges; test both states. Record blocker.
+- [ ] Minor C: protect `/deep-reviews` and `/api/usage` in guards; unknown paths default-deny for authenticated areas where safe; `secure` flag on app cookies in production; `NEXT_PUBLIC_APP_URL`/QR base must fail closed (throw) in production if missing or not https; add `set search_path` to the three analytics functions lacking it (new migration `20261016000037_analytics_search_path.sql`, `create or replace` same bodies); partner server actions check role not just sign-in; admin allowed on `/api/partner` consistently or both denied (decide per PERMISSIONS.md).
+- [ ] `npm run check` once; E2E once. Commit, push.
+
+### Task 14: UX conformance fixes (audit D)
+
+**Files:** many under `src/app/**`, `src/components/**`, copy in `src/lib/copy.ts`, tests/E2E.
+
+- [ ] Read audit-D.md (all Important, then Minor where cheap).
+- [ ] D-01 "Saya belum tahu": in `/workspace/new`, a fourth choice that starts a chat where the AI helps pick among the three supported templates (no fabricated document; if none fits, offer Special Case). The AI may only choose among catalogued templates; grounding rules apply; TDD with the fake LLM.
+- [ ] D-03: Bantuan link in the logged-in navigation (sidebar + mobile) and a "Butuh bantuan?" line on the dashboard.
+- [ ] D-04: version list shows real review status per version (reviewed/with badge/unreviewed), not a hard-coded label.
+- [ ] D-05 (+ ledger item): remove raw `?error=` / `?notice=` echoes on `workspace/new`, `reviews/[id]/deep` and any other (grep for `searchParams` string rendering); map to fixed strings.
+- [ ] D-06: checkout shows document title, version, scope of the review, who reviews, price rule ("AI gratis; pemeriksaan pengacara berbayar", membership price rule); use or remove the unused `PriceBreakdown`.
+- [ ] D-07/D-14: review result shows reviewer role/firm name (no private data), completion date, report download if a report export exists (else state honestly), timeline dates; DECLINED review explains payment became a review credit (verify against the DB behavior; do not claim what the DB doesn't do).
+- [ ] D-08: Bantuan wording must not claim `/verify` detects alterations; say it shows the document code to compare.
+- [ ] D-09: add `not-found.tsx`, `error.tsx`, `global-error.tsx`, `loading.tsx` in plain Indonesian (no stack traces), E2E asserts a 404 route renders the Indonesian page.
+- [ ] D-11: consumer screens explain "Catatan hukum" as "Catatan dari pemeriksa" with a plain one-line explanation where it first appears.
+- [ ] Cheap Minor D items: page `<title>`s on all pages, nav labels per UX_SPEC, plus these Task 9 review minors: README.md:106 smoke list (add E06,E12), `timeout-minutes` (30) on `check` and `smoke` CI jobs, SCENARIOS E08 wording (the browser step does not prove the queue is empty before confirmation; reword) and E12 gap cell (cite tests/db/publish.test.ts:94-99).
+- [ ] `npm run check` once; full E2E once (both viewports). Commit, push.
