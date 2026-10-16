@@ -43,4 +43,33 @@ describe("halaman Deep Review pemilik", () => {
     const s2 = await loadDeepStatusPage(service, c.owner, deep);
     expect(s2.kind === "ok" && s2.assigned).toBe(true);
   });
+  it("tidak layak: induk tanpa catatan yang perlu ditindaklanjuti menampilkan alasan, bukan tawaran", async () => {
+    const c = await kit.completedStandard({ severity: "MINOR", actionable: false });
+    const r = await loadDeepOfferPage(on, c.owner, c.req);
+    expect(r.kind).toBe("ineligible");
+    if (r.kind === "ineligible") expect(r.eligibility.reason).toBe("NO_ACTIONABLE_NOTES");
+  });
+  it("tidak layak: order Deep yang masih menunggu pembayaran → DEEP_EXISTS, tanpa tawaran kedua", async () => {
+    const c = await kit.completedStandard();
+    await kit.order(c.owner, "DEEP_REVIEW", c.req);
+    const r = await loadDeepOfferPage(on, c.owner, c.req);
+    expect(r.kind).toBe("ineligible");
+    if (r.kind === "ineligible") expect(r.eligibility.reason).toBe("DEEP_EXISTS");
+  });
+  it("id bukan UUID ditolak sebelum menyentuh DB (offer dan status)", async () => {
+    const c = await kit.completedStandard();
+    for (const bad of ["bukan-uuid", "", "1; drop table x", "../deep"]) {
+      expect((await loadDeepOfferPage(on, c.owner, bad)).kind).toBe("notFound");
+      expect((await loadDeepStatusPage(service, c.owner, bad)).kind).toBe("notFound");
+    }
+  });
+  it("reviewer dan admin (bukan pemilik) mendapat notFound yang sama pada tawaran dan status", async () => {
+    const c = await kit.completedStandard();
+    const b = await kit.buy(c.owner, "DEEP_REVIEW", c.req);
+    const deep = (await pool.query("select id from deep_requests where order_id = $1", [b.order_id])).rows[0].id as string;
+    for (const who of [c.r.reviewer, c.f.admin, c.f.coordinator]) {
+      expect((await loadDeepOfferPage(on, who, c.req)).kind).toBe("notFound");
+      expect((await loadDeepStatusPage(service, who, deep)).kind).toBe("notFound");
+    }
+  });
 });

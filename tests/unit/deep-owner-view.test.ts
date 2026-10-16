@@ -20,9 +20,34 @@ describe("deepTimeline", () => {
   });
 });
 
+describe("enhancedExplanation menurut status verifikasi", () => {
+  it("hanya ACTIVE yang boleh mengaku Enhanced disetujui", () => {
+    const e = enhancedExplanation("ENHANCED_APPROVED", null, "ACTIVE");
+    expect([e.enhanced, e.headline]).toEqual([true, "Enhanced disetujui"]);
+  });
+  it("SUSPENDED dan REVOKED: keputusan tercatat, lencana tidak berlaku sekarang, tanpa klaim persetujuan saat ini", () => {
+    for (const st of ["SUSPENDED", "REVOKED"] as const) {
+      const e = enhancedExplanation("ENHANCED_APPROVED", null, st);
+      expect(e.enhanced).toBe(false);
+      expect(e.headline).not.toMatch(/disetujui/i);
+      expect(e.headline).toBe(st === "SUSPENDED" ? "Enhanced ditangguhkan sementara" : "Enhanced dicabut");
+      expect(e.text).toMatch(/pernah dicatat/i);
+      expect(e.text).not.toMatch(/memastikan semua syarat/i);
+    }
+  });
+  it("tanpa verifikasi: tidak mengaku Enhanced", () => {
+    const e = enhancedExplanation("ENHANCED_APPROVED", null, null);
+    expect(e.enhanced).toBe(false);
+    expect(e.headline).not.toMatch(/disetujui/i);
+  });
+  it("hasil lain berjudul Enhanced tidak diberikan", () => {
+    expect(enhancedExplanation("INCONCLUSIVE", null, null).headline).toBe("Enhanced tidak diberikan");
+  });
+});
+
 describe("enhancedExplanation", () => {
   it("Enhanced hanya bila disetujui; lainnya memberi alasan sederhana tanpa janji", () => {
-    expect(enhancedExplanation("ENHANCED_APPROVED", null).enhanced).toBe(true);
+    expect(enhancedExplanation("ENHANCED_APPROVED", null, "ACTIVE").enhanced).toBe(true);
     for (const o of ["COMPLETED_WITH_NOTES", "INCONCLUSIVE", "REFERRED_SPECIAL_CASE", null]) {
       const e = enhancedExplanation(o, "Alasan reviewer");
       expect(e.enhanced).toBe(false);

@@ -19,6 +19,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
     <main className="max-w-3xl space-y-6">
       <PageHeading title="Review Saya" lead="Status pemeriksaan dokumen Anda oleh pengacara." />
       {q.dibuat && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-success">✓ Permintaan pemeriksaan diterima dan masuk antrean.</p>}
+      {q.notice === "deep-tidak-valid" && <p role="alert" className="font-semibold text-red-800">Pemeriksaan mendalam tidak dapat dipesan karena pemeriksaan standar tidak dikenali.</p>}
       {q.notice === "sudah" && <p role="status" className="rounded-xl border border-line bg-white p-4">Versi ini sudah punya permintaan pemeriksaan.</p>}
       {rows.length === 0 ? (
         <EmptyState title="Belum ada dokumen yang diperiksa pengacara" text="Buka salah satu dokumen Anda lalu pilih “Minta pemeriksaan pengacara”." action={<ButtonLink href="/documents" variant="secondary">Lihat dokumen saya</ButtonLink>} />

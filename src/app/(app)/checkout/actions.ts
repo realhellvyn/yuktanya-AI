@@ -7,6 +7,7 @@ import { billingService } from "@/lib/billing/runtime";
 import { requireUserId } from "@/lib/documents/session";
 import { flags } from "@/lib/flags";
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const str = (f: FormData, k: string) => String(f.get(k) ?? "");
 
 export async function startMembershipAction(): Promise<void> {
@@ -55,6 +56,8 @@ export async function mockSettleAction(formData: FormData): Promise<void> {
 export async function requestDeepAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
   const parent = str(formData, "parentRequestId");
+  // ID tidak valid tidak boleh sampai ke DB (akan 500): kembali ke daftar dengan pemberitahuan.
+  if (!UUID.test(parent)) redirect("/reviews?notice=deep-tidak-valid");
   if (!flags.deepReviewPurchase) redirect(`/reviews/${parent}`);
   try {
     const o = await billingService().createOrder(userId, "DEEP_REVIEW", parent, randomUUID());

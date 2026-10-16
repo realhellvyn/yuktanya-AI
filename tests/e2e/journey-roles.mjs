@@ -272,6 +272,16 @@ export async function journey({ step, base, vp, db, newActor }) {
     const enhancedText = await pub.innerText("body");
     if (!/Ditangguhkan|Dicabut/.test(enhancedText)) throw new Error("Enhanced tetap aktif padahal induk dicabut");
     if (/\bAktif\b/.test(enhancedText)) throw new Error("halaman Enhanced masih menampilkan Aktif setelah induk dicabut");
+    
+    // Pemilik: halaman status tidak lagi mengaku "Enhanced disetujui" setelah induk dicabut.
+    await ownerA.page.goto(base + "/reviews");
+    await ownerA.page.click("a[href^='/reviews/']");
+    await ownerA.page.click("a:has-text('Lihat status pemeriksaan mendalam')");
+    await ownerA.page.waitForURL(/\/deep-reviews\//);
+    const lapsed = await ownerA.page.innerText("main");
+    if (/Enhanced disetujui|memastikan semua syarat/.test(lapsed)) throw new Error("halaman pemilik masih mengaku Enhanced disetujui setelah pencabutan: " + lapsed.slice(0, 500));
+    if (!/Ditangguhkan|Dicabut/.test(lapsed) || !/pernah dicatat/.test(lapsed)) throw new Error("halaman pemilik tidak menjelaskan status Enhanced: " + lapsed.slice(0, 500));
+    await ownerA.shot("07c-deep-ditangguhkan");
     await pub.close();
   });
 

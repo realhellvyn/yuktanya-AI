@@ -14,10 +14,11 @@ export function DeepResult({ deep, verifyUrl }: { deep: OwnerDeep; verifyUrl?: s
   if (deep.status !== "COMPLETED") {
     return <p role="status" className="rounded-lg border border-line bg-white p-4">Pemeriksaan mendalam: {STATUS[deep.status] ?? deep.status}.</p>;
   }
-  const enhanced = deep.outcome === "ENHANCED_APPROVED" && deep.verification;
+  const enhanced = deep.outcome === "ENHANCED_APPROVED" && deep.verification?.status === "ACTIVE";
+  const lapsed = deep.outcome === "ENHANCED_APPROVED" && !enhanced;
   return (
     <section aria-labelledby="deep-hasil-h" className="space-y-3">
-      <h2 id="deep-hasil-h" className="text-2xl font-semibold">{TITLE[deep.outcome ?? ""] ?? "Selesai"}</h2>
+      <h2 id="deep-hasil-h" className="text-2xl font-semibold">{lapsed ? (deep.verification?.status === "REVOKED" ? "Selesai — Enhanced dicabut" : deep.verification?.status === "SUSPENDED" ? "Selesai — Enhanced ditangguhkan sementara" : "Selesai — Enhanced belum berlaku") : TITLE[deep.outcome ?? ""] ?? "Selesai"}</h2>
       {deep.extraWork && <div><h3 className="font-semibold">Pemeriksaan tambahan</h3><p>{deep.extraWork}</p></div>}
       {deep.summary && <div><h3 className="font-semibold">Ringkasan</h3><p>{deep.summary}</p></div>}
       {deep.decisionReason && <div><h3 className="font-semibold">Alasan keputusan</h3><p>{deep.decisionReason}</p></div>}
@@ -37,7 +38,14 @@ export function DeepResult({ deep, verifyUrl }: { deep: OwnerDeep; verifyUrl?: s
           <p>{QR_NOT_SIGNATURE}</p>
         </div>
       )}
-      {!enhanced && <p>Pemeriksaan ini tidak menghasilkan Yuktanya Legal Verified — Enhanced. Hasil pemeriksaan standar Anda tetap berlaku untuk versi yang diperiksa.</p>}
+      {lapsed && deep.verification && (
+        <div className="space-y-2 rounded-lg border border-line bg-white p-4">
+          <h3 className="text-lg font-semibold">Yuktanya Legal Verified — Enhanced tidak berlaku saat ini</h3>
+          <p role="status" className="font-semibold">Status: {deep.verification.status === "SUSPENDED" ? "Ditangguhkan sementara" : "Dicabut"}</p>
+          <p>Keputusan sebelumnya tercatat, tetapi lencana tidak boleh dipakai sebagai bukti selama statusnya bukan Aktif.</p>
+        </div>
+      )}
+      {!enhanced && !lapsed && <p>Pemeriksaan ini tidak menghasilkan Yuktanya Legal Verified — Enhanced. Hasil pemeriksaan standar Anda tetap berlaku untuk versi yang diperiksa.</p>}
       <p>{LEGAL_DISCLAIMER}</p>
     </section>
   );

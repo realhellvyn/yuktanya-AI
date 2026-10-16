@@ -23,7 +23,7 @@ export default async function DeepStatusPage({ params }: { params: Promise<{ id:
   const { deep } = page;
   const steps = deepTimeline({ status: deep.status, assigned: page.assigned });
   const completed = deep.status === "COMPLETED";
-  const why = enhancedExplanation(deep.outcome, deep.decisionReason);
+  const why = enhancedExplanation(deep.outcome, deep.decisionReason, deep.verification?.status ?? null);
   return (
     <main className="max-w-3xl space-y-6">
       <PageHeading title="Pemeriksaan mendalam" lead="Pemeriksaan tambahan oleh profesional hukum atas catatan dari pemeriksaan standar Anda." />
@@ -43,7 +43,7 @@ export default async function DeepStatusPage({ params }: { params: Promise<{ id:
       {completed ? (
         <>
           <Card className="space-y-2">
-            <h2 className="text-xl font-semibold">{why.enhanced ? "Enhanced disetujui" : "Enhanced tidak diberikan"}</h2>
+            <h2 className="text-xl font-semibold">{why.headline}</h2>
             <p>{why.text}</p>
             <p>Batasan: pemeriksaan hanya berlaku untuk versi dokumen dan ruang lingkup yang diperiksa. {DEEP_PAYMENT_STATEMENT}</p>
           </Card>

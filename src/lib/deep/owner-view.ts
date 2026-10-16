@@ -20,10 +20,24 @@ const NOT_ENHANCED: Record<string, string> = {
   REFERRED_SPECIAL_CASE: "Dokumen ini dirujuk sebagai kasus khusus. Biaya dan ruang lingkup ditentukan setelah asesmen profesional, dan Enhanced belum diberikan.",
 };
 
-export function enhancedExplanation(outcome: string | null, decisionReason: string | null): { enhanced: boolean; text: string } {
+export type EnhancedView = { enhanced: boolean; headline: string; text: string };
+
+// Enhanced hanya diklaim berlaku bila keputusan APPROVE DAN lencananya sedang ACTIVE.
+export function enhancedExplanation(outcome: string | null, decisionReason: string | null, verificationStatus: string | null = null): EnhancedView {
   if (outcome === "ENHANCED_APPROVED") {
-    return { enhanced: true, text: "Profesional hukum yang berwenang menyelesaikan pemeriksaan tambahan dan memastikan semua syarat Enhanced terpenuhi, lengkap dengan bukti." };
+    if (verificationStatus === "ACTIVE") {
+      return { enhanced: true, headline: "Enhanced disetujui", text: "Profesional hukum yang berwenang menyelesaikan pemeriksaan tambahan dan memastikan semua syarat Enhanced terpenuhi, lengkap dengan bukti." };
+    }
+    if (verificationStatus === "SUSPENDED" || verificationStatus === "REVOKED") {
+      const state = verificationStatus === "SUSPENDED" ? "ditangguhkan sementara" : "dicabut";
+      return {
+        enhanced: false,
+        headline: verificationStatus === "SUSPENDED" ? "Enhanced ditangguhkan sementara" : "Enhanced dicabut",
+        text: `Keputusan Enhanced pernah dicatat untuk pemeriksaan ini, tetapi lencananya sekarang ${state}. Biasanya ini terjadi karena verifikasi pemeriksaan standar yang menjadi dasarnya tidak lagi aktif. Lencana ini tidak boleh dipakai sebagai bukti sampai statusnya aktif kembali.`,
+      };
+    }
+    return { enhanced: false, headline: "Enhanced belum berlaku", text: "Keputusan tercatat, tetapi tidak ada lencana Enhanced yang aktif untuk pemeriksaan ini." };
   }
   const base = NOT_ENHANCED[outcome ?? ""] ?? "Pemeriksaan ini belum menghasilkan Enhanced.";
-  return { enhanced: false, text: decisionReason ? `${base} Alasan dari profesional hukum: ${decisionReason}` : base };
+  return { enhanced: false, headline: "Enhanced tidak diberikan", text: decisionReason ? `${base} Alasan dari profesional hukum: ${decisionReason}` : base };
 }

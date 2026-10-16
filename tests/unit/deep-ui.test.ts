@@ -51,6 +51,14 @@ describe("DeepResult", () => {
       expect(h).toContain("Kriteria M3 tidak terpenuhi");
     }
   });
+  it("Enhanced dicabut atau ditangguhkan: tidak ada klaim Enhanced disetujui sebagai kondisi saat ini", () => {
+    for (const status of ["SUSPENDED", "REVOKED"]) {
+      const h = renderToStaticMarkup(DeepResult({ deep: deep({ verification: { code: "e".repeat(48), status } }) }));
+      expect(h).not.toContain("Selesai — Enhanced disetujui");
+      expect(h).not.toContain(VERIFICATION_STATEMENTS.LEGAL_ENHANCED);
+      expect(h).toContain(status === "SUSPENDED" ? "Ditangguhkan sementara" : "Dicabut");
+    }
+  });
   it("ditangguhkan dan ditahan ditampilkan eksplisit", () => {
     expect(renderToStaticMarkup(DeepResult({ deep: deep({ verification: { code: "e".repeat(48), status: "SUSPENDED" } }) }))).toContain("Ditangguhkan sementara");
     expect(renderToStaticMarkup(DeepResult({ deep: deep({ status: "ON_HOLD", outcome: null }) }))).toContain("Ditahan karena verifikasi induk dicabut");
