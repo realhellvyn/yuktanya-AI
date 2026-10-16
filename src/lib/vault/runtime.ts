@@ -10,6 +10,8 @@ import { createRateLimiter } from "./rate-limit";
 import { createPgReminderService } from "./reminders";
 import { createPgShareService } from "./share";
 import type { AssistDeps } from "@/lib/ai/assist";
+import type { AiReviewDeps } from "@/lib/ai/prereview";
+import { createPgVerificationService } from "@/lib/verification/service";
 import { getSessionRoles } from "@/lib/supabase/server";
 import { homeFor } from "@/lib/auth/permissions";
 import { ForbiddenError } from "@/lib/documents/handlers";
@@ -41,5 +43,20 @@ export function assistDeps(): AssistDeps {
     chat,
     inflight: assistInflight,
     attempts: createPgAttemptLimiter(getPool()),
+  };
+}
+
+const aiReviewInflight = new Set<string>();
+export function aiReviewDeps(): AiReviewDeps {
+  const base = assistDeps();
+  return {
+    getUserId: base.getUserId,
+    service: documentsService(),
+    store: base.store,
+    chat,
+    pool: getPool(),
+    verification: createPgVerificationService(getPool()),
+    inflight: aiReviewInflight,
+    attempts: base.attempts,
   };
 }
