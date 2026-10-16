@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 const NAV = [
   ["/admin/analytics", "Funnel"], ["/admin/ai-usage", "Pemakaian AI"], ["/admin/reviews", "Operasi review"], ["/admin/revenue", "Pendapatan"],
   ["/admin/users", "Pengguna"], ["/admin/incidents", "Insiden"], ["/admin/payments", "Pembayaran"], ["/admin/routing", "Perutean review"],
-  ["/admin/partners", "Mitra hukum"], ["/admin/rubric", "Persetujuan rubrik Enhanced"], ["/admin/features", "Kunci fitur per plan"],
+  ["/admin/partners", "Mitra hukum"], ["/admin/verifications", "Pencabutan verifikasi"], ["/admin/rubric", "Persetujuan rubrik Enhanced"], ["/admin/features", "Kunci fitur per plan"],
 ] as const;
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ r?: string }> }) {

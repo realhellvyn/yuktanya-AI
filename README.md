@@ -89,7 +89,7 @@ Hanya data sintetis. Tidak ada deploy, pembayaran nyata, atau email nyata.
 | 2b | Vault: link berbagi, konfirmasi baca, pengingat, paket bukti, bantuan AI terpandu, hardening | Selesai, teruji |
 | 3 | Billing, Standard Review, Legal Verified, QR | Selesai, teruji (data sintetis; pembayaran mock/manual) |
 | 4 | Deep Review dan Enhanced | Selesai, teruji (flag produksi default OFF; Enhanced juga butuh persetujuan rubrik mitra) |
-| 5 | Analitik admin, ops, smoke rilis | Belum |
+| 5 | Analitik admin, ops, rekonsiliasi, smoke rilis | Selesai, teruji (`npm run test:smoke` untuk smoke rilis; lihat docs/RELEASE_CHECKLIST.md) |
 
 Flag produksi `AI_PREREVIEW_ENABLED`, `DEEP_REVIEW_PURCHASE`, `ENHANCED_ISSUANCE` default OFF. Rencana dan spesifikasi ada di `docs/superpowers/` (specs/ dan plans/). Blocker produksi (persetujuan template, kriteria hukum, privasi, hosting, refund) tetap berlaku dan tidak diselesaikan oleh kode.
 
@@ -102,3 +102,6 @@ Review standar terikat satu versi dan hash beku. Reviewer harus anggota firma de
 Deep Review hanya ditawarkan setelah review standar selesai dengan Legal Note yang dapat ditindaklanjuti dan verifikasi induk masih aktif (`deep_eligibility`). Biaya tambahan: Free Rp200.000, Member aktif Rp150.000, tanpa diskon pertama; pemeriksaan standar dan membership dihitung terpisah. Order yang tidak lagi layak saat pembayaran masuk menjadi `RECONCILIATION_REQUIRED` tanpa pekerjaan.
 
 Reviewer berwenang mencatat pekerjaan tambahan, tindak lanjut tiap catatan induk, dan checklist M1–M7. `decide_deep` hanya menerbitkan Yuktanya Legal Verified — Enhanced bila semua penjaga terpenuhi dalam satu transaksi (pembayaran terverifikasi, induk aktif, hash cocok, bukti ada, tidak ada FAIL/UNKNOWN, tidak ada catatan material yang belum selesai, atestasi, dan rubrik disetujui mitra lewat `/admin/rubric`). Pembayaran, AI, dan admin tidak pernah menerbitkan Enhanced. Pencabutan verifikasi induk menangguhkan Enhanced turunan dan menahan deep yang berjalan. Flag `DEEP_REVIEW_PURCHASE` dan `ENHANCED_ISSUANCE` default OFF. Kebijakan refund untuk deep yang tidak menghasilkan Enhanced belum diputuskan (UNKNOWN).
+
+## Operasional admin dan smoke rilis (Fase 5)
+Dashboard admin (`/admin`) menampilkan pengguna, AI, funnel kohort, operasi review, pendapatan dikumpulkan (hanya pembayaran terverifikasi, bukan laba), dan insiden, semuanya dihitung di SQL (`admin_overview`) dari tabel sumber dengan rentang WIB; tanpa data ditampilkan "Belum ada data". Admin juga mengelola firma/otorisasi mitra (tidak dapat memberi dirinya sendiri kewenangan profesional), merutekan review, merekonsiliasi pembayaran, dan mencabut verifikasi secara operasional. `npm run test:smoke` menjalankan skenario E01, E02, E03, E04, E05, E08, E09, E10, E11, E13, E14 lewat handler dan database tanpa browser; ini bukan bagian `npm run check`.
