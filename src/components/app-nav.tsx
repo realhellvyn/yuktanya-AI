@@ -5,6 +5,8 @@ const LINKS = [
   { href: "/workspace/new", label: "Buat Dokumen" },
   { href: "/documents", label: "Dokumen Saya" },
   { href: "/vault", label: "Vault" },
+  { href: "/reviews", label: "Review Saya" },
+  { href: "/membership", label: "Membership" },
 ];
 
 export function AppNav() {

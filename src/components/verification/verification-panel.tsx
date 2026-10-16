@@ -20,7 +20,10 @@ export function VerificationPanel({ verifications, qrDataUrls, urls }: { verific
           <p>Terbit {formatDateId(wibDay(v.issuedAt))}</p>
           <p>Cek di <a className="inline-flex min-h-12 items-center underline" href={urls[v.id]}>{urls[v.id]}</a></p>
           <p>Kode: <span className="font-mono break-all">{v.code}</span></p>
-          {qrDataUrls[v.id] && /* eslint-disable-next-line @next/next/no-img-element */ <img src={qrDataUrls[v.id]} alt="Kode QR pengecekan verifikasi" width={140} height={140} />}
+          {qrDataUrls[v.id] && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={qrDataUrls[v.id]} alt="Kode QR pengecekan verifikasi" width={140} height={140} />
+          )}
           <p>{LEGAL_DISCLAIMER}</p>
           <p>{QR_NOT_SIGNATURE}</p>
         </li>

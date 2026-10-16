@@ -87,8 +87,13 @@ Hanya data sintetis. Tidak ada deploy, pembayaran nyata, atau email nyata.
 | 1 | Auth, kuota atomik harian WIB, chat AI (mock gateway), AI review | Selesai, teruji |
 | 2 | Wizard dokumen (PKS, Utang Piutang, NDA), versi immutable + SHA-256, ekspor DOCX/PDF | Selesai, teruji |
 | 2b | Vault: link berbagi, konfirmasi baca, pengingat, paket bukti, bantuan AI terpandu, hardening | Selesai, teruji |
-| 3 | Billing, Standard Review, Legal Verified, QR | Rencana tertulis, belum dibangun |
+| 3 | Billing, Standard Review, Legal Verified, QR | Selesai, teruji (data sintetis; pembayaran mock/manual) |
 | 4 | Deep Review dan Enhanced | Belum (flag produksi default OFF) |
 | 5 | Analitik admin, ops, smoke rilis | Belum |
 
 Flag produksi `AI_PREREVIEW_ENABLED`, `DEEP_REVIEW_PURCHASE`, `ENHANCED_ISSUANCE` default OFF. Rencana dan spesifikasi ada di `docs/superpowers/` (specs/ dan plans/). Blocker produksi (persetujuan template, kriteria hukum, privasi, hosting, refund) tetap berlaku dan tidak diselesaikan oleh kode.
+
+## Penagihan, review standar, dan verifikasi (Fase 3)
+Harga dihitung di database (`price_catalog`, `create_order`): Free Rp50.000; Member aktif pertama per periode tagihan Rp30.000 dan berikutnya Rp35.000; membership Rp19.000. Harga paket tahunan dan bundle masih UNKNOWN: produk itu tidak dapat dipesan sampai platform admin mengisinya lewat `set_price`. Pembayaran sah hanya lewat `settle_payment` (idempoten per penyedia+event); jumlah salah atau pembayaran terlambat menjadi `RECONCILIATION_REQUIRED` tanpa aktivasi. Hanya adapter `mock` (non-produksi) dan transfer manual yang ada; konfirmasi manual oleh platform admin di `/admin/payments`. Webhook gateway nyata menjawab 404 sampai penyedia dipilih.
+
+Review standar terikat satu versi dan hash beku. Reviewer harus anggota firma dengan otorisasi aktif, ditugaskan koordinator, dan bukan pemilik dokumen; semuanya diperiksa ulang saat penyelesaian. Hasil `WITH_NOTES` atau `WITHIN_SCOPE` (dengan atestasi profesional) menerbitkan Yuktanya Legal Verified; `INCONCLUSIVE`/`DECLINED` tidak menerbitkan badge (DECLINED mengganti pembayaran dengan satu kredit review). Verifikasi hanya dibuat oleh `publish_standard` dan `issue_ai_verification`. Halaman publik `/verify/[kode]` menampilkan jenis, status aktif/dicabut, tanggal, kode, dan hash tanpa isi dokumen; pencabutan terlihat seketika. QR mengarah ke halaman itu dan bukan tanda tangan. Analisis awal AI (AI Verified) berada di balik `AI_PREREVIEW_ENABLED` dan persetujuan eksplisit pengguna.
