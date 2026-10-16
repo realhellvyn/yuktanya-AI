@@ -11,6 +11,7 @@ import { createPgUsageStore } from "@/lib/ai/quota";
 import { createPgVerificationService } from "@/lib/verification/service";
 import { handleUpload, type UploadDeps } from "@/lib/uploads/handler";
 import { createPgUploadRepo } from "@/lib/uploads/repo";
+import { UPLOAD_MESSAGES } from "@/lib/uploads/messages";
 import { UPLOAD_DOC_LABEL } from "@/lib/uploads/document";
 import { AI_REVIEW_CONSENT_VERSION, UPLOAD_HASH_NOTE, VERIFICATION_STATEMENTS } from "@/lib/copy";
 import { recordEvent } from "@/lib/analytics/events";
@@ -273,5 +274,13 @@ describe("persetujuan unggahan tercatat", () => {
     const u2 = await createUser(pool);
     await handleUpload(uploadDeps(u2, { record: (e) => recordEvent(pool, e) }), { filename: "a.txt", bytes: enc(TXT), key: key() });
     expect((await pool.query("select count(*)::int as n from product_events where actor_user_id = $1 and event_name = 'document_upload_consent'", [u2])).rows[0].n).toBe(0);
+  });
+  it("pencatatan persetujuan gagal SETELAH dokumen tersimpan → hasil jelas (CONSENT_NOT_RECORDED), bukan INTERNAL; dokumen tetap ada dan tidak ada yang dikirim ke AI", async () => {
+    const u = await createUser(pool);
+    const r = await handleUpload(uploadDeps(u, { record: async () => { throw new Error("db down"); } }), { filename: "a.txt", bytes: enc(TXT), key: key(), consentVersion: AI_REVIEW_CONSENT_VERSION });
+    expect(r).toMatchObject({ ok: false, code: "CONSENT_NOT_RECORDED" });
+    expect(UPLOAD_MESSAGES.CONSENT_NOT_RECORDED).toMatch(/sudah tersimpan/);
+    expect(UPLOAD_MESSAGES.CONSENT_NOT_RECORDED).toMatch(/tidak ada.*dikirim ke AI/i);
+    expect((await pool.query("select count(*)::int as n from documents where owner_id = $1", [u])).rows[0].n).toBe(1);
   });
 });

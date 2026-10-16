@@ -4,6 +4,7 @@ import { ReviewTimeline } from "@/components/reviews/review-timeline";
 import { ResultPanel } from "@/components/reviews/result-panel";
 import { DeepOffer } from "@/components/deep/deep-offer";
 import { DeepResult } from "@/components/deep/deep-result";
+import { deepNoticeText } from "@/lib/deep/notices";
 import { trackDeepOfferShown } from "@/lib/deep/offer-event";
 import { deepService } from "@/lib/deep/runtime";
 import { flags } from "@/lib/flags";
@@ -18,6 +19,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function ReviewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ notice?: string }> }) {
   const q = await searchParams;
+  const notice = deepNoticeText(q.notice);
   const { id } = await params;
   const userId = await requireUserId();
   if (!UUID.test(id)) notFound();
@@ -43,7 +45,7 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
       <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">{review.title} — versi {review.versionNo}</h1>
       <ReviewTimeline status={review.status} />
       <ResultPanel review={review} verifyUrl={url} qrDataUrl={qr} isLatestVersion={review.versionNo === latest} />
-      {q.notice && <p role="alert" className="font-semibold text-red-800">Pemeriksaan mendalam belum dapat dipesan ({q.notice}).</p>}
+      {notice && <p role="alert" className="font-semibold text-red-800">{notice}</p>}
       {deep && <DeepResult deep={deep} verifyUrl={deepUrl} />}
       {deepRef && <ButtonLink href={`/deep-reviews/${deepRef.deepId}`} variant="secondary">Lihat status pemeriksaan mendalam</ButtonLink>}
       {elig?.eligible && <ButtonLink href={`/reviews/${id}/deep`} variant="secondary">Lihat rincian pemeriksaan mendalam</ButtonLink>}

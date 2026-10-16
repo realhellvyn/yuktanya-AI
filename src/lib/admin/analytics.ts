@@ -77,7 +77,7 @@ export type Alert = { code: string; text: string };
 
 export function buildAlerts(a: AlertsInput): Alert[] {
   const out: Alert[] = [];
-  if (a.overdue_reviews > 0) out.push({ code: "REVIEW_OVERDUE", text: `${fmtCount(a.overdue_reviews)} Review Standar menunggu lebih dari ${a.overdue_hours} jam sejak dibayar. Periksa perutean dan beban reviewer.` });
+  if (a.overdue_reviews > 0) out.push({ code: "REVIEW_OVERDUE", text: `${fmtCount(a.overdue_reviews)} Review Standar masih terbuka dengan usia permintaan lebih dari ${a.overdue_hours} jam. Periksa perutean dan beban reviewer.` });
   if (a.overdue_deep > 0) out.push({ code: "DEEP_OVERDUE", text: `${fmtCount(a.overdue_deep)} Pemeriksaan Mendalam menunggu lebih dari ${a.overdue_hours} jam.` });
   const rate = a.ai_24h?.rate === null || a.ai_24h?.rate === undefined ? null : Number(a.ai_24h.rate);
   if (a.ai_24h && rate !== null && a.ai_24h.requests >= a.ai_min_requests && rate >= Number(a.ai_rate_threshold)) {

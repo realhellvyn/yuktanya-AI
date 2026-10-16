@@ -123,7 +123,7 @@ export async function journey({ step, base, db, newActor }) {
     await step(tag(`@${w.width}px koordinator: /partner dan /partner/team (email reviewer, pekerjaan aktif, otorisasi aktif)`), async () => {
       const a = await open("koordinator", w);
       await checkPage(a, w, "/partner", { title: "Review Standar", markers: ["Dashboard Mitra Hukum"] });
-      await checkPage(a, w, "/partner/team", { title: "Tim Firma", markers: ["Tim firma", mail("reviewer"), "Otorisasi aktif", "Pekerjaan aktif: 2", "Tugaskan permintaan"] });
+      await checkPage(a, w, "/partner/team", { title: "Tim Firma", markers: ["Tim firma", mail("reviewer"), "Otorisasi aktif", "Pekerjaan aktif di firma ini: 2", "Tugaskan permintaan"] });
       if (await a.page.locator("main form").count()) throw new Error("halaman tim tidak boleh punya form pemberian peran/otorisasi");
     });
 

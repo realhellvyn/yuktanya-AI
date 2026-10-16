@@ -94,7 +94,8 @@ export function docxParagraphs(xml: string, maxChars: number): string[] {
     }
     const name = xml.slice(lt + 1, j);
     const selfClosing = xml.charCodeAt(gt - 1) === 47;
-    const hasAttrs = j < gt - (selfClosing ? 1 : 0);
+    // Atribut = ada karakter bukan-spasi setelah nama tag (mis. "<w:tab />" tanpa atribut, "<w:tab w:val=.../>" beratribut).
+    const hasAttrs = xml.slice(j, gt - (selfClosing ? 1 : 0)).trim().length > 0;
     if (name === "w:p") {
       flush();
     } else if (name === "/w:p") {

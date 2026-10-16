@@ -18,6 +18,7 @@ export const UPLOAD_MESSAGES = {
   DOCX_TOO_LARGE: "Isi dokumen Word ini terlalu besar untuk dibaca. Pisahkan menjadi beberapa bagian atau simpan sebagai PDF.",
   TIMEOUT: "Membaca berkas terlalu lama. Coba berkas yang lebih sederhana.",
   DOCUMENT_DAILY_QUOTA_REACHED: "Batas dokumen baru hari ini sudah tercapai. Coba lagi besok setelah pukul 00.00 WIB.",
+  CONSENT_NOT_RECORDED: "Dokumen sudah tersimpan, tetapi persetujuan Anda belum dapat dicatat. Tidak ada yang dikirim ke AI. Buka dokumen Anda lalu coba analisis lagi nanti.",
   INTERNAL: "Terjadi gangguan. Berkas belum tersimpan. Silakan coba lagi.",
 } as const;
 export type UploadCode = keyof typeof UPLOAD_MESSAGES;

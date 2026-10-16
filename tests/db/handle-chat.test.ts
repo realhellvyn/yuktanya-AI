@@ -78,6 +78,18 @@ describe("handleChat", () => {
     expect(t.metrics[0]).toMatchObject({ status: "FAILED", errorCode: "TIMEOUT" });
   });
 
+  it("event mulai dan hasil memakai id logis yang sama (sukses dan gagal)", async () => {
+    const u = await createUser(pool);
+    for (const impl of [undefined, async () => { throw new GatewayError("TIMEOUT"); }]) {
+      const t = setup(u, impl as ChatDeps["chat"] | undefined);
+      const started: string[] = [];
+      t.deps.onStart = async (m) => void started.push(m.logicalId);
+      await t.call();
+      expect(started).toHaveLength(1);
+      expect(t.metrics[0]).toMatchObject({ logicalId: started[0] });
+    }
+  });
+
   it("sukses → 200, pesan terpakai 1, system prompt dari server", async () => {
     const u = await createUser(pool);
     const t = setup(u);
@@ -171,12 +183,20 @@ describe("handleChat: ketahanan", () => {
 });
 
 describe("recordEvent", () => {
-  it("dedupe_key membuat event idempoten; metadata tersimpan hanya untuk kunci daftar-izin", async () => {
+  it("dedupe_key membuat event idempoten; metadata daftar-izin tersimpan utuh", async () => {
     const key = `ev-${Math.random()}`;
-    const e = { name: "ai_request_succeeded", dedupeKey: key, metadata: { latency_ms: 12, ok: true } };
+    const e = { name: "ai_request_succeeded", dedupeKey: key, metadata: { latency_ms: 12 } };
     await recordEvent(pool, e);
     await recordEvent(pool, e);
     const rows = (await pool.query("select event_name, metadata_safe from product_events where dedupe_key = $1", [key])).rows;
     expect(rows).toEqual([{ event_name: "ai_request_succeeded", metadata_safe: { latency_ms: 12 } }]);
+  });
+  it("catatan wajib gagal keras bila penyaringan mengubah metadata (kunci asing atau nilai tidak aman); tidak ada baris ditulis", async () => {
+    const bad = [{ latency_ms: 12, ok: true }, { latency_ms: 12, email: "a@b.id" }, { source: "isi dokumen <b>x</b> dengan spasi dan simbol!!" }];
+    for (const [i, metadata] of bad.entries()) {
+      const key = `ev-strict-${i}-${Math.random()}`;
+      await expect(recordEvent(pool, { name: "ai_review_consent_given", dedupeKey: key, metadata: metadata as never })).rejects.toThrow("EVENT_METADATA_REJECTED");
+      expect((await pool.query("select count(*)::int as n from product_events where dedupe_key = $1", [key])).rows[0].n).toBe(0);
+    }
   });
 });

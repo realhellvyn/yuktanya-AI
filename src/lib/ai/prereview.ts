@@ -28,6 +28,8 @@ export type AiReviewDeps = {
   enabled?: () => boolean;
   attempts?: AttemptLimiter;
   baseUrl?: string;
+  // Penulis catatan wajib (persetujuan); bawaan recordEvent. Dapat diganti dalam uji.
+  record?: typeof recordEvent;
 };
 
 const json = (body: unknown, status = 200, headers?: Record<string, string>) => Response.json(body, { status, headers });
@@ -103,11 +105,17 @@ export async function handleAiReview(deps: AiReviewDeps, req: Request, params: {
     }
     if (reservation.duplicate) return json({ code: "DUPLICATE_REQUEST" }, 409);
     // Persetujuan eksplisit dicatat sebelum teks dikirim ke gateway: versi teks persetujuan + waktu, tanpa isi dokumen.
-    await recordEvent(deps.pool, {
-      name: "ai_review_consent_given", actorUserId: userId, entityType: "document_version", entityId: params.versionId,
-      dedupeKey: `ai-consent:${userId}:${params.versionId}:${key}`,
-      metadata: { consentVersion: AI_REVIEW_CONSENT_VERSION, source: upload.rows.length ? "UPLOAD" : "TEMPLATE", at: now.toISOString() },
-    });
+    // Bila pencatatan gagal, reservasi dilepas dan gateway tidak dipanggil.
+    try {
+      await (deps.record ?? recordEvent)(deps.pool, {
+        name: "ai_review_consent_given", actorUserId: userId, entityType: "document_version", entityId: params.versionId,
+        dedupeKey: `ai-consent:${userId}:${params.versionId}:${key}`,
+        metadata: { consentVersion: AI_REVIEW_CONSENT_VERSION, source: upload.rows.length ? "UPLOAD" : "TEMPLATE", at: now.toISOString() },
+      });
+    } catch {
+      await deps.store.release(reservation.groupId).catch(() => undefined);
+      return json({ code: "INTERNAL" }, 500);
+    }
 
     const base: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }, { role: "user", content: docText(version.doc) }];
     // Event analitik best-effort: hanya id logis, durasi, dan kode galat.

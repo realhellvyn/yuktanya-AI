@@ -16,7 +16,7 @@ const bodySchema = z.object({
 });
 
 export type ChatResult = { text: string; requestId: string };
-export type ChatMetric = { requestId: string; userId: string; status: "SUCCESS" | "FAILED"; latencyMs: number; errorCode?: string };
+export type ChatMetric = { requestId: string; logicalId: string; userId: string; status: "SUCCESS" | "FAILED"; latencyMs: number; errorCode?: string };
 export type ChatCache = Map<string, { result: ChatResult; expiresAt: number }>;
 export const createChatCache = (): ChatCache => new Map();
 
@@ -79,8 +79,8 @@ async function runChat(
 
   const started = Date.now();
   const messages: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }, ...clientMessages];
-  const metric = (m: Omit<ChatMetric, "userId" | "latencyMs">) =>
-    deps.recordMetric({ ...m, userId, latencyMs: Date.now() - started }).catch(() => undefined);
+  const metric = (m: Omit<ChatMetric, "userId" | "latencyMs" | "logicalId">) =>
+    deps.recordMetric({ ...m, userId, logicalId: reservation.groupId, latencyMs: Date.now() - started }).catch(() => undefined);
   if (deps.onStart) await deps.onStart({ userId, logicalId: reservation.groupId }).catch(() => undefined);
   try {
     const result = await deps.chat(messages);

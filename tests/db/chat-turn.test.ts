@@ -4,7 +4,7 @@ import { handleChatTurn, type ChatTurnDeps } from "@/lib/ai/chat-turn";
 import { GatewayError } from "@/lib/ai/gateway";
 import { createPgUsageStore } from "@/lib/ai/quota";
 import { listMessages } from "@/lib/documents/conversation";
-import { createPgDocumentsService } from "@/lib/documents/service";
+import { createPgDocumentsService, StaleRevisionError } from "@/lib/documents/service";
 import { createUser, getPool } from "./helpers";
 
 const pool = getPool();
@@ -264,5 +264,24 @@ describe("event AI (best-effort, tanpa isi pesan)", () => {
     await setup(u3, async () => ({ text: "bukan json", requestId: "r" })).call(await newDoc(u3), { message: "Halo" });
     expect((await evs(u3)).find((e) => e.event_name === "ai_request_failed")?.metadata_safe).toMatchObject({ error_code: "MALFORMED_OUTPUT" });
     expect(JSON.stringify([...(await evs(u1)), ...e2])).not.toMatch(/Sinta|Halo/);
+  });
+  it("revisi basi dan galat tak terduga setelah started: ai_request_failed dengan kode non-isi, kuota kembali", async () => {
+    const u1 = await createUser(pool);
+    const stale = setup(u1, answer({ disclosingParty: "Sinta Dewi" }));
+    stale.deps.service = { ...docs, saveDraft: async () => { throw new StaleRevisionError(); } } as unknown as ChatTurnDeps["service"];
+    const r1 = await handleChatTurn(stale.deps, new Request("http://t/x", { method: "POST", headers: { "content-type": "application/json", "idempotency-key": key() }, body: JSON.stringify({ message: "Saya Sinta Dewi" }) }), { id: await newDoc(u1) });
+    expect(r1.status).toBe(409);
+    const e1 = await evs(u1);
+    expect(e1.map((e) => e.event_name)).toEqual(["ai_request_failed", "ai_request_started"]);
+    expect(e1[0].metadata_safe).toMatchObject({ task: "document_chat", error_code: "STALE_REVISION" });
+    expect((await store.snapshot(u1, NOW)).messagesUsed).toBe(0);
+    const u2 = await createUser(pool);
+    const r2 = await setup(u2, async () => { throw new Error("rahasia isi pesan"); }).call(await newDoc(u2), { message: "Halo" });
+    expect(r2.status).toBe(500);
+    const e2 = await evs(u2);
+    expect(e2.map((e) => e.event_name)).toEqual(["ai_request_failed", "ai_request_started"]);
+    expect(e2[0].metadata_safe).toMatchObject({ task: "document_chat", error_code: "INTERNAL" });
+    expect(JSON.stringify(e2)).not.toMatch(/rahasia/);
+    expect((await store.snapshot(u2, NOW)).messagesUsed).toBe(0);
   });
 });

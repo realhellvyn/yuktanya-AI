@@ -184,11 +184,15 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
       return json({ reply: out, applied: [...applied, ...cleared], missing, ready: isReady(template, final), issues });
     } catch (e) {
       await deps.store.release(reservation.groupId).catch(() => undefined);
-      if (e instanceof StaleRevisionError) return json({ code: "STALE_REVISION" }, 409);
+      if (e instanceof StaleRevisionError) {
+        await aiEvent("ai_request_failed", "STALE_REVISION");
+        return json({ code: "STALE_REVISION" }, 409);
+      }
       if (e instanceof GatewayError) {
         await aiEvent("ai_request_failed", e.code);
         return json({ code: "AI_UNAVAILABLE", preserved: true }, 502);
       }
+      await aiEvent("ai_request_failed", "INTERNAL");
       return json({ code: "INTERNAL" }, 500);
     }
   } finally {

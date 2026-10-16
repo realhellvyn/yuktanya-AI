@@ -149,7 +149,7 @@ export default async function DeepEditorPage({ params, searchParams }: { params:
               {!flags.enhancedIssuance && <p role="status" className="font-semibold">Penerbitan Enhanced belum diaktifkan. Anda masih dapat memilih keputusan lain.</p>}
               <Card>
                 <DecisionPanel action={decideDeepAction} deepId={id} revision={d.revision} title={d.title} versionNo={d.versionNo} sha256={d.sha256}
-                  parentScope={d.parentScope} approveBlockers={approveBlockers} unresolved={unresolved} />
+                  parentScope={d.parentScope} approveBlockers={approveBlockers} unresolved={unresolved} authorized={d.authorized} />
               </Card>
             </>
           ),

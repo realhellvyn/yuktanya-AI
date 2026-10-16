@@ -44,7 +44,7 @@ export default async function TeamPage() {
                       <StatusBadge tone={a.tone}>{a.text}</StatusBadge>
                     </div>
                     <p className="text-muted">{a.detail}</p>
-                    <p>Pekerjaan aktif: <strong>{total}</strong> dari batas {CAPACITY} ({m.activeStandard} Review Standar, {m.activeDeep} Pemeriksaan Mendalam){total >= CAPACITY ? " — penuh" : ""}</p>
+                    <p>Pekerjaan aktif di firma ini: <strong>{total}</strong> ({m.activeStandard} Review Standar, {m.activeDeep} Pemeriksaan Mendalam){total >= CAPACITY ? " — penuh" : ""}</p>
                   </Card>
                 </li>
               );

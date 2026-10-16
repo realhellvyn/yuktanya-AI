@@ -85,6 +85,21 @@ describe("analisis awal AI", () => {
     expect((await pool.query("select count(*) from document_verifications where version_id = $1", [v.versionId])).rows[0].count).toBe("0");
   });
 
+  it("pencatatan persetujuan gagal setelah reservasi → reservasi dilepas, kuota kembali, gateway tidak dipanggil", async () => {
+    const u = await createUser(pool);
+    const v = await kit.frozen(u);
+    const before = await usage(u);
+    const t = setup(u, { record: async () => { throw new Error("db down"); } });
+    const res = await t.call(v.versionId);
+    expect(res.status).toBe(500);
+    expect((await res.json()).code).toBe("INTERNAL");
+    expect(t.chat).not.toHaveBeenCalled();
+    const after = await usage(u);
+    expect(after.aiReviewsUsed).toBe(before.aiReviewsUsed);
+    expect(after.messagesUsed).toBe(before.messagesUsed);
+    // Percobaan ulang (kunci baru) tidak terhalang reservasi yang menggantung.
+    expect((await setup(u).call(v.versionId)).status).toBe(200);
+  });
   it("review ke-3 Free pada hari yang sama → 429 AI_REVIEW_QUOTA_REACHED", async () => {
     const u = await createUser(pool);
     const v = await kit.frozen(u);

@@ -29,8 +29,8 @@ export async function POST(req: Request) {
           name: m.status === "SUCCESS" ? "ai_request_succeeded" : "ai_request_failed",
           actorUserId: m.userId,
           entityType: "ai_request",
-          entityId: m.requestId,
-          dedupeKey: `ai:${m.requestId}:${m.status}`,
+          entityId: m.logicalId,
+          dedupeKey: `ai:${m.logicalId}:${m.status}`,
           metadata: { task: "chat", latency_ms: m.latencyMs, ...(m.errorCode ? { error_code: m.errorCode } : {}) },
         });
       },

@@ -153,6 +153,12 @@ describe("pembacaan teks terisolasi dengan batas", () => {
     expect(r.ok && r.paragraphs).toEqual(["A&B\tC\nD AB", "Kedua"]);
   });
 
+  it("DOCX: <w:tab /> (dengan spasi sebelum garis miring) dibaca sebagai tab; tab beratribut tetap diabaikan", async () => {
+    const xml = '<w:document><w:body><w:p><w:r><w:t>A</w:t><w:tab /><w:t>B</w:t><w:tab w:val="left"/><w:t>C</w:t><w:br /><w:t>D</w:t></w:r></w:p></w:body></w:document>';
+    const r = await extractUploadText("DOCX", await zipOf({ "word/document.xml": xml }), LIMITS);
+    expect(r.ok && r.paragraphs).toEqual(["A\tBC\nD"]);
+  });
+
   it("PDF berlapis teks terbaca per halaman", async () => {
     const r = await extractUploadText("PDF", await pdfOf([["Perjanjian Sewa (sintetis)", "Pasal 1 Para pihak sepakat."], ["Pasal 2 Penutup"]]), LIMITS);
     expect(r.ok).toBe(true);

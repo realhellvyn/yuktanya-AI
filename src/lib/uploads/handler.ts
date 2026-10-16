@@ -77,10 +77,15 @@ export async function handleUpload(deps: UploadDeps, input: { filename: string; 
   if (saved.status === "DUPLICATE") await deps.blob.delete(path).catch(() => undefined);
   // Persetujuan pengguna dicatat sebagai bukti: versi teks persetujuan + waktu, tanpa isi atau nama berkas.
   if (input.consentVersion && deps.record) {
-    await deps.record({
-      name: "document_upload_consent", actorUserId: userId, entityType: "document", entityId: saved.documentId,
-      dedupeKey: `upload-consent:${userId}:${input.key}`, metadata: { consentVersion: input.consentVersion, kind: detected.kind, at: now.toISOString() },
-    });
+    // Gagal mencatat SETELAH dokumen tersimpan: hasil jelas (bukan INTERNAL "belum tersimpan"); tidak ada yang dikirim ke AI.
+    try {
+      await deps.record({
+        name: "document_upload_consent", actorUserId: userId, entityType: "document", entityId: saved.documentId,
+        dedupeKey: `upload-consent:${userId}:${input.key}`, metadata: { consentVersion: input.consentVersion, kind: detected.kind, at: now.toISOString() },
+      });
+    } catch {
+      return { ok: false, code: "CONSENT_NOT_RECORDED" };
+    }
   }
   return { ok: true, documentId: saved.documentId, versionId: saved.versionId, risk, duplicate: saved.status === "DUPLICATE" };
 }

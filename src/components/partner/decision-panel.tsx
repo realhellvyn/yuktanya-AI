@@ -15,13 +15,14 @@ const DECISION: Record<Decision, string> = {
 // Keputusan akhir Pemeriksaan Mendalam. "Setujui Enhanced" hanya aktif bila semua syarat terpenuhi; alasan yang kurang ditulis jelas.
 export function DecisionPanel(props: {
   action: (fd: FormData) => Promise<void>; deepId: string; revision: number; title: string; versionNo: number; sha256: string;
-  parentScope: string; approveBlockers: string[]; unresolved: string[];
+  parentScope: string; approveBlockers: string[]; unresolved: string[]; authorized: boolean;
 }) {
   const [decision, setDecision] = useState<Decision>("DENY");
   const [reason, setReason] = useState("");
   const [attest, setAttest] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const blockers = [
+    ...(props.authorized ? [] : ["Otorisasi profesional Anda tidak aktif. Hubungi koordinator."]),
     ...(decision === "APPROVE" ? props.approveBlockers : reason.trim().length < 5 ? ["Isi alasan keputusan (minimal 5 karakter)."] : []),
     ...(attest ? [] : ["Centang pernyataan profesional di bawah."]),
   ];
