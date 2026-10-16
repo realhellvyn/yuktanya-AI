@@ -80,6 +80,13 @@ export default async function DocumentPage({ params, searchParams }: { params: P
               )}
             </div>
           )}
+          {q.exported && (
+            <p role="status" className="rounded-lg border border-blue-700 bg-white p-4">
+              <a className="inline-flex min-h-12 items-center font-semibold text-blue-700 underline" href={`/api/documents/exports/${q.exported}`}>
+                Berkas siap. Tekan di sini untuk mengunduh.
+              </a>
+            </p>
+          )}
           <div className="flex flex-wrap gap-3">
             {(["DOCX", "PDF"] as const).map((f) => (
               <form key={f} action={exportAction}>
@@ -133,7 +140,6 @@ export default async function DocumentPage({ params, searchParams }: { params: P
             )}
             {q.ai && <p role="status" className="rounded-lg border border-slate-300 bg-white p-3">{q.ai === "ok" ? "Analisis awal AI selesai dan tercatat di atas." : q.ai === "quota" ? "Batas analisis AI hari ini sudah tercapai." : "Analisis AI belum berhasil. Kuota Anda tidak terpakai."}</p>}
           </section>
-          {q.exported && <p role="status"><a className="inline-flex min-h-12 items-center text-blue-700 underline" href={`/api/documents/exports/${q.exported}`}>Berkas siap. Tekan di sini untuk mengunduh.</a></p>}
         </section>
       )}
     </main>
