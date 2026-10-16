@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
+import { Document, HeadingLevel, ImageRun, Packer, Paragraph, TextRun } from "docx";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import type { RenderedDoc } from "./render";
 
@@ -12,9 +12,25 @@ export class UnsupportedCharactersError extends Error {
   }
 }
 
+// Blok verifikasi di akhir ekspor. Hash ekspor tetap tersendiri; "kode versi asli" menunjuk hash versi yang diperiksa.
+export type ExportVerification = {
+  kindTitle: string;
+  statement: string;
+  code: string;
+  url: string;
+  originalSha256: string;
+  qrPng: Uint8Array;
+};
+const verificationLines = (v: ExportVerification): string[] => [
+  ...v.statement.split("\n"),
+  `Cek keaslian: ${v.url}`,
+  `Kode verifikasi: ${v.code}`,
+  `Kode versi asli: ${v.originalSha256}`,
+];
+
 const lines = (text: string) => text.split(/\r\n|\r|\n/);
 
-export async function exportDocx(doc: RenderedDoc): Promise<Uint8Array> {
+export async function exportDocx(doc: RenderedDoc, verification?: ExportVerification): Promise<Uint8Array> {
   const children: Paragraph[] = [];
   for (const b of doc.blocks) {
     if (b.kind === "title") {
@@ -25,6 +41,12 @@ export async function exportDocx(doc: RenderedDoc): Promise<Uint8Array> {
     } else {
       children.push(new Paragraph({ children: lines(b.text).map((l, i) => new TextRun({ text: l, break: i > 0 ? 1 : undefined })), spacing: { after: 120 } }));
     }
+  }
+  if (verification) {
+    children.push(new Paragraph({ text: "Verifikasi", heading: HeadingLevel.HEADING_2 }));
+    children.push(new Paragraph({ children: [new TextRun({ text: verification.kindTitle, bold: true })], spacing: { after: 80 } }));
+    for (const l of verificationLines(verification)) children.push(new Paragraph({ children: [new TextRun({ text: l })], spacing: { after: 80 } }));
+    children.push(new Paragraph({ children: [new ImageRun({ type: "png", data: verification.qrPng, transformation: { width: 120, height: 120 }, altText: { title: "Kode QR", description: "Kode QR pengecekan verifikasi", name: "qr" } })] }));
   }
   return new Uint8Array(await Packer.toBuffer(new Document({ sections: [{ children }] })));
 }
@@ -64,10 +86,11 @@ function wrap(text: string, font: PDFFont, size: number, maxWidth: number): stri
   return lines;
 }
 
-export async function exportPdf(doc: RenderedDoc): Promise<Uint8Array> {
+export async function exportPdf(doc: RenderedDoc, verification?: ExportVerification): Promise<Uint8Array> {
   // Periksa seluruh dokumen dulu supaya galat memuat semua karakter bermasalah sekaligus.
   const bad = new Set<string>();
-  for (const t of [doc.label, ...doc.blocks.map((b) => b.text)]) {
+  const verText = verification ? [verification.kindTitle, ...verificationLines(verification)] : [];
+  for (const t of [doc.label, ...doc.blocks.map((b) => b.text), ...verText]) {
     try {
       pdfLines(t);
     } catch (e) {
@@ -98,6 +121,17 @@ export async function exportPdf(doc: RenderedDoc): Promise<Uint8Array> {
     if (b.kind === "title") { draw(b.text, bold, 18, 4); draw(doc.label, italic, 9, 14); }
     else if (b.kind === "heading") { y -= 6; draw(b.text, bold, 13, 2); }
     else draw(b.text, regular, 11, 6);
+  }
+  if (verification) {
+    const QR = 110;
+    if (y - QR - 140 < M) { page = pdf.addPage([W, H]); y = H - M; }
+    y -= 6;
+    draw("Verifikasi", bold, 13, 2);
+    draw(verification.kindTitle, bold, 11, 4);
+    for (const l of verificationLines(verification)) draw(l, regular, 9, 3);
+    const img = await pdf.embedPng(verification.qrPng);
+    if (y - QR < M) { page = pdf.addPage([W, H]); y = H - M; }
+    page.drawImage(img, { x: M, y: y - QR, width: QR, height: QR });
   }
   return pdf.save();
 }

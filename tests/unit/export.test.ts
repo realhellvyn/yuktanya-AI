@@ -69,3 +69,35 @@ describe("sha256Hex", () => {
     expect(sha256Hex(b)).toBe(createHash("sha256").update(b).digest("hex"));
   });
 });
+
+describe("blok verifikasi pada ekspor", () => {
+  const verification = async () => {
+    const { qrPng, verifyUrl } = await import("@/lib/verification/qr");
+    const code = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4";
+    const url = verifyUrl(code, "https://yuktanya.example");
+    return {
+      kindTitle: "Yuktanya Legal Verified", statement: "Pemeriksaan selesai dengan catatan. Baca catatan sebelum menggunakan dokumen.\nTidak menjamin keabsahan atau hasil hukum dalam semua keadaan.",
+      code, url, originalSha256: "f".repeat(64), qrPng: await qrPng(url),
+    };
+  };
+
+  it("DOCX memuat URL, kode, pernyataan, kode versi asli dan gambar QR; tanpa verifikasi tidak ada blok", async () => {
+    const v = await verification();
+    const withV = await JSZip.loadAsync(await exportDocx(doc(), v));
+    const xml = await withV.file("word/document.xml")!.async("string");
+    for (const s of [v.url, v.code, "Pemeriksaan selesai dengan catatan", "Tidak menjamin keabsahan", `Kode versi asli: ${v.originalSha256}`, "Verifikasi"]) expect(xml).toContain(s);
+    expect(Object.keys(withV.files).some((f) => f.startsWith("word/media/"))).toBe(true);
+    const plain = await (await JSZip.loadAsync(await exportDocx(doc()))).file("word/document.xml")!.async("string");
+    expect(plain).not.toContain("Kode versi asli");
+  });
+
+  it("PDF dengan verifikasi dapat dimuat ulang, memuat ≥ 1 halaman, dan hashnya berbeda dari ekspor tanpa verifikasi", async () => {
+    const v = await verification();
+    const withV = await exportPdf(doc(), v);
+    const reloaded = await PDFDocument.load(withV);
+    expect(reloaded.getPageCount()).toBeGreaterThanOrEqual(1);
+    const plain = await exportPdf(doc());
+    expect(sha256Hex(withV)).not.toBe(sha256Hex(plain));
+    expect(sha256Hex(withV)).not.toBe(v.originalSha256);
+  });
+});

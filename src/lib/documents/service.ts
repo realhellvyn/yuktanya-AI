@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import type { BlobStore } from "./blob";
-import { exportDocx, exportPdf, sha256Hex } from "./export";
+import { LEGAL_DISCLAIMER, VERIFICATION_TITLES, verificationStatement, type VerificationKind } from "@/lib/copy";
+import { qrPng, verifyUrl } from "@/lib/verification/qr";
+import { exportDocx, exportPdf, sha256Hex, type ExportVerification } from "./export";
 import { canonicalize, parseCanonical, renderDocument, type RenderedDoc } from "./render";
 import { getTemplate, TemplateNotApprovedError, TEMPLATES, type ApprovalCheck } from "./templates/registry";
 import type { Category, Data } from "./types";
@@ -87,6 +89,21 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
     return deps.blob;
   };
   const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "dokumen";
+
+  // Verifikasi AKTIF terbaru untuk versi ini (bila ada) ikut dicantumkan; versi yang dicabut atau diedit tidak membawa blok aktif.
+  async function activeVerification(versionId: string): Promise<ExportVerification | undefined> {
+    const { rows } = await pool.query(
+      "select kind, outcome, code, sha256 from document_verifications where version_id = $1 and status = 'ACTIVE' order by issued_at desc limit 1",
+      [versionId],
+    );
+    const r = rows[0];
+    if (!r) return undefined;
+    const url = verifyUrl(r.code);
+    return {
+      kindTitle: VERIFICATION_TITLES[r.kind as VerificationKind], statement: r.kind === "AI" ? verificationStatement(r.kind, r.outcome) : `${verificationStatement(r.kind, r.outcome)}\n${LEGAL_DISCLAIMER}`,
+      code: r.code, url, originalSha256: r.sha256, qrPng: await qrPng(url),
+    };
+  }
 
   const self: DocumentsService = {
     async create(userId, category, key) {
@@ -180,7 +197,8 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
       const v = await self.getVersion(userId, versionId);
       if (!v) return null;
       const blob = needBlob();
-      const bytes = format === "DOCX" ? await exportDocx(v.doc) : await exportPdf(v.doc);
+      const verification = await activeVerification(versionId);
+      const bytes = format === "DOCX" ? await exportDocx(v.doc, verification) : await exportPdf(v.doc, verification);
       const sha256 = sha256Hex(bytes);
       const path = `${userId}/${v.documentId}/${versionId}-${randomUUID()}.${FORMATS[format].ext}`;
       // Blob ditulis dulu; bila pencatatan gagal, yang tersisa hanya berkas yatim (tidak ada baris yang menunjuk ke berkas hilang).

@@ -91,3 +91,29 @@ describe("exportVersion", () => {
     await expect(svc.downloadExport(u, id)).rejects.toBeInstanceOf(IntegrityError);
   });
 });
+
+describe("exportVersion dengan verifikasi", () => {
+  async function withAi(u: string, versionId: string, versionSha: string) {
+    const rep = (await pool.query("insert into ai_review_reports (user_id, logical_request_id, version_ref, sha256, report_json, analyzer_policy_version) values ($1, gen_random_uuid(), $2, $3, '{}', 'p1') returning id", [u, versionId, versionSha])).rows[0].id;
+    return (await pool.query("select * from issue_ai_verification($1, $2, $3)", [u, rep, NOW])).rows[0] as { verification_id: string; code: string };
+  }
+  const xmlOf = async (u: string, versionId: string) => {
+    const e = (await svc.exportVersion(u, versionId, "DOCX"))!;
+    const row = (await pool.query("select storage_path from document_exports where id = $1", [e.exportId])).rows[0];
+    return { xml: await (await JSZip.loadAsync((await blob.get(row.storage_path))!)).file("word/document.xml")!.async("string"), sha: e.sha256 };
+  };
+
+  it("versi tanpa verifikasi → tanpa blok; dengan verifikasi aktif → blok memuat kode dan hash ekspor tetap tersendiri; dicabut → blok hilang", async () => {
+    const u = await createUser(pool);
+    const f = await frozen(u);
+    expect((await xmlOf(u, f.versionId)).xml).not.toContain("Kode versi asli");
+    const v = await withAi(u, f.versionId, f.versionSha);
+    const withBlock = await xmlOf(u, f.versionId);
+    expect(withBlock.xml).toContain(v.code);
+    expect(withBlock.xml).toContain(`Kode versi asli: ${f.versionSha}`);
+    expect(withBlock.sha).not.toBe(f.versionSha);
+    const admin = await createUser(pool, { roles: ["platform_admin"] });
+    await pool.query("select revoke_verification($1, $2, 'ERROR', null, $3)", [admin, v.verification_id, NOW]);
+    expect((await xmlOf(u, f.versionId)).xml).not.toContain(v.code);
+  });
+});
