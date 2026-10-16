@@ -36,8 +36,21 @@ export async function createNdaVersion(page, base, { disclosing = "Sinta Dewi", 
   return page.url();
 }
 
-// Kirim form lalu tunggu aksi server selesai dan halaman tenang (hindari balapan dengan revisi di input tersembunyi).
+// Kirim form aksi server lalu tunggu hasilnya benar-benar diterapkan di halaman.
+// waitForLoadState("networkidle") saja tidak cukup: untuk navigasi sisi klien ia langsung selesai, sehingga form berikutnya
+// bisa terkirim dengan `revision` tersembunyi yang lama (STALE_REVISION). Maka tunggu URL tujuan redirect dan,
+// bila form membawa `revision`, tunggu nilainya berganti (atau muncul ?e= untuk kegagalan).
 export async function submit(page, clickable) {
-  await Promise.all([page.waitForResponse((r) => r.request().method() === "POST", { timeout: 20000 }), clickable.click()]);
+  const form = clickable.locator("xpath=ancestor::form[1]");
+  const rev = (await form.locator("input[name=revision]").count()) ? await form.locator("input[name=revision]").first().inputValue() : null;
+  const [res] = await Promise.all([page.waitForResponse((r) => r.request().method() === "POST", { timeout: 20000 }), clickable.click()]);
+  const target = (res.headers()["x-action-redirect"] ?? "").split(";")[0];
+  if (target) await page.waitForURL((u) => u.pathname + u.search === target, { timeout: 20000 });
+  if (rev !== null) {
+    await page.waitForFunction((old) => {
+      const i = document.querySelector("input[name=revision]");
+      return !i || i.value !== old || /[?&]e=/.test(location.search);
+    }, rev, { timeout: 20000 });
+  }
   await page.waitForLoadState("networkidle");
 }

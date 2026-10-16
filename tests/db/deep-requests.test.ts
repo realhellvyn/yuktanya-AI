@@ -77,6 +77,32 @@ describe("penugasan deep", () => {
     expect((await pool.query("select * from deep_queue($1)", [rv.reviewer])).rows).toHaveLength(1);
   });
 
+  it("koordinator firma lain tidak melihat permintaan standar maupun deep firma ini (antrean dan yang sedang berjalan)", async () => {
+    const { c, deep } = await paidDeep();
+    const other = await kit.firm();
+    const rv = await c.f.addReviewer();
+    const u = await createUser(pool);
+    const b = await kit.buy(u, "STANDARD_REVIEW", (await kit.frozen(u)).versionId);
+    const queued = (await pool.query("select id from review_requests where order_id = $1", [b.order_id])).rows[0].id;
+    const u2 = await createUser(pool);
+    const b2 = await kit.buy(u2, "STANDARD_REVIEW", (await kit.frozen(u2)).versionId);
+    const running = (await pool.query("select id from review_requests where order_id = $1", [b2.order_id])).rows[0].id;
+    await pool.query("select assign_review($1, $2, $3, $4)", [c.f.coordinator, running, rv.reviewer, NOW]);
+    const ids = async (actor: string) => {
+      const q = async (sql: string, args: unknown[]) => (await pool.query(sql, args)).rows.map((r) => r.request_id ?? r.deep_id);
+      return [
+        ...(await q("select * from coordinator_unassigned($1)", [actor])), ...(await q("select * from coordinator_inflight($1, $2)", [actor, NOW])),
+        ...(await q("select * from deep_unassigned($1)", [actor])),
+      ];
+    };
+    expect(await ids(c.f.coordinator)).toEqual(expect.arrayContaining([queued, running, deep.id]));
+    const seen = await ids(other.coordinator);
+    for (const id of [queued, running, deep.id]) expect(seen).not.toContain(id);
+    await assignDeep(c.f.coordinator, deep.id, rv.reviewer);
+    expect((await pool.query("select * from deep_inflight($1, $2)", [c.f.coordinator, NOW])).rows.map((r) => r.deep_id)).toContain(deep.id);
+    expect((await pool.query("select * from deep_inflight($1, $2)", [other.coordinator, NOW])).rows.map((r) => r.deep_id)).not.toContain(deep.id);
+  });
+
   it("kapasitas 10 menghitung penugasan standar dan deep bersama", async () => {
     const { c, deep } = await paidDeep();
     const rv = await c.f.addReviewer();

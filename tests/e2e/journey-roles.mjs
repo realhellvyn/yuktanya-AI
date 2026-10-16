@@ -1,5 +1,5 @@
 // Perjalanan lintas peran (E01/E02 di SCENARIOS): admin -> koordinator -> reviewer -> pemilik, dengan sesi browser terpisah.
-import { createNdaVersion, register, submit } from "./helpers.mjs";
+import { createNdaVersion, register, say, submit } from "./helpers.mjs";
 
 export const onlyViewport = "desktop";
 
@@ -7,7 +7,7 @@ export async function journey({ step, base, vp, db, newActor }) {
   const n = Date.now();
   const mail = (who) => `${who}+${n}@example.com`;
   const adminA = await newActor("admin"), coordA = await newActor("koordinator"), revA = await newActor("reviewer"), ownerA = await newActor("pemilik");
-  let code = "", enhancedCode = "";
+  let code = "", enhancedCode = "", docUrl = "";
   const tag = (s) => `[${vp.name}] ${s}`;
 
   await step(tag("empat akun terdaftar; admin diberi peran lewat DB (bukan lewat UI)"), async () => {
@@ -51,8 +51,19 @@ export async function journey({ step, base, vp, db, newActor }) {
     await adminA.shot("01-mitra");
   });
 
+  await step(tag("pengguna biasa dan akun reviewer saja ditolak di /admin dan /admin/payments"), async () => {
+    for (const [who, actor] of [["pengguna biasa", ownerA], ["reviewer", revA]]) {
+      for (const p of ["/admin", "/admin/payments"]) {
+        await actor.page.goto(base + p);
+        const u = new URL(actor.page.url());
+        if (u.pathname.startsWith("/admin")) throw new Error(`${p} terbuka untuk ${who}: ${actor.page.url()}`);
+        if (/Konfirmasi pembayaran|menunggu konfirmasi/i.test(await actor.page.innerText("body"))) throw new Error(`${p} membocorkan isi admin ke ${who}`);
+      }
+    }
+  });
+
   await step(tag("pemilik membuat NDA lewat percakapan dan meminta pemeriksaan pengacara (Rp50.000)"), async () => {
-    await createNdaVersion(ownerA.page, base);
+    docUrl = await createNdaVersion(ownerA.page, base);
     await ownerA.page.click("button:has-text('Minta pemeriksaan pengacara')");
     await ownerA.page.waitForURL(/\/checkout\//, { timeout: 30000 });
     const t = await ownerA.page.innerText("body");
@@ -169,7 +180,10 @@ export async function journey({ step, base, vp, db, newActor }) {
     await r.check("input[name=attest]");
     await submit(r, r.locator("button:has-text('Simpan keputusan')"));
     const q = await db.query("select code, status from document_verifications where kind = 'LEGAL_ENHANCED' order by issued_at desc limit 1");
-    if (!q.rows[0] || q.rows[0].status !== "ACTIVE") throw new Error("Enhanced tidak terbit: " + JSON.stringify(q.rows) + " | " + r.url() + " | " + JSON.stringify((await db.query("select status from deep_reviews order by created_at desc limit 1").catch((e) => ({ rows: [String(e.message)] }))).rows));
+    if (!q.rows[0] || q.rows[0].status !== "ACTIVE") {
+      const dbg = await db.query("select d.status, d.order_id, rp.status as rs, rp.revision, rp.decision, (select count(*) from deep_checklist c where c.report_id = rp.id) as chk, (select string_agg(o.status || '/' || coalesce(p.status, '-'), ',') from orders o left join payments p on p.order_id = o.id where o.id = d.order_id) as pay from deep_requests d left join deep_reports rp on rp.deep_id = d.id order by d.created_at desc limit 1");
+      throw new Error("Enhanced tidak terbit: " + JSON.stringify(q.rows) + " | " + r.url() + " | " + JSON.stringify(dbg.rows));
+    }
     enhancedCode = q.rows[0].code;
   });
 
@@ -191,5 +205,23 @@ export async function journey({ step, base, vp, db, newActor }) {
     await pub.goto(base + "/verify/" + enhancedCode);
     if (!/Ditangguhkan|Dicabut/.test(await pub.innerText("body"))) throw new Error("Enhanced tetap aktif padahal induk dicabut");
     await pub.close();
+  });
+
+  await step(tag("versi baru dari dokumen yang sama: belum diperiksa, tanpa lencana (E12)"), async () => {
+    const p = ownerA.page;
+    await p.goto(docUrl);
+    const docId = /\/documents\/([0-9a-f-]{36})/.exec(docUrl)[1];
+    await p.locator("summary:has-text('Ubah atau salin dokumen')").click();
+    await Promise.all([p.waitForURL(/\/workspace\//, { timeout: 30000 }), p.click("button:has-text('Buat versi baru dari versi ini')")]);
+    await say(p, "Maaf, ganti nama pihak kedua jadi Budi Hartono.", "Baik, saya catat");
+    await Promise.all([p.waitForURL(/\/documents\/.*baru=1/, { timeout: 30000 }), p.click("button:has-text('Buat dokumen')")]);
+    const t = await p.innerText("main");
+    if (!t.includes("Versi 2") || !t.includes("Versi baru belum diperiksa")) throw new Error("versi 2 tidak ditandai belum diperiksa: " + t.slice(0, 400));
+    if (/Status: (Aktif|Dicabut|Ditangguhkan)|Yuktanya Legal Verified/.test(t)) throw new Error("versi baru mewarisi lencana: " + t.slice(0, 400));
+    const v2 = new URL(p.url()).searchParams.get("version");
+    const n = (await db.query("select count(*)::int as n from document_verifications where version_id = $1", [v2])).rows[0].n;
+    const v1 = (await db.query("select count(*)::int as n from document_verifications v join document_versions dv on dv.id = v.version_id where dv.document_id = $1 and dv.version_no = 1", [docId])).rows[0].n;
+    if (n !== 0 || v1 < 1) throw new Error(`verifikasi versi 2 = ${n}, versi 1 = ${v1}`);
+    await ownerA.shot("08-versi-baru");
   });
 }
