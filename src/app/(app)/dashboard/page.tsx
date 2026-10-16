@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AI_DRAFT_LABEL } from "@/lib/copy";
 
 const OPTIONS = [
@@ -11,9 +12,7 @@ export default function DashboardPage() {
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">Selamat datang di Yuktanya</h1>
       <p className="text-xl">Apa yang ingin Anda buat hari ini?</p>
-      <p className="rounded-lg border border-slate-300 bg-white p-4">
-        Buat dokumen baru (Gratis) akan tersedia pada tahap berikutnya. {AI_DRAFT_LABEL}
-      </p>
+      <p className="rounded-lg border border-slate-300 bg-white p-4">{AI_DRAFT_LABEL}</p>
       <ul className="grid gap-4 md:grid-cols-3">
         {OPTIONS.map((o) => (
           <li key={o.title} className="rounded-lg border border-slate-300 bg-white p-4">
@@ -22,6 +21,9 @@ export default function DashboardPage() {
           </li>
         ))}
       </ul>
+      <Link href="/workspace/new" className="inline-flex min-h-12 items-center rounded-lg bg-blue-600 px-6 font-semibold text-white">
+        Buat Dokumen
+      </Link>
     </main>
   );
 }
