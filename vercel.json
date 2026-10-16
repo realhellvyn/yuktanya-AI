@@ -1,0 +1,3 @@
+{
+  "crons": [{ "path": "/api/jobs/outbox", "schedule": "0 1 * * *" }]
+}
