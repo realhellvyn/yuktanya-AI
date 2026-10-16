@@ -1,4 +1,7 @@
+import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
+import type { BlobStore } from "./blob";
+import { exportDocx, exportPdf, sha256Hex } from "./export";
 import { canonicalize, parseCanonical, renderDocument, type RenderedDoc } from "./render";
 import { getTemplate, TemplateNotApprovedError, TEMPLATES, type ApprovalCheck } from "./templates/registry";
 import type { Category, Data } from "./types";
@@ -15,6 +18,19 @@ export class StaleRevisionError extends Error {
     this.name = "StaleRevisionError";
   }
 }
+
+export class IntegrityError extends Error {
+  constructor(message = "INTEGRITY_ERROR") {
+    super(message);
+    this.name = "IntegrityError";
+  }
+}
+
+export type ExportFormat = "DOCX" | "PDF";
+const FORMATS: Record<ExportFormat, { ext: string; contentType: string }> = {
+  DOCX: { ext: "docx", contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
+  PDF: { ext: "pdf", contentType: "application/pdf" },
+};
 
 export type FreezeResult =
   | { ok: true; versionId: string; versionNo: number; sha256: string; duplicate: boolean }
@@ -34,10 +50,12 @@ export interface DocumentsService {
   list(userId: string): Promise<DocSummary[]>;
   get(userId: string, documentId: string): Promise<DocDetail | null>;
   getVersion(userId: string, versionId: string): Promise<VersionDetail | null>;
+  exportVersion(userId: string, versionId: string, format: ExportFormat): Promise<{ exportId: string; sha256: string; byteSize: number } | null>;
+  downloadExport(userId: string, exportId: string): Promise<{ bytes: Uint8Array; filename: string; contentType: string } | null>;
 }
 
 type Env = { ALLOW_UNAPPROVED_TEMPLATES?: string; NODE_ENV?: string };
-type Deps = { isApproved?: ApprovalCheck };
+type Deps = { isApproved?: ApprovalCheck; blob?: BlobStore };
 
 const isNotFound = (e: unknown) => e instanceof Error && e.message.includes("NOT_FOUND");
 
@@ -63,7 +81,13 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
     id: r.id, versionNo: r.version_no, sha256: r.sha256, createdAt: r.created_at.toISOString(),
   });
 
-  return {
+  const needBlob = (): BlobStore => {
+    if (!deps.blob) throw new Error("Penyimpanan berkas belum dikonfigurasi");
+    return deps.blob;
+  };
+  const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "dokumen";
+
+  const self: DocumentsService = {
     async create(userId, category, key) {
       const { template: t } = await template(category);
       const { rows } = await pool.query("select create_document($1, $2, $3, $4, $5, $6) as id", [userId, category, t.id, t.version, t.title, key]);
@@ -140,5 +164,37 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
       if (!r) return null;
       return { ...toVersion(r), documentId: r.document_id, canonicalText: r.canonical_text, doc: parseCanonical(r.canonical_text), structuredData: r.structured_data };
     },
+
+    async exportVersion(userId, versionId, format) {
+      const v = await self.getVersion(userId, versionId);
+      if (!v) return null;
+      const blob = needBlob();
+      const bytes = format === "DOCX" ? await exportDocx(v.doc) : await exportPdf(v.doc);
+      const sha256 = sha256Hex(bytes);
+      const path = `${userId}/${v.documentId}/${versionId}-${randomUUID()}.${FORMATS[format].ext}`;
+      // Blob ditulis dulu; bila pencatatan gagal, yang tersisa hanya berkas yatim (tidak ada baris yang menunjuk ke berkas hilang).
+      await blob.put(path, bytes);
+      const { rows } = await pool.query("select register_export($1, $2, $3, $4, $5, $6) as id", [userId, versionId, format, sha256, bytes.byteLength, path]);
+      return { exportId: rows[0].id, sha256, byteSize: bytes.byteLength };
+    },
+
+    async downloadExport(userId, exportId) {
+      const { rows } = await pool.query(
+        `select e.format, e.sha256, e.storage_path, d.title, v.version_no
+           from document_exports e
+           join document_versions v on v.id = e.version_id
+           join documents d on d.id = v.document_id
+          where e.id = $1 and d.owner_id = $2`,
+        [exportId, userId],
+      );
+      const r = rows[0];
+      if (!r) return null;
+      const bytes = await needBlob().get(r.storage_path);
+      if (!bytes) throw new IntegrityError("BLOB_MISSING");
+      if (sha256Hex(bytes) !== r.sha256) throw new IntegrityError("HASH_MISMATCH");
+      const f = FORMATS[r.format as ExportFormat];
+      return { bytes, filename: `${slug(r.title)}-v${r.version_no}.${f.ext}`, contentType: f.contentType };
+    },
   };
+  return self;
 }
