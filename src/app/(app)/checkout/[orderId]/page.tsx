@@ -5,6 +5,7 @@ import { billingService } from "@/lib/billing/runtime";
 import { CHECKOUT_NOTE } from "@/lib/copy";
 import { requireUserId } from "@/lib/documents/session";
 import { formatIdr } from "@/lib/pricing/catalog";
+import { paymentReference } from "@/lib/reviews/paths";
 import { mockSettleAction, payAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,7 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
             <div className="space-y-2 rounded-lg border border-slate-300 bg-white p-4">
               <h2 className="text-xl font-semibold">Transfer bank</h2>
               <p className="whitespace-pre-line">{manual}</p>
+              <p>Tulis kode berikut pada berita transfer: <strong className="font-mono text-xl">{paymentReference(pending.id)}</strong></p>
               <p>Setelah transfer, kami mengonfirmasi pembayaran Anda secara manual. Mohon tunggu.</p>
             </div>
           )}

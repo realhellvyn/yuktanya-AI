@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { createManualAdapter, createMockAdapter } from "@/lib/billing/adapters";
-import { confirmManualHandler, createOrderHandler, getOrderHandler, mockSettleHandler, payHandler, webhookHandler, type BillingDeps } from "@/lib/billing/handlers";
+import { resolveReconciliationHandler, confirmManualHandler, createOrderHandler, getOrderHandler, mockSettleHandler, payHandler, webhookHandler, type BillingDeps } from "@/lib/billing/handlers";
 import { createPgBillingService } from "@/lib/billing/service";
 import { ForbiddenError } from "@/lib/documents/handlers";
 import { createUser, getPool } from "./helpers";
@@ -115,5 +115,24 @@ describe("handler penagihan", () => {
     const u = await createUser(pool);
     const o = await s.createOrder(u, "MEMBERSHIP_MONTHLY", null, "idem-instr-12345", NOW);
     expect((await s.startPayment(u, o.orderId, "manual", NOW)).instructions).toContain("belum tersedia");
+  });
+
+  it("konfirmasi manual menerima receivedAt; resolve rekonsiliasi hanya admin dan butuh catatan", async () => {
+    const u = await createUser(pool);
+    const o = await (await createOrderHandler(deps(u), post({ kind: "MEMBERSHIP_MONTHLY" }))).json();
+    const pay = await (await payHandler(deps(u), post({ provider: "manual" }), { id: o.orderId })).json();
+    const admin = await kit.admin();
+    const d = deps(u, { getAdminId: async () => admin, now: () => new Date(NOW.getTime() + 3 * 24 * 3600_000) });
+    const ok = await confirmManualHandler(d, post({ bankRef: "BANK-5", amountIdr: 19000, receivedAt: NOW.toISOString() }), { id: pay.paymentId });
+    expect((await ok.json()).result).toBe("SETTLED");
+
+    const o2 = await (await createOrderHandler(deps(u, { now: () => NOW }), post({ kind: "MEMBERSHIP_MONTHLY" }))).json();
+    const pay2 = await (await payHandler(deps(u), post({ provider: "manual" }), { id: o2.orderId })).json();
+    const late = deps(u, { getAdminId: async () => admin, now: () => new Date(NOW.getTime() + 5 * 24 * 3600_000) });
+    expect((await (await confirmManualHandler(late, post({ bankRef: "BANK-6", amountIdr: 19000 }), { id: pay2.paymentId })).json()).result).toBe("RECONCILIATION_REQUIRED");
+    expect((await resolveReconciliationHandler(deps(u), post({ action: "CLOSE", note: "tutup" }), { id: o2.orderId })).status).toBe(403);
+    expect((await resolveReconciliationHandler(late, post({ action: "CLOSE", note: "x" }), { id: o2.orderId })).status).toBe(400);
+    expect((await (await resolveReconciliationHandler(late, post({ action: "CLOSE", note: "ditutup oleh admin" }), { id: o2.orderId })).json()).result).toBe("CLOSED");
+    expect((await resolveReconciliationHandler(late, post({ action: "CLOSE", note: "ditutup lagi" }), { id: o2.orderId })).status).toBe(409);
   });
 });

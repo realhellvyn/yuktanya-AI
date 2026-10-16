@@ -196,4 +196,39 @@ describe("kewenangan dan integritas", () => {
     expect(after.notes[0].title).toBe("CATATAN-DRAF");
     expect((await pool.query("select * from get_review_for_owner($1, $2)", [await createUser(pool), c.req])).rows).toHaveLength(0);
   });
+
+  it("catatan otoritas (snapshot) tersimpan di verifikasi: id otorisasi, lingkup, masa berlaku, atestasi", async () => {
+    const c = await setup();
+    const s = (await start(c)).rows[0];
+    const rev = await draft(c, s.revision);
+    await publish(c, rev, "WITHIN_SCOPE", { noNotes: true });
+    const issuer = (await pool.query("select issuer from document_verifications where request_id = $1", [c.req])).rows[0].issuer;
+    expect(issuer.authorization_id).toBe(c.authId);
+    expect(issuer.scope_note).toBe("Kontrak komersial");
+    expect([issuer.valid_from, issuer.valid_to, issuer.attested]).toEqual(["2026-01-01", "2027-12-31", true]);
+    expect(issuer.firm_id).toBe(c.f.firmId);
+  });
+
+  it("ekspor memilih verifikasi hukum aktif walau analisis AI yang lebih baru ada", async () => {
+    const { mkdtempSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const path = await import("node:path");
+    const JSZip = (await import("jszip")).default;
+    const { createFsBlobStore } = await import("@/lib/documents/blob");
+    const { createPgDocumentsService } = await import("@/lib/documents/service");
+    const blob = createFsBlobStore(mkdtempSync(path.join(tmpdir(), "pub-")));
+    const svc = createPgDocumentsService(pool, { ALLOW_UNAPPROVED_TEMPLATES: "true", NODE_ENV: "test" }, { blob });
+    const c = await setup();
+    const s = (await start(c)).rows[0];
+    const rev = await draft(c, s.revision);
+    const pub = (await publish(c, rev, "WITHIN_SCOPE", { noNotes: true })).rows[0];
+    const sha = (await pool.query("select sha256 from document_versions where id = $1", [c.v.versionId])).rows[0].sha256;
+    const rep = (await pool.query("insert into ai_review_reports (user_id, logical_request_id, version_ref, sha256, report_json, analyzer_policy_version) values ($1, gen_random_uuid(), $2, $3, '{}', 'p1') returning id", [c.owner, c.v.versionId, sha])).rows[0].id;
+    const ai = (await pool.query("select * from issue_ai_verification($1, $2, now())", [c.owner, rep])).rows[0];
+    const e = (await svc.exportVersion(c.owner, c.v.versionId, "DOCX"))!;
+    const row = (await pool.query("select storage_path from document_exports where id = $1", [e.exportId])).rows[0];
+    const xml = await (await JSZip.loadAsync((await blob.get(row.storage_path))!)).file("word/document.xml")!.async("string");
+    expect(xml).toContain(pub.code);
+    expect(xml).not.toContain(ai.code);
+  });
 });

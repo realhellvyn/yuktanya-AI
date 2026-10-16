@@ -93,7 +93,8 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
   // Verifikasi AKTIF terbaru untuk versi ini (bila ada) ikut dicantumkan; versi yang dicabut atau diedit tidak membawa blok aktif.
   async function activeVerification(versionId: string): Promise<ExportVerification | undefined> {
     const { rows } = await pool.query(
-      "select kind, outcome, code, sha256 from document_verifications where version_id = $1 and status = 'ACTIVE' order by issued_at desc limit 1",
+      `select kind, outcome, code, sha256 from document_verifications where version_id = $1 and status = 'ACTIVE'
+        order by case kind when 'LEGAL_ENHANCED' then 0 when 'LEGAL' then 1 else 2 end, issued_at desc limit 1`,
       [versionId],
     );
     const r = rows[0];

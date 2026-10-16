@@ -22,7 +22,7 @@ const REASON: Record<string, string> = {
   NOTES_PRESENT: "Hasil “Tanpa Legal Note” tidak boleh memiliki catatan.", NO_NOTES_DECLARATION_REQUIRED: "Centang pernyataan bahwa tidak ada catatan.",
   SUMMARY_REQUIRED: "Isi ringkasan untuk hasil ini.", INVALID_OUTCOME: "Pilih hasil pemeriksaan.",
 };
-const input = "mt-1 block w-full rounded-lg border border-slate-400 px-3 py-2";
+const input = "mt-1 block min-h-12 w-full rounded-lg border border-slate-400 px-3 py-2";
 const btn = "min-h-12 rounded-lg px-5 font-semibold";
 
 export default async function ReviewEditorPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ e?: string; r?: string; ok?: string; done?: string }> }) {

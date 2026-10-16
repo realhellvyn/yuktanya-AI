@@ -39,6 +39,7 @@ export type OpenedReview = {
   requestId: string; title: string; category: string; doc: RenderedDoc; revision: number;
   scope: string; assumptions: string; summary: string; notes: NoteView[];
 };
+export type InflightRow = { requestId: string; status: string; createdAt: string; category: string; reviewerId: string; reviewerAuthorized: boolean };
 export type PublishInput = { revision: number; outcome: Outcome; noNotesDeclared: boolean; attest: boolean };
 
 export interface ReviewService {
@@ -53,6 +54,8 @@ export interface ReviewService {
   unassigned(actorId: string): Promise<{ requestId: string; createdAt: string; category: string }[]>;
   reviewers(actorId: string): Promise<{ reviewerId: string; firmId: string; active: number }[]>;
   assign(actorId: string, requestId: string, reviewerId: string, now?: Date): Promise<void>;
+  reassign(actorId: string, requestId: string, reviewerId: string, now?: Date): Promise<void>;
+  inflight(actorId: string, now?: Date): Promise<InflightRow[]>;
 }
 
 const noteRow = (n: Record<string, unknown>): NoteView => ({
@@ -164,6 +167,19 @@ export function createPgReviewService(pool: Pool): ReviewService {
       } catch (e) {
         mapError(e);
       }
+    },
+
+    async reassign(actorId, requestId, reviewerId, now = new Date()) {
+      try {
+        await pool.query("select reassign_review($1, $2, $3, $4)", [actorId, requestId, reviewerId, now]);
+      } catch (e) {
+        mapError(e);
+      }
+    },
+
+    async inflight(actorId, now = new Date()) {
+      const { rows } = await pool.query("select * from coordinator_inflight($1, $2)", [actorId, now]);
+      return rows.map((r) => ({ requestId: r.request_id, status: r.status, createdAt: r.created_at.toISOString(), category: r.category, reviewerId: r.reviewer_id, reviewerAuthorized: r.reviewer_authorized }));
     },
   };
 }

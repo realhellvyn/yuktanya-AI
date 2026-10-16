@@ -11,7 +11,7 @@ export type OrderView = {
 };
 
 export class BillingError extends Error {
-  constructor(readonly code: "NOT_FOUND" | "ALREADY_REVIEWED" | "PRODUCT_UNAVAILABLE" | "ORDER_NOT_PAYABLE" | "INVALID_KIND" | "FORBIDDEN" | "PROVIDER_UNAVAILABLE") {
+  constructor(readonly code: "NOTE_REQUIRED" | "NOT_RECONCILIATION" | "AMOUNT_MISMATCH" | "CONFLICT" | "INVALID_ACTION" | "NOT_FOUND" | "ALREADY_REVIEWED" | "PRODUCT_UNAVAILABLE" | "ORDER_NOT_PAYABLE" | "INVALID_KIND" | "FORBIDDEN" | "PROVIDER_UNAVAILABLE") {
     super(code);
     this.name = "BillingError";
   }
@@ -31,8 +31,9 @@ export interface BillingService {
   listOrders(userId: string): Promise<OrderView[]>;
   // Hanya non-produksi: mensimulasikan webhook gateway untuk pembayaran milik pengguna.
   mockSettle(userId: string, paymentId: string, now?: Date): Promise<string>;
-  confirmManual(adminId: string, paymentId: string, bankRef: string, amountIdr: number, now?: Date): Promise<string>;
-  pendingManualPayments(): Promise<{ paymentId: string; orderId: string; amountIdr: number; createdAt: string }[]>;
+  confirmManual(adminId: string, paymentId: string, bankRef: string, amountIdr: number, receivedAt?: Date | null, now?: Date): Promise<string>;
+  resolveReconciliation(adminId: string, orderId: string, action: "ACTIVATE" | "REFUND_RECORDED" | "CLOSE", note: string, now?: Date): Promise<string>;
+  pendingManualPayments(): Promise<{ paymentId: string; orderId: string; kind: string; amountIdr: number; createdAt: string }[]>;
   reconciliation(): Promise<{ orderId: string; paymentId: string | null; status: string; amountIdr: number; createdAt: string }[]>;
 }
 
@@ -99,19 +100,30 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
       const r = await pool.query("select settle_payment('mock', $1, $2, $3, 0, $4) as r", [rows[0].provider_ref, `mock:${paymentId}`, rows[0].amount_idr, now]);
       return r.rows[0].r;
     },
-    async confirmManual(adminId, paymentId, bankRef, amountIdr, now = new Date()) {
+    async confirmManual(adminId, paymentId, bankRef, amountIdr, receivedAt = null, now = new Date()) {
       try {
-        const { rows } = await pool.query("select confirm_manual_payment($1, $2, $3, $4, $5) as r", [adminId, paymentId, bankRef, amountIdr, now]);
+        const { rows } = await pool.query("select confirm_manual_payment($1, $2, $3, $4, $5, $6) as r", [adminId, paymentId, bankRef, amountIdr, now, receivedAt]);
         return rows[0].r;
       } catch (e) {
         return mapError(e);
       }
     },
+
+    async resolveReconciliation(adminId, orderId, action, note, now = new Date()) {
+      try {
+        const { rows } = await pool.query("select admin_resolve_reconciliation($1, $2, $3, $4, $5) as r", [adminId, orderId, action, note, now]);
+        return rows[0].r;
+      } catch (e) {
+        const m = e instanceof Error ? e.message : "";
+        for (const c of ["NOTE_REQUIRED", "NOT_RECONCILIATION", "AMOUNT_MISMATCH", "CONFLICT", "INVALID_ACTION"] as const) if (m.includes(c)) throw new BillingError(c);
+        return mapError(e);
+      }
+    },
     async pendingManualPayments() {
       const { rows } = await pool.query(
-        "select p.id, p.order_id, p.amount_idr, p.created_at from payments p join orders o on o.id = p.order_id where p.provider = 'manual' and p.status = 'PENDING' and o.status = 'PENDING_PAYMENT' order by p.created_at",
+        "select p.id, p.order_id, o.kind, p.amount_idr, p.created_at from payments p join orders o on o.id = p.order_id where p.provider = 'manual' and p.status = 'PENDING' and o.status = 'PENDING_PAYMENT' order by p.created_at",
       );
-      return rows.map((r) => ({ paymentId: r.id, orderId: r.order_id, amountIdr: r.amount_idr, createdAt: r.created_at.toISOString() }));
+      return rows.map((r) => ({ paymentId: r.id, orderId: r.order_id, kind: r.kind, amountIdr: r.amount_idr, createdAt: r.created_at.toISOString() }));
     },
     async reconciliation() {
       const { rows } = await pool.query(

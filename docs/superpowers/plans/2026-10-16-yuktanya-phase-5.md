@@ -32,13 +32,13 @@
 ## Tasks
 
 ### Task 1: Metrik admin (DB)
-**Files:** Create `supabase/migrations/20261016000024_admin_metrics.sql`, `tests/db/admin-metrics.test.ts`.
+**Files:** Create `supabase/migrations/20261016000025_admin_metrics.sql`, `tests/db/admin-metrics.test.ts`.
 **Interfaces:** Produces `admin_overview(p_admin uuid, p_from timestamptz, p_to timestamptz) returns jsonb` dengan kunci: `users {registered, new, activated}`, `ai {requests, succeeded, failed, p50_ms, p95_ms}`, `documents {started, versions}`, `funnel {registered, ai_used, doc_started, version_created, review_requested, review_paid, review_completed}`, `reviews {backlog_by_age {lt_24h, d1_3, gt_3d}, unassigned, sla_median_hours, sla_p95_hours, completed}`, `revenue {collected_by_kind {...}, refunds, net, fees, memberships_active}`, `incidents {reconciliation, failed_outbox, ai_failures}`; nilai tanpa data = `null`. `admin_find_user(p_admin, p_email) returns uuid`.
 - [ ] Tes gagal dulu: non-admin → `FORBIDDEN`; basis data dengan order PAID tanpa pembayaran `VERIFIED` tidak menambah pendapatan; DISPUTED/REFUNDED tidak dihitung/ dikurangi; pembagian jenis menjumlah ke total; rentang WIB (batas tengah malam); funnel menghitung pengguna unik; tidak ada data → `null` bukan 0; hasil tidak memuat teks dokumen.
 - [ ] Implement, hijaukan, commit.
 
 ### Task 2: Rekonsiliasi dan manajemen mitra (DB)
-**Files:** Create `supabase/migrations/20261016000025_admin_ops.sql`, `tests/db/admin-ops.test.ts`.
+**Files:** Create `supabase/migrations/20261016000026_admin_ops.sql`, `tests/db/admin-ops.test.ts`.
 **Interfaces:** Produces `admin_resolve_reconciliation(p_admin uuid, p_order uuid, p_action text, p_note text, p_now timestamptz) returns text` (`ACTIVATED|REFUND_RECORDED|CLOSED`; hanya order `RECONCILIATION_REQUIRED`; catatan min 5 karakter; diaudit); `admin_list_partners(p_admin uuid)` mengembalikan firma, anggota (id, peran), otorisasi (aktif/kedaluwarsa/dicabut).
 - [ ] Tes gagal dulu sesuai Review Focus 3, non-admin `FORBIDDEN`, audit tercatat, `ACTIVATE` pada order deep yang induknya dicabut ditolak.
 - [ ] Implement, hijaukan, commit.

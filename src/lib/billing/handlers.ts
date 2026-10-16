@@ -31,6 +31,8 @@ function mapError(e: unknown): Response {
       case "ALREADY_REVIEWED": return json({ code: "ALREADY_REVIEWED" }, 409);
       case "PRODUCT_UNAVAILABLE": return json({ code: "PRODUCT_UNAVAILABLE" }, 409);
       case "ORDER_NOT_PAYABLE": return json({ code: "ORDER_NOT_PAYABLE" }, 409);
+      case "NOTE_REQUIRED": case "INVALID_ACTION": return invalid();
+      case "NOT_RECONCILIATION": case "AMOUNT_MISMATCH": case "CONFLICT": return json({ code: e.code }, 409);
       default: return invalid();
     }
   }
@@ -89,7 +91,7 @@ export const mockSettleHandler = userGuard(["id"], async (userId, deps, _req, p)
   return json({ result });
 });
 
-const confirmBody = z.object({ bankRef: z.string().trim().min(3).max(64), amountIdr: z.number().int().positive() });
+const confirmBody = z.object({ bankRef: z.string().trim().min(3).max(64), amountIdr: z.number().int().positive(), receivedAt: z.string().datetime().optional() });
 export const confirmManualHandler: Handler = async (deps, req, params = {}) => {
   let adminId: string | null;
   try {
@@ -103,7 +105,27 @@ export const confirmManualHandler: Handler = async (deps, req, params = {}) => {
   const body = confirmBody.safeParse(await readJson(req));
   if (!body.success) return invalid();
   try {
-    return json({ result: await deps.service.confirmManual(adminId, params.id, body.data.bankRef, body.data.amountIdr, deps.now?.()) });
+    return json({ result: await deps.service.confirmManual(adminId, params.id, body.data.bankRef, body.data.amountIdr, body.data.receivedAt ? new Date(body.data.receivedAt) : null, deps.now?.()) });
+  } catch (e) {
+    return mapError(e);
+  }
+};
+
+const resolveBody = z.object({ action: z.enum(["ACTIVATE", "REFUND_RECORDED", "CLOSE"]), note: z.string().trim().min(5).max(300) });
+export const resolveReconciliationHandler: Handler = async (deps, req, params = {}) => {
+  let adminId: string | null;
+  try {
+    adminId = await deps.getAdminId();
+  } catch (e) {
+    if (e instanceof ForbiddenError) return json({ code: "FORBIDDEN" }, 403);
+    throw e;
+  }
+  if (!adminId) return json({ code: "AUTH_REQUIRED" }, 401);
+  if (!UUID.test(params.id ?? "")) return notFound();
+  const body = resolveBody.safeParse(await readJson(req));
+  if (!body.success) return invalid();
+  try {
+    return json({ result: await deps.service.resolveReconciliation(adminId, params.id, body.data.action, body.data.note, deps.now?.()) });
   } catch (e) {
     return mapError(e);
   }

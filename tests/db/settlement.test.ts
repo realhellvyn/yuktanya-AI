@@ -141,4 +141,80 @@ describe("settlement", () => {
     await expect(asUser(pool, u, (c) => c.query("select * from payments"))).rejects.toThrow(/permission denied/);
     await expect(asUser(pool, u, (c) => c.query("select * from payment_events"))).rejects.toThrow(/permission denied/);
   });
+
+  it("review: order kedaluwarsa → pesan ulang → pembayaran order lama datang terlambat tidak melempar dan tercatat sebagai rekonsiliasi", async () => {
+    await pool.query("update firms set is_default = false");
+    const u = await createUser(pool);
+    const v = await kit.frozen(u);
+    const a = await kit.order(u, "STANDARD_REVIEW", v.versionId);
+    const pa = await kit.pay(u, a.order_id);
+    const later = at(25 * 60);
+    const b = await kit.order(u, "STANDARD_REVIEW", v.versionId, later);
+    expect(b.order_id).not.toBe(a.order_id);
+    expect(await kit.settle("mock", pa.ref, a.amount_idr, later)).toBe("RECONCILIATION_REQUIRED");
+    expect((await row("orders", a.order_id)).status).toBe("RECONCILIATION_REQUIRED");
+    expect((await row("payments", pa.paymentId)).status).toBe("DISPUTED");
+    expect((await pool.query("select count(*) from review_requests where version_id = $1", [v.versionId])).rows[0].count).toBe("0");
+  });
+
+  it("AMOUNT_MISMATCH pada order Member pertama melepas diskon yang dipesan", async () => {
+    const u = await kit.member();
+    const v = await kit.frozen(u);
+    const o = await kit.order(u, "STANDARD_REVIEW", v.versionId);
+    const p = await kit.pay(u, o.order_id);
+    expect(await kit.settle("mock", p.ref, 1)).toBe("AMOUNT_MISMATCH");
+    expect((await pool.query("select status from review_discount_entitlements where order_id = $1", [o.order_id])).rows[0].status).toBe("RELEASED");
+    const v2 = await kit.frozen(u);
+    expect((await kit.order(u, "STANDARD_REVIEW", v2.versionId)).amount_idr).toBe(30000);
+  });
+
+  it("transfer manual dinilai dari waktu dana diterima, bukan waktu admin menekan konfirmasi", async () => {
+    const u = await createUser(pool);
+    const o = await kit.order(u, "MEMBERSHIP_MONTHLY", null);
+    const p = await kit.pay(u, o.order_id, "manual");
+    const admin = await kit.admin();
+    const monday = at(3 * 24 * 60);
+    const r = await pool.query("select confirm_manual_payment($1, $2, 'BANK-9', 19000, $3, $4) as r", [admin, p.paymentId, monday, at(60)]);
+    expect(r.rows[0].r).toBe("SETTLED");
+    expect(await ent(u, monday)).toBe("MEMBER");
+    const o2 = await kit.order(u, "MEMBERSHIP_MONTHLY", null, at(10 * 24 * 60));
+    const p2 = await kit.pay(u, o2.order_id, "manual", at(10 * 24 * 60));
+    const late = (await pool.query("select confirm_manual_payment($1, $2, 'BANK-10', 19000, $3, $4) as r", [admin, p2.paymentId, at(12 * 24 * 60), at(12 * 24 * 60)])).rows[0].r;
+    expect(late).toBe("RECONCILIATION_REQUIRED");
+  });
+
+  it("admin_resolve_reconciliation: ACTIVATE hanya bila masih valid, REFUND_RECORDED melepas dan tidak dapat dua kali, non-admin FORBIDDEN, tercatat di audit", async () => {
+    const admin = await kit.admin();
+    const u = await createUser(pool);
+    const o = await kit.order(u, "MEMBERSHIP_MONTHLY", null);
+    const p = await kit.pay(u, o.order_id);
+    await kit.settle("mock", p.ref, 19000, at(25 * 60));
+    expect((await row("orders", o.order_id)).status).toBe("RECONCILIATION_REQUIRED");
+    await expect(pool.query("select admin_resolve_reconciliation($1, $2, 'ACTIVATE', 'cek bank ok', $3)", [u, o.order_id, at(26 * 60)])).rejects.toThrow(/FORBIDDEN/);
+    await expect(pool.query("select admin_resolve_reconciliation($1, $2, 'ACTIVATE', 'x', $3)", [admin, o.order_id, at(26 * 60)])).rejects.toThrow(/NOTE_REQUIRED/);
+    expect((await pool.query("select admin_resolve_reconciliation($1, $2, 'ACTIVATE', 'dana terbukti diterima', $3) as r", [admin, o.order_id, at(26 * 60)])).rows[0].r).toBe("ACTIVATED");
+    expect(await ent(u, at(26 * 60))).toBe("MEMBER");
+    await expect(pool.query("select admin_resolve_reconciliation($1, $2, 'ACTIVATE', 'sekali lagi ok', $3)", [admin, o.order_id, at(27 * 60)])).rejects.toThrow(/NOT_RECONCILIATION/);
+
+    const u2 = await createUser(pool);
+    const o2 = await kit.order(u2, "MEMBERSHIP_MONTHLY", null);
+    const p2 = await kit.pay(u2, o2.order_id);
+    await kit.settle("mock", p2.ref, 5);
+    expect((await pool.query("select admin_resolve_reconciliation($1, $2, 'REFUND_RECORDED', 'dikembalikan via bank', $3) as r", [admin, o2.order_id, NOW])).rows[0].r).toBe("REFUND_RECORDED");
+    expect((await row("payments", p2.paymentId)).status).toBe("REFUNDED");
+    expect((await row("orders", o2.order_id)).status).toBe("CANCELLED");
+    expect((await pool.query("select count(*) from audit_events where event_type = 'reconciliation_resolved' and actor_id = $1", [admin])).rows[0].count).toBe("2");
+  });
+
+  it("periode tahunan dihitung dari awal tanpa menyusut (mulai tanggal 31)", async () => {
+    const admin = await kit.admin();
+    await pool.query("select set_price($1, 'MEMBERSHIP_ANNUAL', 'DEFAULT', 190000, null, null)", [admin]);
+    const u = await createUser(pool);
+    const start = new Date("2026-01-31T05:00:00Z");
+    const o = await kit.order(u, "MEMBERSHIP_ANNUAL", null, start);
+    const p = await kit.pay(u, o.order_id, "mock", start);
+    await kit.settle("mock", p.ref, o.amount_idr, start);
+    const ms = (await pool.query("select period_end from memberships where user_id = $1 order by period_start", [u])).rows;
+    expect(ms[11].period_end.toISOString()).toBe("2027-01-31T05:00:00.000Z");
+  });
 });

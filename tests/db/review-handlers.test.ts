@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import type { Role } from "@/lib/auth/permissions";
-import { assignHandler, deleteNoteHandler, getOwnerReviewHandler, listOwnerReviewsHandler, openReviewHandler, publishHandler, reviewerQueueHandler, saveDraftHandler, unassignedHandler, upsertNoteHandler, type ReviewDeps } from "@/lib/reviews/handlers";
+import { reassignHandler, assignHandler, deleteNoteHandler, getOwnerReviewHandler, listOwnerReviewsHandler, openReviewHandler, publishHandler, reviewerQueueHandler, saveDraftHandler, unassignedHandler, upsertNoteHandler, type ReviewDeps } from "@/lib/reviews/handlers";
 import { createPgReviewService } from "@/lib/reviews/service";
 import { createUser, getPool } from "./helpers";
 import { makeKit, NOW } from "./phase3-helpers";
@@ -112,5 +112,18 @@ describe("handler review", () => {
     const outsider = await createUser(pool);
     const r = await assignHandler(as(c.f.coordinator, ["partner_admin"]), req({ reviewerId: outsider }), { id: c.rid });
     expect([r.status, (await r.json()).code]).toEqual([403, "REVIEWER_NOT_AUTHORIZED"]);
+  });
+
+  it("reassign: koordinator memindahkan pekerjaan tertahan; unassigned memuat inflight; pengguna biasa 403", async () => {
+    const c = await setup();
+    const other = await c.f.addReviewer();
+    const coord = as(c.f.coordinator, ["partner_admin"]);
+    await assignHandler(coord, req({ reviewerId: c.reviewer }), { id: c.rid });
+    const view = await (await unassignedHandler(coord, req())).json();
+    expect(view.inflight.map((x: { requestId: string }) => x.requestId)).toContain(c.rid);
+    expect((await reassignHandler(as(c.owner, ["user"]), req({ reviewerId: other.reviewer }), { id: c.rid })).status).toBe(403);
+    expect((await reassignHandler(coord, req({ reviewerId: other.reviewer }), { id: c.rid })).status).toBe(200);
+    expect((await (await reviewerQueueHandler(as(other.reviewer, ["reviewer"]), req())).json()).queue).toHaveLength(1);
+    expect((await (await reviewerQueueHandler(as(c.reviewer, ["reviewer"]), req())).json()).queue).toHaveLength(0);
   });
 });

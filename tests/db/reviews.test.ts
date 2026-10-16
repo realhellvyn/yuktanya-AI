@@ -126,4 +126,34 @@ describe("fungsi admin dan akses klien", () => {
       await expect(asUser(pool, u, (c) => c.query(`select * from ${t}`))).rejects.toThrow(/permission denied/);
     }
   });
+
+  it("admin tidak dapat memberi dirinya anggota, otorisasi, atau menugaskan dirinya sebagai reviewer", async () => {
+    await pool.query("update firms set is_default = false");
+    const f = await kit.firm({ isDefault: true });
+    await expect(pool.query("select admin_add_member($1, $2, $1, 'reviewer')", [f.admin, f.firmId])).rejects.toThrow(/SELF_GRANT/);
+    await expect(pool.query("select admin_authorize($1, $1, $2, 's', '2026-01-01', '2027-12-31')", [f.admin, f.firmId])).rejects.toThrow(/SELF_GRANT/);
+    const second = await kit.admin();
+    await pool.query("select admin_add_member($1, $2, $3, 'reviewer')", [f.admin, f.firmId, second]);
+    await pool.query("select admin_authorize($1, $2, $3, 's', '2026-01-01', '2027-12-31')", [f.admin, second, f.firmId]);
+    expect((await pool.query("select reviewer_has_authority($1, $2, $3) as ok", [second, f.firmId, NOW])).rows[0].ok).toBe(false);
+    const { r } = await paidRequest();
+    await expect(assign(f.coordinator, r.id, second)).rejects.toThrow(/REVIEWER_NOT_AUTHORIZED/);
+  });
+
+  it("coordinator_inflight menampilkan permintaan yang tertahan karena otorisasi reviewer berakhir, dan reassign memindahkannya", async () => {
+    await pool.query("update firms set is_default = false");
+    const f = await kit.firm({ isDefault: true });
+    const a = await f.addReviewer();
+    const b = await f.addReviewer();
+    const { r } = await paidRequest();
+    await assign(f.coordinator, r.id, a.reviewer);
+    await pool.query("select admin_revoke_authorization($1, $2, $3)", [f.admin, a.authId, NOW]);
+    const rows = (await pool.query("select * from coordinator_inflight($1, $2)", [f.coordinator, NOW])).rows;
+    const mine = rows.find((x) => x.request_id === r.id);
+    expect(mine.reviewer_id).toBe(a.reviewer);
+    expect(mine.reviewer_authorized).toBe(false);
+    expect((await pool.query("select * from coordinator_inflight($1, $2)", [(await createUser(pool)), NOW])).rows).toEqual([]);
+    await reassign(f.coordinator, r.id, b.reviewer);
+    expect((await pool.query("select * from reviewer_queue($1)", [b.reviewer])).rows).toHaveLength(1);
+  });
 });

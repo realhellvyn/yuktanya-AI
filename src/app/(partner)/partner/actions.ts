@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { afterPublishPath } from "@/lib/reviews/paths";
 import { reviewService } from "@/lib/reviews/runtime";
 import { ReviewError } from "@/lib/reviews/service";
 import { getSessionRoles } from "@/lib/supabase/server";
@@ -62,13 +63,30 @@ export async function deleteNoteAction(formData: FormData): Promise<void> {
 export async function publishAction(formData: FormData): Promise<void> {
   const s = await actor();
   const id = str(formData, "requestId");
-  await run(id, async () => {
-    const r = await reviewService().publish(s.userId, id, {
+  let status: string;
+  try {
+    status = (await reviewService().publish(s.userId, id, {
       revision: num(formData, "revision"), outcome: str(formData, "outcome") as "WITH_NOTES",
       noNotesDeclared: formData.get("noNotesDeclared") === "yes", attest: formData.get("attest") === "yes",
-    });
-    return `done=${r.status}`;
-  });
+    })).status;
+  } catch (e) {
+    if (e instanceof ReviewError) redirect(page(id, `?e=${e.code}${e.reason ? `&r=${e.reason}` : ""}`));
+    throw e;
+  }
+  redirect(afterPublishPath(status));
+}
+
+export async function reassignAction(formData: FormData): Promise<void> {
+  const s = await actor();
+  const id = str(formData, "requestId");
+  const back = s.roles.includes("platform_admin") ? "/admin/routing" : "/partner";
+  try {
+    await reviewService().reassign(s.userId, id, str(formData, "reviewerId"));
+  } catch (e) {
+    if (e instanceof ReviewError) redirect(`${back}?e=${e.code}`);
+    throw e;
+  }
+  redirect(`${back}?ok=assigned`);
 }
 
 export async function assignAction(formData: FormData): Promise<void> {
@@ -77,8 +95,8 @@ export async function assignAction(formData: FormData): Promise<void> {
   try {
     await reviewService().assign(s.userId, id, str(formData, "reviewerId"));
   } catch (e) {
-    if (e instanceof ReviewError) redirect(`/partner?e=${e.code}`);
+    if (e instanceof ReviewError) redirect(`${s.roles.includes("platform_admin") ? "/admin/routing" : "/partner"}?e=${e.code}`);
     throw e;
   }
-  redirect("/partner?ok=assigned");
+  redirect(`${s.roles.includes("platform_admin") ? "/admin/routing" : "/partner"}?ok=assigned`);
 }

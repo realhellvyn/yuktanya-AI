@@ -100,11 +100,20 @@ export const publishHandler = guarded("reviewer", ["id"], async (a, d, req, p) =
 });
 
 // ---- koordinator ----
-export const unassignedHandler = guarded("coordinator", [], async (a, d) => json({ requests: await d.service.unassigned(a.userId), reviewers: await d.service.reviewers(a.userId) }));
+export const unassignedHandler = guarded("coordinator", [], async (a, d) => json({
+  requests: await d.service.unassigned(a.userId), reviewers: await d.service.reviewers(a.userId), inflight: await d.service.inflight(a.userId, d.now?.()),
+}));
 const assignBody = z.object({ reviewerId: z.string().regex(UUID) });
 export const assignHandler = guarded("coordinator", ["id"], async (a, d, req, p) => {
   const b = assignBody.safeParse(await readJson(req));
   if (!b.success) return invalid();
   await d.service.assign(a.userId, p.id, b.data.reviewerId, d.now?.());
+  return json({ ok: true });
+});
+
+export const reassignHandler = guarded("coordinator", ["id"], async (a, d, req, p) => {
+  const b = assignBody.safeParse(await readJson(req));
+  if (!b.success) return invalid();
+  await d.service.reassign(a.userId, p.id, b.data.reviewerId, d.now?.());
   return json({ ok: true });
 });
