@@ -8,3 +8,5 @@ coverage/
 dist/
 
 *.tsbuildinfo
+
+.data/
