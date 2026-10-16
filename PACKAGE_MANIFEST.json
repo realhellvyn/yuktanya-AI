@@ -154,8 +154,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "d9d05a69a15dad97ee9f141d3ee467d136796bc4d46d423757cb72ff73679ba8",
-      "bytes": 5088
+      "sha256": "aa813422608c1504633babc399808036d13e314d3b6853079f83a8d3ebfa37f7",
+      "bytes": 6610
     },
     {
       "path": "scripts/validate_package.py",

@@ -74,3 +74,21 @@ Di produksi template hanya dipakai bila baris `document_templates` berstatus `AP
 
 ## Vault aktif (Fase 2b)
 Fitur berbagi, pengingat, dan paket bukti dikunci per plan lewat `feature_plan_map` (usulan awal: hanya Member; dapat diubah platform admin di `/admin/features`). Link berbagi memakai token acak yang hanya disimpan sebagai hash; pihak lawan membaca di `/s/[token]` tanpa akun dan dapat memberi konfirmasi baca lewat kode email (bukan tanda tangan elektronik). Email dikirim lewat outbox; pengirim nyata belum dipilih (mock saja), dan penjadwal memanggil `POST /api/jobs/outbox` dengan `CRON_SECRET`.
+
+## Hardening Fase 2b
+Klaim outbox bertoken (pekerja basi tidak bisa menimpa), kode konfirmasi kedaluwarsa dibatalkan bukan dikirim terlambat, batas tebakan kode (10 per tautan+email, 20 per email per 24 jam) dan permintaan kode (10 per jam per email), maksimal 20 tautan aktif per versi, pembuatan pengingat dan paket bukti diserialkan, pembatas percobaan AI (chat 40 dan bantuan isian 6 per 10 menit; angka rekayasa, bukan keputusan produk), serta grounding bantuan AI dengan batas kata Unicode dan pencocokan tanggal persis.
+
+## Status implementasi (16 Oktober 2026)
+Hanya data sintetis. Tidak ada deploy, pembayaran nyata, atau email nyata.
+
+| Fase | Isi | Status |
+|---|---|---|
+| 0 | Fondasi, katalog harga v8, peran, atribusi | Selesai, teruji |
+| 1 | Auth, kuota atomik harian WIB, chat AI (mock gateway), AI review | Selesai, teruji |
+| 2 | Wizard dokumen (PKS, Utang Piutang, NDA), versi immutable + SHA-256, ekspor DOCX/PDF | Selesai, teruji |
+| 2b | Vault: link berbagi, konfirmasi baca, pengingat, paket bukti, bantuan AI terpandu, hardening | Selesai, teruji |
+| 3 | Billing, Standard Review, Legal Verified, QR | Rencana tertulis, belum dibangun |
+| 4 | Deep Review dan Enhanced | Belum (flag produksi default OFF) |
+| 5 | Analitik admin, ops, smoke rilis | Belum |
+
+Flag produksi `AI_PREREVIEW_ENABLED`, `DEEP_REVIEW_PURCHASE`, `ENHANCED_ISSUANCE` default OFF. Rencana dan spesifikasi ada di `docs/superpowers/` (specs/ dan plans/). Blocker produksi (persetujuan template, kriteria hukum, privasi, hosting, refund) tetap berlaku dan tidak diselesaikan oleh kode.
