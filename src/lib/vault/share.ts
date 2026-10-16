@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
 import type { Pool } from "pg";
 import { parseCanonical, type RenderedDoc } from "@/lib/documents/render";
 import { NotFoundError } from "@/lib/documents/service";
@@ -27,11 +27,31 @@ export function mapShareError(e: unknown): never {
   throw e;
 }
 
+export type AckRequestResult = "SENT" | "RATE_LIMITED" | "NOT_FOUND";
+export type AckVerifyResult = "VERIFIED" | "INVALID" | "EXPIRED" | "LOCKED" | "NOT_FOUND";
+export type AckRow = { shareId: string; email: string; verifiedAt: string };
+
+export class InvalidEmailError extends Error {
+  constructor() {
+    super("Alamat email tidak valid");
+    this.name = "InvalidEmailError";
+  }
+}
+
+const normalizeEmail = (raw: string): string => {
+  const e = raw.trim().toLowerCase();
+  if (e.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) throw new InvalidEmailError();
+  return e;
+};
+
 export interface ShareService {
   create(userId: string, versionId: string, ttlSeconds: number, now?: Date): Promise<{ shareId: string; token: string }>;
   list(userId: string, versionId: string): Promise<ShareRow[]>;
   revoke(userId: string, shareId: string, now?: Date): Promise<void>;
   resolve(token: string, now?: Date): Promise<ShareView>;
+  requestAck(token: string, email: string, now?: Date): Promise<AckRequestResult>;
+  verifyAck(token: string, email: string, code: string, now?: Date): Promise<AckVerifyResult>;
+  acknowledgements(userId: string, versionId: string): Promise<AckRow[]>;
 }
 
 export function createPgShareService(pool: Pool): ShareService {
@@ -69,6 +89,27 @@ export function createPgShareService(pool: Pool): ShareService {
       const r = rows[0];
       if (r.status !== "OK") return { status: r.status };
       return { status: "OK", versionNo: r.version_no, sha256: r.sha256, title: r.title, doc: parseCanonical(r.canonical_text), hasNewer: r.has_newer };
+    },
+
+    async requestAck(token, email, now = new Date()) {
+      const to = normalizeEmail(email);
+      if (!TOKEN.test(token)) return "NOT_FOUND";
+      const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+      const { rows } = await pool.query("select request_ack($1, $2, $3, $4) as r", [hashToken(token), to, code, now]);
+      return rows[0].r as AckRequestResult;
+    },
+
+    async verifyAck(token, email, code, now = new Date()) {
+      const to = normalizeEmail(email);
+      if (!TOKEN.test(token)) return "NOT_FOUND";
+      if (!/^\d{6}$/.test(code)) return "INVALID";
+      const { rows } = await pool.query("select verify_ack($1, $2, $3, $4) as r", [hashToken(token), to, code, now]);
+      return rows[0].r as AckVerifyResult;
+    },
+
+    async acknowledgements(userId, versionId) {
+      const { rows } = await pool.query("select * from list_acknowledgements($1, $2)", [userId, versionId]);
+      return rows.map((r) => ({ shareId: r.share_id, email: r.email, verifiedAt: r.verified_at.toISOString() }));
     },
   };
 }
