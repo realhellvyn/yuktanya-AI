@@ -69,7 +69,7 @@ export function makeKit(pool: Pool) {
         const extra = { title: "Klausul sengketa", finding: "Berisiko", severity: "CRITICAL", actionable: false, recommended_action: "Tinjau", rationale: "Risiko besar", escalation: "Konsultasi lanjutan" };
         rev = (await pool.query("select * from upsert_note($1, $2, $3, $4, $5)", [r.reviewer, req, rev, JSON.stringify(extra), NOW])).rows[0].revision as number;
       }
-      const pub = (await pool.query("select * from publish_standard($1, $2, $3, $4, $5, true, $6)", [r.reviewer, req, rev, opts.noNotes ? "WITHIN_SCOPE" : "WITH_NOTES", !!opts.noNotes, NOW])).rows[0] as { verification_id: string; code: string };
+      const pub = (await pool.query("select * from publish_standard($1, $2, $3, $4, $5, true, true, $6)", [r.reviewer, req, rev, opts.noNotes ? "WITHIN_SCOPE" : "WITH_NOTES", !!opts.noNotes, NOW])).rows[0] as { verification_id: string; code: string };
       return { f, r, owner, v, req, verificationId: pub.verification_id, code: pub.code };
     },
     // Firma bawaan + koordinator + reviewer berotorisasi.

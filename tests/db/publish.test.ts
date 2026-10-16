@@ -24,7 +24,7 @@ const draft = async (c: Ctx, rev: number, scope = "Klausul kerahasiaan dan jangk
 const note = async (c: Ctx, rev: number, over: object = {}) =>
   (await pool.query("select * from upsert_note($1, $2, $3, $4, $5)", [c.reviewer, c.req, rev, JSON.stringify({ title: "Jangka waktu", finding: "Tidak jelas", severity: "MINOR", actionable: true, recommended_action: "Perjelas", ...over }), NOW])).rows[0] as { revision: number; note_no: number };
 const publish = (c: Ctx, rev: number, outcome: string, opts: { noNotes?: boolean; attest?: boolean; who?: string } = {}) =>
-  pool.query("select * from publish_standard($1, $2, $3, $4, $5, $6, $7)", [opts.who ?? c.reviewer, c.req, rev, outcome, opts.noNotes ?? false, opts.attest ?? true, NOW]);
+  pool.query("select * from publish_standard($1, $2, $3, $4, $5, $6, true, $7)", [opts.who ?? c.reviewer, c.req, rev, outcome, opts.noNotes ?? false, opts.attest ?? true, NOW]);
 const reqRow = async (c: Ctx) => (await pool.query("select * from review_requests where id = $1", [c.req])).rows[0];
 const verifCount = async (c: Ctx) => Number((await pool.query("select count(*) from document_verifications where request_id = $1", [c.req])).rows[0].count);
 

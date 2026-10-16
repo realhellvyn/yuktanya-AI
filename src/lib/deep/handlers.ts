@@ -32,7 +32,8 @@ function mapError(e: unknown): Response {
       case "FORBIDDEN": case "NOT_FOUND": return notFound();
       case "REVIEWER_NOT_AUTHORIZED": return json({ code: "REVIEWER_NOT_AUTHORIZED" }, 403);
       case "REVIEWER_AT_CAPACITY": case "NOT_ASSIGNABLE": case "STALE_REVISION": case "VERSION_MISMATCH": return json({ code: e.code }, 409);
-      case "ATTESTATION_REQUIRED": return json({ code: "ATTESTATION_REQUIRED" }, 422);
+      case "ATTESTATION_REQUIRED": case "CONFLICT_ATTESTATION_REQUIRED": return json({ code: e.code }, 422);
+      case "CONFLICT_OF_INTEREST": case "ENHANCED_DISABLED": return json({ code: e.code }, 409);
       case "VALIDATION_FAILED": return json({ code: "VALIDATION_FAILED", reason: e.reason }, 422);
     }
   }
@@ -98,14 +99,18 @@ export const setChecklistHandler = guarded("reviewer", ["id"], async (a, d, req,
 
 const decideBody = z.object({
   revision: z.number().int().min(0), decision: z.enum(["APPROVE", "DENY", "INCONCLUSIVE", "REFER_SPECIAL"]),
-  reason: z.string().max(2000).nullish(), attest: z.boolean().default(false),
+  reason: z.string().max(2000).nullish(), attest: z.boolean().default(false), noConflict: z.boolean().default(false),
 });
 export const decideHandler = guarded("reviewer", ["id"], async (a, d, req, p) => {
   const b = decideBody.safeParse(await readJson(req));
   if (!b.success) return invalid();
-  // Flag Enhanced mati: APPROVE ditolak sebelum menyentuh DB. Keputusan lain tetap boleh.
+  // Flag Enhanced mati: APPROVE ditolak sebelum menyentuh DB. Keputusan lain tetap boleh. Nilai flag juga dikirim ke
+  // decide_deep sehingga database menolak APPROVE walau pemeriksaan ini terlewati.
   if (b.data.decision === "APPROVE" && !d.flags.enhancedIssuance) return json({ code: "ENHANCED_DISABLED" }, 409);
-  return json(await d.service.decide(a.userId, p.id, b.data.revision, b.data.decision, b.data.reason ?? null, b.data.attest, d.now?.()));
+  return json(await d.service.decide(a.userId, p.id, {
+    revision: b.data.revision, decision: b.data.decision, reason: b.data.reason ?? null, attest: b.data.attest, noConflict: b.data.noConflict,
+    enhancedEnabled: d.flags.enhancedIssuance,
+  }, d.now?.()));
 });
 
 // ---- koordinator ----

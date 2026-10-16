@@ -32,7 +32,7 @@ async function prepare(o: { extraNote?: boolean; skipExtra?: boolean; skipCheckl
     await bump("select set_checklist($1, $2, $3, $4, $5, $6, $7, $8) as r", [item, result, "Penalaran " + item, item === o.noEvidenceItem ? "" : "Bukti " + item]);
   }
   const decide = (decision: string, over: { attest?: boolean; reason?: string; who?: string; revision?: number } = {}) =>
-    pool.query("select * from decide_deep($1, $2, $3, $4, $5, $6, $7)", [over.who ?? rv, deep.id, over.revision ?? rev, decision, over.reason ?? null, over.attest ?? true, NOW]);
+    pool.query("select * from decide_deep($1, $2, $3, $4, $5, $6, true, true, $7)", [over.who ?? rv, deep.id, over.revision ?? rev, decision, over.reason ?? null, over.attest ?? true, NOW]);
   const enhancedCount = async () => Number((await pool.query("select count(*) from document_verifications where kind = 'LEGAL_ENHANCED' and request_id = $1", [c.req])).rows[0].count);
   return { c, b, deep, rv, rev, decide, enhancedCount };
 }
@@ -166,7 +166,7 @@ describe("akses", () => {
     expect(after.verification_code).toHaveLength(48);
     expect((await pool.query("select * from get_deep_for_owner($1, $2)", [await createUser(pool), s.deep.id])).rows).toHaveLength(0);
     await expect(pool.query("select admin_approve_rubric($1, 'x', 'ref', $2)", [s.c.owner, NOW])).rejects.toThrow(/FORBIDDEN/);
-    await expect(asUser(pool, s.c.owner, (c) => c.query("select * from decide_deep($1, $2, 0, 'APPROVE', null, true, now())", [s.c.owner, s.deep.id]))).rejects.toThrow(/permission denied/);
+    await expect(asUser(pool, s.c.owner, (c) => c.query("select * from decide_deep($1, $2, 0, 'APPROVE', null, true, true, true, now())", [s.c.owner, s.deep.id]))).rejects.toThrow(/permission denied/);
     await expect(asUser(pool, s.c.owner, (c) => c.query("select * from deep_reports"))).rejects.toThrow(/permission denied/);
   });
 });
@@ -178,7 +178,7 @@ describe("balapan keputusan vs pencabutan induk", () => {
     const c2 = await pool.connect();
     try {
       await c1.query("begin");
-      await c1.query("select * from decide_deep($1, $2, $3, 'APPROVE', null, true, $4)", [s.rv, s.deep.id, s.rev, NOW]);
+      await c1.query("select * from decide_deep($1, $2, $3, 'APPROVE', null, true, true, true, $4)", [s.rv, s.deep.id, s.rev, NOW]);
       const revoke = c2.query("select revoke_verification($1, $2, 'ERROR', null, $3)", [s.c.f.admin, s.c.verificationId, NOW]);
       await new Promise((r) => setTimeout(r, 300));
       await c1.query("commit");

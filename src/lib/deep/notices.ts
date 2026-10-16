@@ -6,6 +6,7 @@ const NOTICE: Record<string, string> = {
   PARENT_NOT_ACTIVE: "Verifikasi pemeriksaan standar sudah tidak aktif.",
   VERSION_MISMATCH: "Isi versi tidak cocok dengan versi yang diperiksa.",
   DEEP_EXISTS: "Pemeriksaan mendalam untuk pemeriksaan ini sudah dipesan atau selesai.",
+  SPECIAL_CASE_OPEN: "Dokumen ini sedang ditangani sebagai Kasus Hukum Khusus, jadi pemeriksaan mendalam tidak ditawarkan.",
   PRODUCT_UNAVAILABLE: "Produk ini belum tersedia.",
   ORDER_NOT_PAYABLE: "Pesanan ini tidak dapat dibayar.",
   NOT_FOUND: "Pemeriksaan tidak ditemukan.",

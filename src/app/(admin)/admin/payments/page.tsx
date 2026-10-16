@@ -54,7 +54,8 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
             {recon.map((r) => (
               <li key={r.paymentId ?? r.orderId} className="space-y-2 rounded-2xl border border-line bg-white p-4">
                 <p>Pesanan {r.orderId.slice(0, 8)} · {formatIdr(r.amountIdr)} · {new Date(r.createdAt).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })} WIB</p>
-                {r.extraPayment && <p className="font-semibold">Pembayaran tambahan pada pesanan yang sudah lunas. Pesanan tetap aktif; dana tambahan ini perlu dikembalikan.</p>}
+                {r.extraPayment && r.status === "CANCELLED" && <p className="font-semibold">Dana masuk pada pesanan yang sudah dibatalkan. Pesanan tetap dibatalkan; dana ini perlu dikembalikan.</p>}
+                {r.extraPayment && r.status !== "CANCELLED" && <p className="font-semibold">Pembayaran tambahan pada pesanan yang sudah lunas. Pesanan tetap aktif; dana tambahan ini perlu dikembalikan.</p>}
                 <form action={resolveReconciliationAction} className="space-y-2">
                   <input type="hidden" name="orderId" value={r.orderId} />
                   <label className="block"><span className={labelText}>Catatan (Wajib, min. 5 karakter)</span><input name="note" required minLength={5} maxLength={300} className={fieldClass} /></label>

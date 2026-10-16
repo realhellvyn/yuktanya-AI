@@ -1,4 +1,4 @@
-import { LEGAL_DISCLAIMER, NEW_VERSION_NOT_REVIEWED, QR_NOT_SIGNATURE, VERIFICATION_TITLES, verificationStatement } from "@/lib/copy";
+import { LEGAL_DISCLAIMER, NEW_VERSION_NOT_REVIEWED, QR_NOT_SIGNATURE, VERIFICATION_TITLES, VERIFIED_LABEL, verificationStatement } from "@/lib/copy";
 import { formatDateId } from "@/lib/documents/format";
 import type { VerificationView } from "@/lib/verification/service";
 
@@ -17,6 +17,7 @@ export function VerificationPanel({ verifications, qrDataUrls, urls }: { verific
           <h3 className="text-lg font-semibold">{VERIFICATION_TITLES[v.kind]}</h3>
           <p role="status" className="font-semibold">Status: {STATUS[v.status]}</p>
           <p>{verificationStatement(v.kind, v.outcome)}</p>
+          {v.kind !== "AI" && v.status === "ACTIVE" && <p className="font-semibold">{VERIFIED_LABEL}</p>}
           <p>Terbit {formatDateId(wibDay(v.issuedAt))}</p>
           <p>Cek di <a className="inline-flex min-h-12 max-w-full items-center break-all underline" href={urls[v.id]}>{urls[v.id]}</a></p>
           <p>Kode: <span className="font-mono break-all">{v.code}</span></p>

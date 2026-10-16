@@ -69,7 +69,7 @@ export async function journey({ step, base, db, newActor }) {
     rev = (await db.query("select save_report_draft($1, $2, $3, 'Klausul kerahasiaan dan jangka waktu', '', '', $4) as r", [ids.reviewer, req2, rev, now])).rows[0].r;
     const note = { title: "Definisi informasi rahasia sempit", finding: "Hanya daftar pelanggan.", severity: "MATERIAL", actionable: true, recommended_action: "Perluas definisi.", rationale: "Risiko kebocoran.", escalation: "Konsultasi bila sengketa." };
     rev = (await db.query("select * from upsert_note($1, $2, $3, $4, $5)", [ids.reviewer, req2, rev, JSON.stringify(note), now])).rows[0].revision;
-    await db.query("select * from publish_standard($1, $2, $3, 'WITH_NOTES', false, true, $4)", [ids.reviewer, req2, rev, now]);
+    await db.query("select * from publish_standard($1, $2, $3, 'WITH_NOTES', false, true, true, $4)", [ids.reviewer, req2, rev, now]);
     const o3 = await buy(ids.pemilik2, "DEEP_REVIEW", req2);
     deepId = (await db.query("select id from deep_requests where order_id = $1", [o3])).rows[0].id;
     await db.query("select assign_deep($1, $2, $3, $4)", [ids.koordinator, deepId, ids.reviewer, new Date()]);

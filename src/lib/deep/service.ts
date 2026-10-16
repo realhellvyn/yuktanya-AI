@@ -1,28 +1,28 @@
 import type { Pool } from "pg";
 import { parseCanonical, type RenderedDoc } from "@/lib/documents/render";
-import { ReviewError } from "@/lib/reviews/service";
+import { REVIEW_CODES, ReviewError } from "@/lib/reviews/service";
 import { RUBRIC_VERSION } from "./rubric";
 
-type Code = ConstructorParameters<typeof ReviewError>[0];
-const CODES: Code[] = ["REVIEWER_NOT_AUTHORIZED", "REVIEWER_AT_CAPACITY", "STALE_REVISION", "VERSION_MISMATCH", "ATTESTATION_REQUIRED", "NOT_ASSIGNABLE", "FORBIDDEN", "NOT_FOUND"];
 function mapError(e: unknown): never {
   const m = e instanceof Error ? e.message : "";
   const g = /GUARD_FAILED: ([A-Z_]+)/.exec(m);
   if (g) throw new ReviewError("VALIDATION_FAILED", g[1]);
   for (const r of ["REASON_REQUIRED", "INVALID_DECISION", "MANDATORY_ITEM"]) if (m.includes(r)) throw new ReviewError("VALIDATION_FAILED", r);
-  for (const c of CODES) if (m.includes(c)) throw new ReviewError(c);
+  for (const c of REVIEW_CODES) if (m.includes(c)) throw new ReviewError(c);
   throw e;
 }
 
 // standardPaidIdr: harga Review Standar induk yang sudah dibayar (0 bila memakai kredit); null bila tidak layak.
 export type Eligibility = { eligible: boolean; reason: string; quote: { amountIdr: number; variant: string } | null; standardPaidIdr: number | null };
 export type ParentNote = { noteNo: number; title: string; finding: string; severity: string; actionable: boolean; recommendedAction: string | null };
-export type ChecklistRow = { item: string; result: string; reasoning: string; evidenceRef: string };
-export type DispositionRow = { noteNo: number; disposition: string; evidence: string };
+// mine (hanya di editor reviewer): baris disimpan reviewer ini dalam penugasan aktifnya; false = wajib disimpan ulang.
+export type ChecklistRow = { item: string; result: string; reasoning: string; evidenceRef: string; mine?: boolean };
+export type DispositionRow = { noteNo: number; disposition: string; evidence: string; mine?: boolean };
 export type OpenedDeep = {
   deepId: string; title: string; category: string; doc: RenderedDoc; revision: number; parentNotes: ParentNote[];
   versionNo: number; sha256: string; parentScope: string; rubricApproved: boolean; authorized: boolean;
   extraWork: string; summary: string; dispositions: DispositionRow[]; checklist: ChecklistRow[];
+  draftMine: boolean;
 };
 export type OwnerDeep = {
   deepId: string; parentRequestId: string; versionId: string; status: string; outcome: string | null; createdAt: string; completedAt: string | null;
@@ -30,6 +30,8 @@ export type OwnerDeep = {
   dispositions: DispositionRow[]; verification: { code: string; status: string } | null;
 };
 export type Decision = "APPROVE" | "DENY" | "INCONCLUSIVE" | "REFER_SPECIAL";
+// enhancedEnabled: nilai flag ENHANCED_ISSUANCE di server; database ikut menolak APPROVE bila mati.
+export type DecideInput = { revision: number; decision: Decision; reason: string | null; attest: boolean; noConflict: boolean; enhancedEnabled: boolean };
 
 export interface DeepService {
   eligibility(userId: string, parentRequestId: string, now?: Date): Promise<Eligibility>;
@@ -41,7 +43,7 @@ export interface DeepService {
   saveDraft(reviewerId: string, deepId: string, revision: number, d: { extraWork: string; summary: string }, now?: Date): Promise<number>;
   setDisposition(reviewerId: string, deepId: string, revision: number, noteNo: number, disposition: string, evidence: string, now?: Date): Promise<number>;
   setChecklist(reviewerId: string, deepId: string, revision: number, item: string, result: string, reasoning: string, evidence: string, now?: Date): Promise<number>;
-  decide(reviewerId: string, deepId: string, revision: number, decision: Decision, reason: string | null, attest: boolean, now?: Date): Promise<{ outcome: string; verificationId: string | null; code: string | null }>;
+  decide(reviewerId: string, deepId: string, input: DecideInput, now?: Date): Promise<{ outcome: string; verificationId: string | null; code: string | null }>;
   unassigned(actorId: string): Promise<{ deepId: string; createdAt: string; category: string }[]>;
   inflight(actorId: string, now?: Date): Promise<{ deepId: string; status: string; createdAt: string; category: string; reviewerId: string; reviewerAuthorized: boolean }[]>;
   assign(actorId: string, deepId: string, reviewerId: string, now?: Date): Promise<void>;
@@ -92,9 +94,11 @@ export function createPgDeepService(pool: Pool): DeepService {
       try {
         const { rows } = await pool.query("select * from start_deep($1, $2, $3)", [reviewerId, deepId, now]);
         const s = rows[0];
-        const rep = (await pool.query("select id, extra_work, summary, revision from deep_reports where deep_id = $1", [deepId])).rows[0];
-        const disp = (await pool.query("select parent_note_no, disposition, evidence from deep_dispositions where report_id = $1 order by parent_note_no", [rep.id])).rows;
-        const chk = (await pool.query("select item, result, reasoning, evidence_ref from deep_checklist where report_id = $1 order by item", [rep.id])).rows;
+        const asg = (await pool.query("select id from deep_assignments where deep_id = $1 and reviewer_id = $2 and status = 'ACTIVE'", [deepId, reviewerId])).rows[0]?.id ?? null;
+        const rep = (await pool.query("select id, extra_work, summary, revision, drafted_assignment_id from deep_reports where deep_id = $1", [deepId])).rows[0];
+        const disp = (await pool.query("select parent_note_no, disposition, evidence, assignment_id from deep_dispositions where report_id = $1 order by parent_note_no", [rep.id])).rows;
+        const chk = (await pool.query("select item, result, reasoning, evidence_ref, assignment_id from deep_checklist where report_id = $1 order by item", [rep.id])).rows;
+        const mine = (a: unknown) => asg !== null && a === asg;
         const meta = (await pool.query(
           `select v.version_no, d.version_sha256, coalesce(prp.scope, '') as parent_scope,
                   exists (select 1 from rubric_approvals ra where ra.policy_version = $4) as rubric_approved,
@@ -109,9 +113,9 @@ export function createPgDeepService(pool: Pool): DeepService {
             noteNo: n.note_no as number, title: n.title as string, finding: n.finding as string, severity: n.severity as string,
             actionable: n.actionable as boolean, recommendedAction: (n.recommended_action as string | null) ?? null,
           })),
-          extraWork: rep.extra_work, summary: rep.summary,
-          dispositions: disp.map((d) => ({ noteNo: d.parent_note_no, disposition: d.disposition, evidence: d.evidence })),
-          checklist: chk.map((c) => ({ item: c.item, result: c.result, reasoning: c.reasoning, evidenceRef: c.evidence_ref })),
+          extraWork: rep.extra_work, summary: rep.summary, draftMine: mine(rep.drafted_assignment_id),
+          dispositions: disp.map((d) => ({ noteNo: d.parent_note_no, disposition: d.disposition, evidence: d.evidence, mine: mine(d.assignment_id) })),
+          checklist: chk.map((c) => ({ item: c.item, result: c.result, reasoning: c.reasoning, evidenceRef: c.evidence_ref, mine: mine(c.assignment_id) })),
         };
       } catch (e) {
         return mapError(e);
@@ -142,9 +146,10 @@ export function createPgDeepService(pool: Pool): DeepService {
       }
     },
 
-    async decide(reviewerId, deepId, revision, decision, reason, attest, now = new Date()) {
+    async decide(reviewerId, deepId, input, now = new Date()) {
       try {
-        const { rows } = await pool.query("select * from decide_deep($1, $2, $3, $4, $5, $6, $7)", [reviewerId, deepId, revision, decision, reason, attest, now]);
+        const { rows } = await pool.query("select * from decide_deep($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+          [reviewerId, deepId, input.revision, input.decision, input.reason, input.attest, input.noConflict, input.enhancedEnabled, now]);
         return { outcome: rows[0].outcome, verificationId: rows[0].verification_id ?? null, code: rows[0].code ?? null };
       } catch (e) {
         return mapError(e);

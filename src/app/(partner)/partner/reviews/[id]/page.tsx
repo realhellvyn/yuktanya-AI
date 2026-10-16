@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { fieldClass as input, labelText } from "@/components/ui/field";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getSessionRoles } from "@/lib/supabase/server";
+import { INVALID_FORM_TEXT } from "@/lib/partner/form";
 import { categoryLabel } from "@/lib/partner/labels";
 import { reviewService } from "@/lib/reviews/runtime";
 import { ReviewError } from "@/lib/reviews/service";
@@ -23,6 +24,9 @@ const ERR: Record<string, string> = {
   ATTESTATION_REQUIRED: "Centang pernyataan profesional sebelum menerbitkan.",
   REVIEWER_NOT_AUTHORIZED: "Otorisasi profesional Anda tidak aktif.",
   VALIDATION_FAILED: "Belum memenuhi syarat penerbitan.",
+  CONFLICT_ATTESTATION_REQUIRED: "Centang pernyataan tidak ada konflik kepentingan sebelum menerbitkan.",
+  CONFLICT_OF_INTEREST: "Firma Anda mencatat konflik kepentingan dengan pemilik dokumen ini. Hasil tidak dapat diterbitkan; hubungi koordinator.",
+  INVALID_REQUEST: INVALID_FORM_TEXT,
 };
 const REASON: Record<string, string> = {
   SCOPE_REQUIRED: "Isi ruang lingkup pemeriksaan.", NOTES_REQUIRED: "Hasil “Dengan Legal Note” memerlukan minimal satu catatan.",
@@ -30,6 +34,8 @@ const REASON: Record<string, string> = {
   NOTE_RATIONALE_REQUIRED: "Catatan Penting/Sangat penting harus memuat tindakan, alasan, dan langkah lanjutan.",
   NOTES_PRESENT: "Hasil “Tanpa Legal Note” tidak boleh memiliki catatan.", NO_NOTES_DECLARATION_REQUIRED: "Centang pernyataan bahwa tidak ada catatan.",
   SUMMARY_REQUIRED: "Isi ringkasan untuk hasil ini.", INVALID_OUTCOME: "Pilih hasil pemeriksaan.",
+  REPORT_NOT_CONFIRMED: "Laporan terakhir disimpan reviewer sebelumnya. Periksa lalu tekan Simpan draf.",
+  NOTE_NOT_CONFIRMED: "Ada catatan buatan reviewer sebelumnya. Periksa lalu tekan Konfirmasi catatan pada catatan itu.",
 };
 const OK: Record<string, string> = { draft: "Tersimpan. Laporan sudah diperbarui.", note: "Tersimpan. Daftar catatan sudah diperbarui." };
 const H2 = "text-xl font-bold text-navy md:text-2xl";
@@ -80,6 +86,19 @@ export default async function ReviewEditorPage({ params, searchParams }: { param
               {review.notes.map((n) => (
                 <div key={n.noteNo} className="space-y-2">
                   <LegalNoteCard note={n} />
+                  {!n.mine && (
+                    <form action={upsertNoteAction} className="space-y-2 rounded-xl border border-amber-400 bg-amber-50 p-3 text-amber-950">
+                      <p className="font-semibold">Catatan {n.noteNo} dibuat reviewer sebelumnya. Catatan ini baru ikut terbit atas nama Anda setelah Anda memeriksanya dan menekan Konfirmasi.</p>
+                      <input type="hidden" name="requestId" value={id} /><input type="hidden" name="revision" value={review.revision} />
+                      <input type="hidden" name="noteNo" value={n.noteNo} /><input type="hidden" name="title" value={n.title} />
+                      <input type="hidden" name="finding" value={n.finding} /><input type="hidden" name="quote" value={n.quote ?? ""} />
+                      <input type="hidden" name="blockId" value={n.blockId ?? ""} /><input type="hidden" name="severity" value={n.severity} />
+                      {n.actionable && <input type="hidden" name="actionable" value="yes" />}
+                      <input type="hidden" name="recommendedAction" value={n.recommendedAction ?? ""} />
+                      <input type="hidden" name="rationale" value={n.rationale ?? ""} /><input type="hidden" name="escalation" value={n.escalation ?? ""} />
+                      <Button type="submit" variant="secondary">Konfirmasi catatan {n.noteNo}</Button>
+                    </form>
+                  )}
                   <form action={deleteNoteAction}>
                     <input type="hidden" name="requestId" value={id} />
                     <input type="hidden" name="revision" value={review.revision} />
@@ -116,6 +135,9 @@ export default async function ReviewEditorPage({ params, searchParams }: { param
           id: "pemeriksaan", label: "Pemeriksaan", content: (
             <>
               <h2 className={H2}>Laporan pemeriksaan</h2>
+              {!review.draftMine && review.scope.trim() !== "" && (
+                <p role="status" className="rounded-xl border border-amber-400 bg-amber-50 p-3 font-semibold text-amber-950">Isi laporan ini disimpan reviewer sebelumnya. Periksa lalu tekan Simpan draf agar menjadi laporan Anda.</p>
+              )}
               <Card>
                 <form action={saveDraftAction} className="space-y-3">
                   <input type="hidden" name="requestId" value={id} />
@@ -136,8 +158,8 @@ export default async function ReviewEditorPage({ params, searchParams }: { param
               <p>Anda akan menyelesaikan pemeriksaan versi ini. Setelah diterbitkan, laporan dan catatan tidak dapat diubah.</p>
               <Card>
                 <PublishPanel action={publishAction} requestId={id} revision={review.revision} title={review.title} versionNo={review.versionNo} sha256={review.sha256}
-                  scope={review.scope} summary={review.summary} authorized={review.authorized}
-                  notes={review.notes.map((n) => ({ noteNo: n.noteNo, title: n.title, severity: n.severity, actionable: n.actionable, recommendedAction: n.recommendedAction, rationale: n.rationale, escalation: n.escalation }))} />
+                  scope={review.scope} summary={review.summary} authorized={review.authorized} draftMine={review.draftMine}
+                  notes={review.notes.map((n) => ({ noteNo: n.noteNo, title: n.title, severity: n.severity, actionable: n.actionable, recommendedAction: n.recommendedAction, rationale: n.rationale, escalation: n.escalation, mine: n.mine }))} />
               </Card>
             </>
           ),

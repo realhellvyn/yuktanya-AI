@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import type { BlobStore } from "./blob";
-import { LEGAL_DISCLAIMER, UPLOAD_HASH_NOTE, VERIFICATION_TITLES, verificationStatement, type VerificationKind } from "@/lib/copy";
+import { exportVerificationStatement, UPLOAD_HASH_NOTE, VERIFICATION_TITLES, type VerificationKind } from "@/lib/copy";
 import { qrPng, verifyUrl } from "@/lib/verification/qr";
 import { exportDocx, exportPdf, sha256Hex, type ExportVerification } from "./export";
 import { canonicalize, parseCanonical, renderDocument, type RenderedDoc } from "./render";
@@ -106,7 +106,7 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
     if (!r) return undefined;
     const url = verifyUrl(r.code);
     return {
-      kindTitle: VERIFICATION_TITLES[r.kind as VerificationKind], statement: r.kind === "AI" ? verificationStatement(r.kind, r.outcome) : `${verificationStatement(r.kind, r.outcome)}\n${LEGAL_DISCLAIMER}`,
+      kindTitle: VERIFICATION_TITLES[r.kind as VerificationKind], statement: exportVerificationStatement(r.kind as VerificationKind, r.outcome),
       code: r.code, url, originalSha256: r.sha256, qrPng: await qrPng(url), note: upload ? UPLOAD_HASH_NOTE : undefined,
     };
   }

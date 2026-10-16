@@ -11,6 +11,7 @@ const smallTargets = (page) =>
       .map((e) => `${e.tagName.toLowerCase()}:${(e.textContent || e.getAttribute("name") || "").trim().slice(0, 24)}:${Math.round(e.getBoundingClientRect().height)}px`),
   );
 const PAY_STATEMENT = "Pembayaran tidak menjamin Enhanced, kesimpulan yang menguntungkan, keabsahan hukum, atau hasil di pengadilan.";
+const VERIFIED_LABEL = "Dokumen versi ini telah diperiksa oleh profesional hukum sesuai ruang lingkup review yang tercantum. Tidak menjamin keabsahan atau hasil hukum tertentu.";
 
 export async function journey({ step, base, vp, db, newActor }) {
   const n = Date.now();
@@ -130,6 +131,9 @@ export async function journey({ step, base, vp, db, newActor }) {
     await p.locator("dialog[open]").waitFor();
     const confirmText = await p.locator("dialog[open]").innerText();
     if (!/Versi 1/.test(confirmText) || !confirmText.includes("Dengan Legal Note") || !confirmText.includes("Kepatutan klausul kerahasiaan") || !/Catatan 1/.test(confirmText)) throw new Error("konfirmasi akhir tidak lengkap: " + confirmText.slice(0, 400));
+    // Pernyataan tidak ada konflik kepentingan wajib: tombol terbit nonaktif sampai dicentang.
+    if (!(await p.locator("dialog[open] button:has-text('Ya, terbitkan sekarang')").isDisabled())) throw new Error("terbit aktif tanpa pernyataan konflik");
+    await p.check("dialog[open] input[name=noConflict]");
     await p.click("dialog[open] button:has-text('Ya, terbitkan sekarang')");
     await p.waitForURL(/done=|e=/, { timeout: 15000 });
     const r = await db.query("select v.code, v.status, v.outcome from document_verifications v where v.kind = 'LEGAL' order by issued_at desc limit 1");
@@ -140,10 +144,15 @@ export async function journey({ step, base, vp, db, newActor }) {
   await step(tag("pemilik melihat hasil; halaman publik /verify menunjukkan Aktif tanpa login"), async () => {
     await ownerA.page.goto(base + "/reviews");
     await ownerA.page.click("a[href^='/reviews/']");
+    await ownerA.page.waitForURL(/\/reviews\/[0-9a-f-]{36}$/);
     await ownerA.shot("05-hasil");
+    // Label Verified wajib (SECURITY_AND_LEGAL) tampil persis di hasil pemilik dan di halaman publik.
+    if (!(await ownerA.page.innerText("main")).includes(VERIFIED_LABEL)) throw new Error("label Verified tidak ada di hasil pemilik");
     const pub = await (await ownerA.page.context().browser().newContext()).newPage();
     await pub.goto(base + "/verify/" + code);
-    if (!(await pub.innerText("body")).includes("Aktif")) throw new Error("tidak Aktif");
+    const pubText = await pub.innerText("body");
+    if (!pubText.includes("Aktif")) throw new Error("tidak Aktif");
+    if (!pubText.includes(VERIFIED_LABEL)) throw new Error("label Verified tidak ada di /verify");
     await pub.close();
   });
 
@@ -237,6 +246,8 @@ export async function journey({ step, base, vp, db, newActor }) {
     await r.click("button:has-text('Simpan keputusan')");
     await r.locator("dialog[open]").waitFor();
     if (!(await r.locator("dialog[open]").innerText()).includes("Setujui Enhanced")) throw new Error("konfirmasi keputusan tidak menyebut keputusan");
+    if (!(await r.locator("dialog[open] button:has-text('Ya, simpan keputusan')").isDisabled())) throw new Error("keputusan aktif tanpa pernyataan konflik");
+    await r.check("dialog[open] input[name=noConflict]");
     await submit(r, r.locator("dialog[open] button:has-text('Ya, simpan keputusan')"));
     const q = await db.query("select code, status from document_verifications where kind = 'LEGAL_ENHANCED' order by issued_at desc limit 1");
     if (!q.rows[0] || q.rows[0].status !== "ACTIVE") {

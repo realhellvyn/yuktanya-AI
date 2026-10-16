@@ -17,6 +17,7 @@ const REASON: Record<string, string> = {
   PARENT_NOT_ACTIVE: "Verifikasi pemeriksaan standar sudah tidak aktif.",
   VERSION_MISMATCH: "Isi versi tidak cocok dengan versi yang diperiksa.",
   DEEP_EXISTS: "Pemeriksaan mendalam untuk pemeriksaan ini sudah dipesan atau selesai.",
+  SPECIAL_CASE_OPEN: "Dokumen ini sedang ditangani sebagai Kasus Hukum Khusus, jadi pemeriksaan mendalam tidak ditawarkan.",
 };
 
 export default async function DeepOfferPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ notice?: string }> }) {

@@ -16,13 +16,17 @@ const DECISION: Record<Decision, string> = {
 export function DecisionPanel(props: {
   action: (fd: FormData) => Promise<void>; deepId: string; revision: number; title: string; versionNo: number; sha256: string;
   parentScope: string; approveBlockers: string[]; unresolved: string[]; authorized: boolean;
+  // Berlaku untuk semua keputusan: isi buatan reviewer sebelumnya yang belum disimpan ulang (cermin decide_deep).
+  confirmBlockers?: string[];
 }) {
   const [decision, setDecision] = useState<Decision>("DENY");
   const [reason, setReason] = useState("");
   const [attest, setAttest] = useState(false);
+  const [noConflict, setNoConflict] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const blockers = [
     ...(props.authorized ? [] : ["Otorisasi profesional Anda tidak aktif. Hubungi koordinator."]),
+    ...(decision === "APPROVE" ? [] : props.confirmBlockers ?? []),
     ...(decision === "APPROVE" ? props.approveBlockers : reason.trim().length < 5 ? ["Isi alasan keputusan (minimal 5 karakter)."] : []),
     ...(attest ? [] : ["Centang pernyataan profesional di bawah."]),
   ];
@@ -63,8 +67,10 @@ export function DecisionPanel(props: {
               <dd>{props.unresolved.length === 0 ? "Tidak ada" : <ul className="list-disc pl-6">{props.unresolved.map((u) => <li key={u} className="break-words">{u}</li>)}</ul>}</dd></div>
           </dl>
           <p>Pembayaran tidak menjamin hasil apa pun. Keputusan tidak dapat diubah setelah disimpan.</p>
+          <label className="flex min-h-12 items-start gap-3"><input type="checkbox" name="noConflict" value="yes" checked={noConflict} onChange={(e) => setNoConflict(e.target.checked)} className="mt-1 h-6 w-6 shrink-0" /><span>Saya menyatakan tidak ada konflik kepentingan antara saya (dan firma saya) dengan pemilik dokumen ini atau pihak dalam dokumen ini.</span></label>
+          {!noConflict && <p id="decision-conflict-hint" role="status" className="font-semibold">Centang pernyataan tidak ada konflik kepentingan untuk menyimpan keputusan. Bila ada konflik, jangan simpan dan hubungi koordinator.</p>}
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button type="submit">Ya, simpan keputusan</Button>
+            <Button type="submit" disabled={!noConflict} aria-describedby={noConflict ? undefined : "decision-conflict-hint"}>Ya, simpan keputusan</Button>
             <Button type="button" variant="secondary" onClick={() => dialog.current?.close()}>Kembali memeriksa</Button>
           </div>
         </div>

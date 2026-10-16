@@ -6,12 +6,15 @@ import { reviewService } from "@/lib/reviews/runtime";
 import { assignAction, reassignAction } from "@/app/(partner)/partner/actions";
 import { assignDeepAction } from "@/app/(partner)/partner/deep-actions";
 import { deepService } from "@/lib/deep/runtime";
+import { INVALID_FORM_TEXT } from "@/lib/partner/form";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Perutean review | Admin Yuktanya" };
 const ERR: Record<string, string> = {
   FORBIDDEN: "Tidak berwenang.", REVIEWER_NOT_AUTHORIZED: "Reviewer tidak memiliki otorisasi aktif.", REVIEWER_AT_CAPACITY: "Reviewer sudah penuh.",
   NOT_FOUND: "Permintaan tidak ditemukan.", NOT_ASSIGNABLE: "Permintaan ini tidak dapat ditugaskan lagi.",
+  CONFLICT_OF_INTEREST: "Firma ini mencatat konflik kepentingan dengan pemilik dokumen, jadi permintaan ini tidak dapat ditugaskan di firma tersebut. Pengalihan firma atau pengembalian dana belum tersedia di sistem dan perlu ditangani manual.",
+  INVALID_REQUEST: INVALID_FORM_TEXT,
 };
 const CATEGORY: Record<string, string> = { PKS: "Perjanjian Kerja Sama", UTANG_PIUTANG: "Surat Utang Piutang", NDA: "Perjanjian Kerahasiaan (NDA)", UPLOAD: "Dokumen unggahan" };
 

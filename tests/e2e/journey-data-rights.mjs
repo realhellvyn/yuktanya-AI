@@ -51,7 +51,7 @@ export async function journey({ step, base, db, newActor, fake }) {
     await db.query("select assign_review($1, $2, $3, $4)", [coord, req, reviewer, now]);
     let rev = (await db.query("select * from start_review($1, $2, $3)", [reviewer, req, now])).rows[0].revision;
     rev = (await db.query("select save_report_draft($1, $2, $3, 'Klausul kerahasiaan', '', '', $4) as r", [reviewer, req, rev, now])).rows[0].r;
-    code = (await db.query("select * from publish_standard($1, $2, $3, 'WITHIN_SCOPE', true, true, $4)", [reviewer, req, rev, now])).rows[0].code;
+    code = (await db.query("select * from publish_standard($1, $2, $3, 'WITHIN_SCOPE', true, true, true, $4)", [reviewer, req, rev, now])).rows[0].code;
     if (!code) throw new Error("verifikasi tidak terbit");
   });
 

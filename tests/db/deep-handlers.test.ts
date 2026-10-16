@@ -81,9 +81,11 @@ describe("alur reviewer dan keputusan", () => {
     for (const item of ["M1", "M2", "M3", "M4", "M5", "M6", "M7"]) {
       rev = (await (await setChecklistHandler(rv, req({ revision: rev, item, result: "PASS", reasoning: "ok", evidenceRef: "bukti" }), { id: deep })).json()).revision;
     }
-    const noAttest = await decideHandler(rv, req({ revision: rev, decision: "APPROVE", attest: false }), { id: deep });
+    const noAttest = await decideHandler(rv, req({ revision: rev, decision: "APPROVE", attest: false, noConflict: true }), { id: deep });
     expect([noAttest.status, (await noAttest.json()).code]).toEqual([422, "ATTESTATION_REQUIRED"]);
-    const r = await decideHandler(rv, req({ revision: rev, decision: "APPROVE", attest: true }), { id: deep });
+    const noConflict = await decideHandler(rv, req({ revision: rev, decision: "APPROVE", attest: true }), { id: deep });
+    expect([noConflict.status, (await noConflict.json()).code]).toEqual([422, "CONFLICT_ATTESTATION_REQUIRED"]);
+    const r = await decideHandler(rv, req({ revision: rev, decision: "APPROVE", attest: true, noConflict: true }), { id: deep });
     expect(r.status).toBe(200);
     const done = await r.json();
     expect(done.outcome).toBe("ENHANCED_APPROVED");
@@ -97,10 +99,10 @@ describe("alur reviewer dan keputusan", () => {
     await assignDeepHandler(deps(c.f.coordinator, ["partner_admin"]), req({ reviewerId: c.r.reviewer }), { id: deep });
     const rv = deps(c.r.reviewer, ["reviewer"], { deepReviewPurchase: true, enhancedIssuance: false });
     const o = await (await openDeepHandler(rv, req(), { id: deep })).json();
-    const approveTry = await decideHandler(rv, req({ revision: o.revision, decision: "APPROVE", attest: true }), { id: deep });
+    const approveTry = await decideHandler(rv, req({ revision: o.revision, decision: "APPROVE", attest: true, noConflict: true }), { id: deep });
     expect([approveTry.status, (await approveTry.json()).code]).toEqual([409, "ENHANCED_DISABLED"]);
     expect((await pool.query("select status from deep_requests where id = $1", [deep])).rows[0].status).toBe("IN_REVIEW");
-    const refer = await decideHandler(rv, req({ revision: o.revision, decision: "REFER_SPECIAL", reason: "Perlu penilaian khusus", attest: true }), { id: deep });
+    const refer = await decideHandler(rv, req({ revision: o.revision, decision: "REFER_SPECIAL", reason: "Perlu penilaian khusus", attest: true, noConflict: true }), { id: deep });
     expect(refer.status).toBe(200);
     expect((await refer.json()).verificationId).toBeNull();
   });
@@ -110,7 +112,7 @@ describe("alur reviewer dan keputusan", () => {
     await assignDeepHandler(deps(c.f.coordinator, ["partner_admin"]), req({ reviewerId: c.r.reviewer }), { id: deep });
     for (const d of [deps(c.f.admin, ["platform_admin"]), deps(c.f.coordinator, ["partner_admin"]), deps(c.owner, ["user"])]) {
       expect((await openDeepHandler(d, req(), { id: deep })).status).toBe(403);
-      expect((await decideHandler(d, req({ revision: 0, decision: "DENY", reason: "alasan lengkap", attest: true }), { id: deep })).status).toBe(403);
+      expect((await decideHandler(d, req({ revision: 0, decision: "DENY", reason: "alasan lengkap", attest: true, noConflict: true }), { id: deep })).status).toBe(403);
     }
     const stranger = deps((await c.f.addReviewer()).reviewer, ["reviewer"]);
     const a = await openDeepHandler(stranger, req(), { id: deep });
@@ -129,7 +131,7 @@ describe("alur reviewer dan keputusan", () => {
     const rv = deps(c.r.reviewer, ["reviewer"]);
     const o = await (await openDeepHandler(rv, req(), { id: deep })).json();
     const rev = (await (await saveDeepDraftHandler(rv, req({ revision: o.revision, extraWork: "kerja", summary: "" }), { id: deep })).json()).revision;
-    const r = await decideHandler(rv, req({ revision: rev, decision: "APPROVE", attest: true }), { id: deep });
+    const r = await decideHandler(rv, req({ revision: rev, decision: "APPROVE", attest: true, noConflict: true }), { id: deep });
     expect(r.status).toBe(422);
     const body = await r.json();
     expect(body.code).toBe("VALIDATION_FAILED");

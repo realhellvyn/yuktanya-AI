@@ -31,7 +31,7 @@ async function fullFlow() {
   await bump("select save_deep_draft($1, $2, $3, $4, $5, $6) as r", ["Pemeriksaan identitas dan kewenangan para pihak", "Ringkasan pemeriksaan tambahan"]);
   await bump("select set_disposition($1, $2, $3, 1, $4, $5, $6) as r", ["RESOLVED", "Klausul diperbaiki di versi baru"]);
   for (const item of ITEMS) await bump("select set_checklist($1, $2, $3, $4, $5, $6, $7, $8) as r", [item, "PASS", "Penalaran " + item, "Bukti " + item]);
-  const d = (await pool.query("select * from decide_deep($1, $2, $3, 'APPROVE', null, true, $4)", [rv, deep.id, rev, NOW])).rows[0];
+  const d = (await pool.query("select * from decide_deep($1, $2, $3, 'APPROVE', null, true, true, true, $4)", [rv, deep.id, rev, NOW])).rows[0];
   const std = (await pool.query("select o.id as order_id, p.id as payment_id, a.id as assignment_id from review_requests r join orders o on o.id = r.order_id join payments p on p.order_id = o.id join review_assignments a on a.request_id = r.id where r.id = $1", [c.req])).rows[0];
   const deepPay = (await pool.query("select id from payments where order_id = $1", [b.order_id])).rows[0].id as string;
   const deepAssign = (await pool.query("select id from deep_assignments where deep_id = $1", [deep.id])).rows[0].id as string;

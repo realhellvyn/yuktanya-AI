@@ -3,21 +3,23 @@ import { parseCanonical, type RenderedDoc } from "@/lib/documents/render";
 
 export type ReviewErrorCode =
   | "FORBIDDEN" | "NOT_FOUND" | "REVIEWER_NOT_AUTHORIZED" | "REVIEWER_AT_CAPACITY" | "STALE_REVISION" | "VERSION_MISMATCH"
-  | "ATTESTATION_REQUIRED" | "VALIDATION_FAILED" | "NOT_ASSIGNABLE";
+  | "ATTESTATION_REQUIRED" | "VALIDATION_FAILED" | "NOT_ASSIGNABLE" | "CONFLICT_ATTESTATION_REQUIRED" | "CONFLICT_OF_INTEREST" | "ENHANCED_DISABLED";
 export class ReviewError extends Error {
   constructor(readonly code: ReviewErrorCode, readonly reason?: string) {
     super(reason ? `${code}: ${reason}` : code);
     this.name = "ReviewError";
   }
 }
-const CODES: ReviewErrorCode[] = [
+// CONFLICT_ATTESTATION_REQUIRED memuat ATTESTATION_REQUIRED sebagai bagian teks: harus dicek lebih dulu.
+export const REVIEW_CODES: ReviewErrorCode[] = [
+  "CONFLICT_ATTESTATION_REQUIRED", "CONFLICT_OF_INTEREST", "ENHANCED_DISABLED",
   "REVIEWER_NOT_AUTHORIZED", "REVIEWER_AT_CAPACITY", "STALE_REVISION", "VERSION_MISMATCH", "ATTESTATION_REQUIRED", "NOT_ASSIGNABLE", "FORBIDDEN", "NOT_FOUND",
 ];
 function mapError(e: unknown): never {
   const m = e instanceof Error ? e.message : "";
   const v = /VALIDATION_FAILED: ([A-Z_]+)/.exec(m);
   if (v) throw new ReviewError("VALIDATION_FAILED", v[1]);
-  for (const c of CODES) if (m.includes(c)) throw new ReviewError(c);
+  for (const c of REVIEW_CODES) if (m.includes(c)) throw new ReviewError(c);
   throw e;
 }
 
@@ -28,6 +30,8 @@ export type NoteInput = {
   recommendedAction?: string | null; rationale?: string | null; escalation?: string | null;
 };
 export type NoteView = NoteInput & { noteNo: number; status: "DRAFT" | "PUBLISHED" };
+// mine: catatan disimpan reviewer ini dalam penugasan aktifnya. false = buatan penugasan sebelumnya, wajib dikonfirmasi ulang.
+export type EditorNote = NoteView & { mine: boolean };
 export type OwnerReview = {
   requestId: string; versionId: string; status: string; outcome: string | null; createdAt: string; completedAt: string | null;
   title: string; versionNo: number; scope: string | null; assumptions: string | null; summary: string | null;
@@ -37,10 +41,12 @@ export type OwnerReviewRow = { requestId: string; title: string; versionNo: numb
 export type QueueRow = { requestId: string; status: string; createdAt: string; assignedAt: string; category: string };
 export type OpenedReview = {
   requestId: string; title: string; category: string; doc: RenderedDoc; revision: number; versionNo: number; sha256: string; authorized: boolean;
-  scope: string; assumptions: string; summary: string; notes: NoteView[];
+  scope: string; assumptions: string; summary: string; notes: EditorNote[];
+  // false = lingkup/asumsi/ringkasan terakhir disimpan dalam penugasan lain (atau belum pernah disimpan).
+  draftMine: boolean;
 };
 export type InflightRow = { requestId: string; status: string; createdAt: string; category: string; reviewerId: string; reviewerAuthorized: boolean };
-export type PublishInput = { revision: number; outcome: Outcome; noNotesDeclared: boolean; attest: boolean };
+export type PublishInput = { revision: number; outcome: Outcome; noNotesDeclared: boolean; attest: boolean; noConflict: boolean };
 
 export interface ReviewService {
   listForOwner(userId: string): Promise<OwnerReviewRow[]>;
@@ -51,7 +57,9 @@ export interface ReviewService {
   upsertNote(reviewerId: string, requestId: string, revision: number, note: NoteInput, now?: Date): Promise<{ revision: number; noteNo: number }>;
   deleteNote(reviewerId: string, requestId: string, revision: number, noteNo: number, now?: Date): Promise<number>;
   publish(reviewerId: string, requestId: string, input: PublishInput, now?: Date): Promise<{ status: string; verificationId: string | null; code: string | null }>;
-  unassigned(actorId: string): Promise<{ requestId: string; createdAt: string; category: string }[]>;
+  // conflict: firma koordinator sudah mencatat konflik kepentingan dengan pemilik dokumen ini.
+  unassigned(actorId: string): Promise<{ requestId: string; createdAt: string; category: string; conflict: boolean }[]>;
+  declareConflict(actorId: string, requestId: string, now?: Date): Promise<void>;
   reviewers(actorId: string): Promise<{ reviewerId: string; email: string; firmId: string; active: number }[]>;
   assign(actorId: string, requestId: string, reviewerId: string, now?: Date): Promise<void>;
   reassign(actorId: string, requestId: string, reviewerId: string, now?: Date): Promise<void>;
@@ -97,7 +105,8 @@ export function createPgReviewService(pool: Pool): ReviewService {
       try {
         const { rows } = await pool.query("select * from start_review($1, $2, $3)", [reviewerId, requestId, now]);
         const s = rows[0];
-        const rep = (await pool.query("select scope, assumptions, summary, revision from review_reports where request_id = $1", [requestId])).rows[0];
+        const asg = (await pool.query("select id from review_assignments where request_id = $1 and reviewer_id = $2 and status = 'ACTIVE'", [requestId, reviewerId])).rows[0]?.id ?? null;
+        const rep = (await pool.query("select scope, assumptions, summary, revision, drafted_assignment_id from review_reports where request_id = $1", [requestId])).rows[0];
         const notes = (await pool.query("select * from legal_notes where report_id = (select id from review_reports where request_id = $1) order by note_no", [requestId])).rows;
         const meta = (await pool.query(
           `select v.version_no, r.version_sha256, r.firm_id is not null and reviewer_has_authority($2, r.firm_id, $3) as authorized
@@ -105,7 +114,9 @@ export function createPgReviewService(pool: Pool): ReviewService {
         return {
           requestId, title: s.title, category: s.category, doc: parseCanonical(s.version_text), revision: rep.revision,
           versionNo: meta.version_no, sha256: meta.version_sha256, authorized: meta.authorized,
-          scope: rep.scope, assumptions: rep.assumptions, summary: rep.summary, notes: notes.map(noteRow),
+          scope: rep.scope, assumptions: rep.assumptions, summary: rep.summary,
+          notes: notes.map((n) => ({ ...noteRow(n), mine: asg !== null && n.assignment_id === asg })),
+          draftMine: asg !== null && rep.drafted_assignment_id === asg,
         };
       } catch (e) {
         return mapError(e);
@@ -144,7 +155,8 @@ export function createPgReviewService(pool: Pool): ReviewService {
 
     async publish(reviewerId, requestId, input, now = new Date()) {
       try {
-        const { rows } = await pool.query("select * from publish_standard($1, $2, $3, $4, $5, $6, $7)", [reviewerId, requestId, input.revision, input.outcome, input.noNotesDeclared, input.attest, now]);
+        const { rows } = await pool.query("select * from publish_standard($1, $2, $3, $4, $5, $6, $7, $8)",
+          [reviewerId, requestId, input.revision, input.outcome, input.noNotesDeclared, input.attest, input.noConflict, now]);
         return { status: rows[0].status, verificationId: rows[0].verification_id ?? null, code: rows[0].code ?? null };
       } catch (e) {
         return mapError(e);
@@ -153,7 +165,19 @@ export function createPgReviewService(pool: Pool): ReviewService {
 
     async unassigned(actorId) {
       const { rows } = await pool.query("select * from coordinator_unassigned($1)", [actorId]);
-      return rows.map((r) => ({ requestId: r.request_id, createdAt: r.created_at.toISOString(), category: r.category }));
+      const ids = rows.map((r) => r.request_id as string);
+      const conflicted = ids.length === 0 ? new Set<string>() : new Set((await pool.query(
+        "select r.id from review_requests r join firm_conflicts c on c.firm_id = r.firm_id and c.owner_id = r.owner_id where r.id = any($1)", [ids],
+      )).rows.map((r) => r.id as string));
+      return rows.map((r) => ({ requestId: r.request_id, createdAt: r.created_at.toISOString(), category: r.category, conflict: conflicted.has(r.request_id) }));
+    },
+
+    async declareConflict(actorId, requestId, now = new Date()) {
+      try {
+        await pool.query("select declare_firm_conflict($1, 'STANDARD', $2, $3)", [actorId, requestId, now]);
+      } catch (e) {
+        mapError(e);
+      }
     },
 
     async reviewers(actorId) {

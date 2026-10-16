@@ -13,6 +13,10 @@ export const SPECIAL_CASE_NOTE = "Biaya dan ruang lingkup ditentukan setelah ase
 export const CHECKOUT_NOTE =
   "Pembayaran adalah biaya pemeriksaan. Tidak menjamin hasil positif atau penerbitan verifikasi Enhanced.";
 export const LEGAL_DISCLAIMER = "Tidak menjamin keabsahan atau hasil hukum dalam semua keadaan.";
+// Label Verified wajib (docs/SECURITY_AND_LEGAL.md "Mandatory copy"; DECISIONS_AND_PRECEDENCE "Review integrity").
+// Tampil bersama pernyataan VERIFICATION_POLICY pada setiap verifikasi hukum (LEGAL, LEGAL_ENHANCED) yang aktif.
+export const VERIFIED_LABEL =
+  "Dokumen versi ini telah diperiksa oleh profesional hukum sesuai ruang lingkup review yang tercantum. Tidak menjamin keabsahan atau hasil hukum tertentu.";
 
 // Teks wajib hasil verifikasi (docs/VERIFICATION_POLICY.md). Tanpa kata "cap" di tampilan pengguna.
 export const VERIFICATION_TITLES = {
@@ -37,3 +41,10 @@ export function verificationStatement(kind: VerificationKind, outcome: string | 
 }
 export const DEEP_PAYMENT_STATEMENT =
   "Pembayaran tidak menjamin Enhanced, kesimpulan yang menguntungkan, keabsahan hukum, atau hasil di pengadilan.";
+
+// Teks blok verifikasi pada ekspor (baris dipisah "\n"): pernyataan kebijakan, lalu untuk verifikasi hukum label Verified
+// dan penafian hukum.
+export function exportVerificationStatement(kind: VerificationKind, outcome: string | null): string {
+  const statement = verificationStatement(kind, outcome);
+  return kind === "AI" ? statement : `${statement}\n${VERIFIED_LABEL}\n${LEGAL_DISCLAIMER}`;
+}

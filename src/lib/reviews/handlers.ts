@@ -32,7 +32,8 @@ function mapError(e: unknown): Response {
       case "NOT_ASSIGNABLE": return json({ code: "NOT_ASSIGNABLE" }, 409);
       case "STALE_REVISION": return json({ code: "STALE_REVISION" }, 409);
       case "VERSION_MISMATCH": return json({ code: "VERSION_MISMATCH" }, 409);
-      case "ATTESTATION_REQUIRED": return json({ code: "ATTESTATION_REQUIRED" }, 422);
+      case "ATTESTATION_REQUIRED": case "CONFLICT_ATTESTATION_REQUIRED": return json({ code: e.code }, 422);
+      case "CONFLICT_OF_INTEREST": case "ENHANCED_DISABLED": return json({ code: e.code }, 409);
       case "VALIDATION_FAILED": return json({ code: "VALIDATION_FAILED", reason: e.reason }, 422);
     }
   }
@@ -91,7 +92,7 @@ export const deleteNoteHandler = guarded("reviewer", ["id"], async (a, d, req, p
 
 const publishBody = z.object({
   revision: z.number().int().min(0), outcome: z.enum(["WITH_NOTES", "WITHIN_SCOPE", "INCONCLUSIVE", "DECLINED"]),
-  noNotesDeclared: z.boolean().default(false), attest: z.boolean().default(false),
+  noNotesDeclared: z.boolean().default(false), attest: z.boolean().default(false), noConflict: z.boolean().default(false),
 });
 export const publishHandler = guarded("reviewer", ["id"], async (a, d, req, p) => {
   const b = publishBody.safeParse(await readJson(req));

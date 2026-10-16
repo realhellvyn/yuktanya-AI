@@ -7,6 +7,7 @@ const REASON: Record<string, string> = {
   PARENT_NOT_ACTIVE: "Verifikasi pemeriksaan standar sudah tidak aktif.",
   VERSION_MISMATCH: "Isi versi tidak cocok dengan versi yang diperiksa.",
   DEEP_EXISTS: "Pemeriksaan mendalam untuk pemeriksaan ini sudah dipesan atau selesai.",
+  SPECIAL_CASE_OPEN: "Dokumen ini sedang ditangani sebagai Kasus Hukum Khusus, jadi pemeriksaan mendalam tidak ditawarkan.",
 };
 
 type Props = { eligible: boolean; reason: string; quote: { amountIdr: number; variant: string } | null; action: (formData: FormData) => Promise<void>; parentRequestId: string; standardPaidIdr?: number };

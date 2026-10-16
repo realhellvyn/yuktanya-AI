@@ -54,3 +54,25 @@ Refunds, re-review rounds, SLA and negative-outcome legal wording require signed
 - AI Verified is issued only for uploaded documents, not AI-assisted template documents (those still receive the
   pre-review report, without an AI Verified record). Enforced in the server handler. Keputusan pengendali, menunggu
   konfirmasi pemilik/mitra hukum.
+
+## Review integrity (Task 12, audit B) — keputusan pengendali, menunggu konfirmasi pemilik/mitra hukum
+- Verified label (SECURITY_AND_LEGAL "Mandatory copy", exact): "Dokumen versi ini telah diperiksa oleh profesional hukum sesuai
+  ruang lingkup review yang tercantum. Tidak menjamin keabsahan atau hasil hukum tertentu." It is shown IN ADDITION to the
+  VERIFICATION_POLICY statements (with notes / without notes / Enhanced) and the legal disclaimer, on every ACTIVE LEGAL and
+  LEGAL_ENHANCED surface: owner result pages (`/reviews/[id]`, `/deep-reviews/[id]`), the owner document verification panel,
+  public `/verify/[code]`, and the verification block of DOCX/PDF exports. It is not shown for AI records or for revoked or
+  suspended records. Neither text replaces the other; both were mandated by current specs.
+- UI never uses the word "cap": the checkout statement says "verifikasi Enhanced" where VERIFICATION_POLICY says
+  "cap Enhanced" (owner instruction in plan BG; meaning unchanged).
+- Work authorship: report text, Legal Notes, Deep note dispositions and M1–M7 checklist rows record the reviewer and the
+  assignment that saved them. Only rows saved under the deciding reviewer's current assignment count at publish/decision;
+  after reassignment the new reviewer must review and re-save (re-confirm) each item. Rows of a reviewer whose authority was
+  revoked are never carried forward because the old assignment has ended.
+- Conflict of interest: a reviewer can never be the document owner (checked at assignment and inside the issuing
+  transaction). A firm coordinator can record a firm-level conflict with a document owner (`firm_conflicts`, append-only),
+  which blocks assignment and issuance within that firm. Every Standard publish and Deep decision requires an explicit
+  "tidak ada konflik kepentingan" statement by the reviewer, stored with the report (`no_conflict_attested_at`) and in the
+  verification issuer snapshot. Clearing a firm conflict, rerouting to another firm and the refund path are not implemented
+  and need partner policy.
+- Deep eligibility also rejects when the parent document has an open Special Legal Case (`SPECIAL_CASE_OPEN`).
+- `ENHANCED_ISSUANCE` is enforced twice: in the server handler/action and inside `decide_deep` (the server passes the flag value).

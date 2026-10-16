@@ -17,11 +17,12 @@ const SEV: Record<string, string> = { INFO: "Informasi", MINOR: "Perlu diperhati
 // Konfirmasi akhir Review Standar: tombol nonaktif selalu disertai alasan tertulis; jendela konfirmasi menyebut versi, hash, hasil, catatan, dan lingkup.
 export function PublishPanel(props: {
   action: (fd: FormData) => Promise<void>; requestId: string; revision: number; title: string; versionNo: number; sha256: string;
-  scope: string; summary: string; notes: PublishNote[]; authorized: boolean;
+  scope: string; summary: string; notes: PublishNote[]; authorized: boolean; draftMine?: boolean;
 }) {
   const [outcome, setOutcome] = useState<StandardOutcome>(props.notes.length > 0 ? "WITH_NOTES" : "WITHIN_SCOPE");
   const [declared, setDeclared] = useState(false);
   const [attest, setAttest] = useState(false);
+  const [noConflict, setNoConflict] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const blockers = [
     ...(props.authorized ? [] : ["Otorisasi profesional Anda tidak aktif. Hubungi koordinator."]),
@@ -70,8 +71,10 @@ export function PublishPanel(props: {
               <dd>{followUp.length === 0 ? "Tidak ada" : <ul className="list-disc pl-6">{followUp.map((n) => <li key={n.noteNo} className="break-words">Catatan {n.noteNo}: {n.title} ({SEV[n.severity] ?? n.severity})</li>)}</ul>}</dd></div>
           </dl>
           <p>{verified ? "Lencana Yuktanya Legal Verified hanya berlaku untuk versi ini. Versi baru tidak mewarisi hasil." : "Hasil ini tidak menerbitkan lencana verifikasi."} Setelah diterbitkan, laporan dan catatan tidak dapat diubah.</p>
+          <label className="flex min-h-12 items-start gap-3"><input type="checkbox" name="noConflict" value="yes" checked={noConflict} onChange={(e) => setNoConflict(e.target.checked)} className="mt-1 h-6 w-6 shrink-0" /><span>Saya menyatakan tidak ada konflik kepentingan antara saya (dan firma saya) dengan pemilik dokumen ini atau pihak dalam dokumen ini.</span></label>
+          {!noConflict && <p id="publish-conflict-hint" role="status" className="font-semibold">Centang pernyataan tidak ada konflik kepentingan untuk menerbitkan. Bila ada konflik, jangan terbitkan dan hubungi koordinator.</p>}
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button type="submit">Ya, terbitkan sekarang</Button>
+            <Button type="submit" disabled={!noConflict} aria-describedby={noConflict ? undefined : "publish-conflict-hint"}>Ya, terbitkan sekarang</Button>
             <Button type="button" variant="secondary" onClick={() => dialog.current?.close()}>Kembali memeriksa</Button>
           </div>
         </div>

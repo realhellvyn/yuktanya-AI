@@ -65,3 +65,26 @@ describe("deepReadiness dan enhancedBlockers (cermin decide_deep)", () => {
     expect(t).toMatch(/belum diaktifkan/);
   });
 });
+
+describe("B-01: isi reviewer sebelumnya wajib dikonfirmasi (cermin REPORT/NOTE/CHECKLIST/DISPOSITION_NOT_CONFIRMED)", () => {
+  it("standar: laporan dan catatan buatan penugasan lain menghalangi semua hasil sampai disimpan ulang", () => {
+    const s = std({ draftMine: false, notes: [{ ...material, mine: false }, { ...material, noteNo: 2, mine: true }] });
+    for (const o of ["WITH_NOTES", "INCONCLUSIVE"] as const) {
+      const b = standardOutcomeBlockers({ ...s, summary: "Ringkasan" }, o).join(" ");
+      expect(b).toContain("Laporan diisi reviewer sebelumnya");
+      expect(b).toContain("Catatan 1 dibuat reviewer sebelumnya");
+      expect(b).not.toContain("Catatan 2 dibuat");
+    }
+    expect(standardReadiness(std({ draftMine: true, notes: [{ ...material, mine: true }] })).ready).toBe(true);
+    // Tanpa informasi penulis (tampilan lain) tidak dianggap milik orang lain.
+    expect(standardReadiness(std()).ready).toBe(true);
+  });
+  it("deep: pekerjaan tambahan, tindak lanjut, dan butir checklist milik penugasan lain disebut satu per satu", () => {
+    const d = deep({ draftMine: false, checklist: ALL.map((i) => ({ ...PASS(i), mine: i !== "M2" && i !== "M5" })), dispositions: [{ noteNo: 1, disposition: "RESOLVED", evidence: "x", mine: false }] });
+    const r = deepReadiness(d);
+    expect(r.ready).toBe(false);
+    const t = r.reasons.join(" ");
+    for (const m of ["Pekerjaan tambahan diisi reviewer sebelumnya", "Tindak lanjut catatan 1 diisi reviewer sebelumnya", "Butir M2, M5 diisi reviewer sebelumnya"]) expect(t).toContain(m);
+    expect(enhancedBlockers(d, { rubricApproved: true, enabled: true }).join(" ")).toContain("Butir M2, M5");
+  });
+});

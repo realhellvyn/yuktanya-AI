@@ -48,7 +48,7 @@ describe("handler review", () => {
     const draftView = await (await getOwnerReviewHandler(as(c.owner, ["user"]), req(), { id: c.rid })).json();
     expect(draftView.notes).toEqual([]);
 
-    const pub = await publishHandler(rv, req({ revision: rev, outcome: "WITH_NOTES", noNotesDeclared: false, attest: true }), { id: c.rid });
+    const pub = await publishHandler(rv, req({ revision: rev, outcome: "WITH_NOTES", noNotesDeclared: false, attest: true, noConflict: true }), { id: c.rid });
     expect(pub.status).toBe(200);
     const done = await pub.json();
     expect(done.code.length).toBeGreaterThanOrEqual(40);
@@ -65,11 +65,13 @@ describe("handler review", () => {
     const rv = as(c.reviewer, ["reviewer"]);
     const o = await (await openReviewHandler(rv, req(), { id: c.rid })).json();
     const rev = (await (await saveDraftHandler(rv, req({ revision: o.revision, scope: "Lingkup", assumptions: "", summary: "" }), { id: c.rid })).json()).revision;
-    const r = await publishHandler(rv, req({ revision: rev, outcome: "WITHIN_SCOPE", noNotesDeclared: true, attest: false }), { id: c.rid });
+    const r = await publishHandler(rv, req({ revision: rev, outcome: "WITHIN_SCOPE", noNotesDeclared: true, attest: false, noConflict: true }), { id: c.rid });
     expect([r.status, (await r.json()).code]).toEqual([422, "ATTESTATION_REQUIRED"]);
+    const noConflict = await publishHandler(rv, req({ revision: rev, outcome: "WITHIN_SCOPE", noNotesDeclared: true, attest: true }), { id: c.rid });
+    expect([noConflict.status, (await noConflict.json()).code]).toEqual([422, "CONFLICT_ATTESTATION_REQUIRED"]);
     const stale = await deleteNoteHandler(rv, new Request(`http://t/x?revision=${rev - 1}`, { method: "DELETE" }), { id: c.rid, noteNo: "1" });
     expect(stale.status).toBe(409);
-    const bad = await publishHandler(rv, req({ revision: rev, outcome: "WITH_NOTES", noNotesDeclared: false, attest: true }), { id: c.rid });
+    const bad = await publishHandler(rv, req({ revision: rev, outcome: "WITH_NOTES", noNotesDeclared: false, attest: true, noConflict: true }), { id: c.rid });
     expect([bad.status, (await bad.json()).reason]).toEqual([422, "NOTES_REQUIRED"]);
   });
 
@@ -81,7 +83,7 @@ describe("handler review", () => {
     const a = await openReviewHandler(rv, req(), { id: c.rid });
     const b = await openReviewHandler(rv, req(), { id: ID });
     expect([a.status, await a.text()]).toEqual([b.status, await b.text()]);
-    expect((await publishHandler(rv, req({ revision: 0, outcome: "WITHIN_SCOPE", noNotesDeclared: true, attest: true }), { id: c.rid })).status).toBe(404);
+    expect((await publishHandler(rv, req({ revision: 0, outcome: "WITHIN_SCOPE", noNotesDeclared: true, attest: true, noConflict: true }), { id: c.rid })).status).toBe(404);
     expect((await reviewerQueueHandler(rv, req())).status).toBe(200);
     expect((await (await reviewerQueueHandler(rv, req())).json()).queue).toEqual([]);
   });
@@ -91,7 +93,7 @@ describe("handler review", () => {
     await assignHandler(as(c.f.coordinator, ["partner_admin"]), req({ reviewerId: c.reviewer }), { id: c.rid });
     for (const d of [as(c.f.coordinator, ["partner_admin"]), as(c.f.admin, ["platform_admin"]), as(c.owner, ["user"])]) {
       expect((await openReviewHandler(d, req(), { id: c.rid })).status).toBe(403);
-      expect((await publishHandler(d, req({ revision: 0, outcome: "WITHIN_SCOPE", attest: true, noNotesDeclared: true }), { id: c.rid })).status).toBe(403);
+      expect((await publishHandler(d, req({ revision: 0, outcome: "WITHIN_SCOPE", attest: true, noConflict: true, noNotesDeclared: true }), { id: c.rid })).status).toBe(403);
     }
   });
 

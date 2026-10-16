@@ -1,4 +1,4 @@
-import { LEGAL_DISCLAIMER, NEW_VERSION_NOT_REVIEWED, QR_NOT_SIGNATURE, verificationStatement } from "@/lib/copy";
+import { LEGAL_DISCLAIMER, NEW_VERSION_NOT_REVIEWED, QR_NOT_SIGNATURE, VERIFIED_LABEL, verificationStatement } from "@/lib/copy";
 import type { OwnerReview } from "@/lib/reviews/service";
 import { LegalNoteCard } from "./legal-note-card";
 
@@ -31,6 +31,7 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
           <h3 className="text-lg font-semibold">Yuktanya Legal Verified</h3>
           <p role="status" className="font-semibold">Status: {v.status === "ACTIVE" ? "Aktif" : v.status === "REVOKED" ? "Dicabut" : "Ditangguhkan sementara"}</p>
           <p>{verificationStatement("LEGAL", review.outcome)}</p>
+          {v.status === "ACTIVE" && <p className="font-semibold">{VERIFIED_LABEL}</p>}
           {verifyUrl && <p>Cek di <a className="inline-flex min-h-12 items-center underline" href={verifyUrl}>{verifyUrl}</a></p>}
           <p>Kode: <span className="font-mono break-all">{v.code}</span></p>
           {qrDataUrl && (

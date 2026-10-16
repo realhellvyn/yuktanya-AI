@@ -7,7 +7,8 @@ import { getSessionRoles } from "@/lib/supabase/server";
 import { deepService } from "@/lib/deep/runtime";
 import { ageHours as age, categoryLabel } from "@/lib/partner/labels";
 import { reviewService } from "@/lib/reviews/runtime";
-import { assignAction, reassignAction } from "./actions";
+import { INVALID_FORM_TEXT } from "@/lib/partner/form";
+import { assignAction, declareConflictAction, reassignAction } from "./actions";
 import { assignDeepAction } from "./deep-actions";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,13 @@ const ERR: Record<string, string> = {
   REVIEWER_AT_CAPACITY: "Reviewer ini sudah mencapai batas pekerjaan aktif.",
   NOT_FOUND: "Permintaan tidak ditemukan.",
   NOT_ASSIGNABLE: "Permintaan ini tidak dapat ditugaskan lagi.",
+  CONFLICT_OF_INTEREST: "Firma Anda sudah mencatat konflik kepentingan dengan pemilik dokumen ini, jadi permintaan ini tidak dapat ditugaskan.",
+  CONFLICT_CONFIRM_REQUIRED: "Centang pernyataan konflik kepentingan sebelum menyimpan.",
+  INVALID_REQUEST: INVALID_FORM_TEXT,
+};
+const OK: Record<string, string> = {
+  assigned: "Penugasan disimpan.",
+  conflict: "Konflik kepentingan firma dicatat. Permintaan ini tidak akan ditugaskan di firma Anda; admin platform menindaklanjutinya.",
 };
 const DONE: Record<string, string> = {
   WITH_NOTES: "Selesai — Dengan Legal Note", WITHIN_SCOPE: "Selesai — Tanpa Legal Note", INCONCLUSIVE: "Belum dapat disimpulkan", DECLINED: "Tidak dapat memeriksa",
@@ -55,7 +63,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
         actions={isReviewer ? <ButtonLink href="/partner/approvals" variant="secondary">Lihat yang siap diputuskan</ButtonLink> : undefined} />
       {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{ERR[q.e] ?? "Terjadi kendala. Coba lagi."}</p>}
       {q.done && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">Pemeriksaan diselesaikan dengan hasil: {DONE[q.done] ?? q.done}. Pemilik dokumen sudah diberi tahu.</p>}
-      {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">Penugasan disimpan.</p>}
+      {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">{OK[q.ok] ?? "Tersimpan."}</p>}
 
       {isReviewer && (
         <section aria-labelledby="antrean-h" className="space-y-3">
@@ -109,11 +117,20 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
                 <li key={r.requestId}>
                   <Card className="space-y-3">
                     <p className="font-semibold text-navy">{categoryLabel(r.category)} · Usia {age(r.createdAt)}</p>
-                    {coord.reviewers.length === 0 ? <p>Belum ada reviewer di firma Anda. Minta admin platform menambahkan reviewer.</p> : (
+                    {r.conflict ? (
+                      <p role="status" className="rounded-xl border border-amber-400 bg-amber-50 p-3 text-amber-950">Konflik kepentingan firma sudah dicatat. Permintaan ini tidak ditugaskan di firma Anda; admin platform menindaklanjutinya.</p>
+                    ) : coord.reviewers.length === 0 ? <p>Belum ada reviewer di firma Anda. Minta admin platform menambahkan reviewer.</p> : (
                       <form action={assignAction} className="flex flex-wrap items-end gap-3">
                         <input type="hidden" name="requestId" value={r.requestId} />
                         <ReviewerSelect reviewers={coord.reviewers} label="Tugaskan kepada" />
                         <Button type="submit">Tugaskan</Button>
+                      </form>
+                    )}
+                    {!r.conflict && (
+                      <form action={declareConflictAction} className="space-y-2 border-t border-line pt-3">
+                        <input type="hidden" name="requestId" value={r.requestId} />
+                        <label className="flex min-h-12 items-start gap-3"><input type="checkbox" name="confirm" value="yes" required className="mt-1 h-6 w-6 shrink-0" /><span>Firma kami memiliki konflik kepentingan dengan pemilik dokumen ini.</span></label>
+                        <Button type="submit" variant="secondary">Catat konflik kepentingan</Button>
                       </form>
                     )}
                   </Card>

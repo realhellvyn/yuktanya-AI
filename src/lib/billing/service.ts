@@ -41,7 +41,7 @@ export interface BillingService {
   // Transfer manual yang menunggu konfirmasi, termasuk yang ordernya sudah lunas lewat pembayaran lain atau sudah kedaluwarsa
   // (30 hari terakhir): dana yang benar-benar masuk tetap dapat dikonfirmasi dan berakhir di rekonsiliasi, bukan hilang.
   pendingManualPayments(now?: Date): Promise<ManualPending[]>;
-  // Order yang perlu rekonsiliasi, plus pembayaran tambahan (DISPUTED) pada order yang sudah lunas.
+  // Order yang perlu rekonsiliasi, plus pembayaran tambahan (DISPUTED) pada order yang sudah lunas atau sudah dibatalkan.
   reconciliation(): Promise<ReconciliationItem[]>;
 }
 
@@ -59,6 +59,14 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
     for (const r of rows) m.set(r.order_id, [...(m.get(r.order_id) ?? []), { id: r.id, provider: r.provider, status: r.status }]);
     return m;
   }
+  // Kegagalan pencatatan audit tidak boleh mengubah jawaban ke pengguna; tetap dilaporkan ke log server.
+  async function recordDeepRejection(userId: string, parent: string, reason: string, stage: "ORDER" | "RECONCILIATION", now: Date) {
+    try {
+      await pool.query("select record_deep_eligibility_rejection($1, $2, $3, $4, $5)", [userId, parent, reason, stage, now]);
+    } catch (err) {
+      console.error("audit penolakan kelayakan Deep gagal", err instanceof Error ? err.message : err);
+    }
+  }
   return {
     async preview(userId, kind, refId, now = new Date()) {
       try {
@@ -73,6 +81,9 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
         const { rows } = await pool.query("select * from create_order($1, $2, $3, $4, $5)", [userId, kind, refId, key, now]);
         return { orderId: rows[0].order_id, status: rows[0].status, amountIdr: rows[0].amount_idr, duplicate: rows[0].duplicate };
       } catch (e) {
+        // Penolakan kelayakan Deep membatalkan transaksi order; jejak auditnya dicatat sesudahnya (hanya kode alasan).
+        const el = /NOT_ELIGIBLE: ([A-Z_]+)/.exec(e instanceof Error ? e.message : "");
+        if (el && kind === "DEEP_REVIEW" && refId) await recordDeepRejection(userId, refId, el[1], "ORDER", now);
         return mapError(e);
       }
     },
@@ -123,7 +134,14 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
         return rows[0].r;
       } catch (e) {
         const m = e instanceof Error ? e.message : "";
-        if (/NOT_ELIGIBLE/.test(m)) throw new BillingError("NOT_ELIGIBLE", "PARENT_CHANGED");
+        if (/NOT_ELIGIBLE/.test(m)) {
+          const o = (await pool.query("select user_id, ref_id from orders where id = $1 and kind = 'DEEP_REVIEW'", [orderId])).rows[0];
+          if (o?.ref_id) {
+            const why = (await pool.query("select reason from deep_eligibility($1, $2, $3, $4)", [o.user_id, o.ref_id, now, orderId])).rows[0]?.reason;
+            await recordDeepRejection(o.user_id, o.ref_id, typeof why === "string" ? why : "UNKNOWN", "RECONCILIATION", now);
+          }
+          throw new BillingError("NOT_ELIGIBLE", "PARENT_CHANGED");
+        }
         for (const c of ["NOTE_REQUIRED", "NOT_RECONCILIATION", "AMOUNT_MISMATCH", "CONFLICT", "INVALID_ACTION", "DISCOUNT_TAKEN"] as const) if (m.includes(c)) throw new BillingError(c);
         return mapError(e);
       }
@@ -149,7 +167,7 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
            from orders o where o.status = 'RECONCILIATION_REQUIRED'
          union all
          select o.id, p.id, o.status, coalesce(p.received_amount_idr, p.amount_idr), coalesce(p.received_at, p.created_at), true
-           from payments p join orders o on o.id = p.order_id where p.status = 'DISPUTED' and o.status = 'PAID'
+           from payments p join orders o on o.id = p.order_id where p.status = 'DISPUTED' and o.status in ('PAID', 'CANCELLED')
          order by 5`,
       );
       return rows.map((r) => ({

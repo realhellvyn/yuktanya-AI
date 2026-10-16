@@ -1,4 +1,4 @@
-import { LEGAL_DISCLAIMER, QR_NOT_SIGNATURE, VERIFICATION_STATEMENTS } from "@/lib/copy";
+import { LEGAL_DISCLAIMER, QR_NOT_SIGNATURE, VERIFICATION_STATEMENTS, VERIFIED_LABEL } from "@/lib/copy";
 import type { OwnerDeep } from "@/lib/deep/service";
 
 const TITLE: Record<string, string> = {
@@ -33,6 +33,7 @@ export function DeepResult({ deep, verifyUrl }: { deep: OwnerDeep; verifyUrl?: s
           <h3 className="text-lg font-semibold">Yuktanya Legal Verified — Enhanced</h3>
           <p role="status" className="font-semibold">Status: {deep.verification.status === "ACTIVE" ? "Aktif" : deep.verification.status === "SUSPENDED" ? "Ditangguhkan sementara" : "Dicabut"}</p>
           <p>{VERIFICATION_STATEMENTS.LEGAL_ENHANCED}</p>
+          <p className="font-semibold">{VERIFIED_LABEL}</p>
           <p>Kode: <span className="font-mono break-all">{deep.verification.code}</span></p>
           {verifyUrl && <p>Cek di <a className="inline-flex min-h-12 items-center underline" href={verifyUrl}>{verifyUrl}</a></p>}
           <p>{QR_NOT_SIGNATURE}</p>

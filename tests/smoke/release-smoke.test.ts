@@ -99,7 +99,7 @@ describe("E03 review standar tanpa catatan", () => {
     const rv = reviewDeps(r.reviewer, ["reviewer"]);
     const opened = await (await openReviewHandler(rv, post(), { id: req })).json();
     await pool.query("select save_report_draft($1, $2, $3, 'Klausul kerahasiaan', '', '', $4)", [r.reviewer, req, opened.revision, NOW]);
-    const pub = await publishHandler(rv, post({ revision: opened.revision + 1, outcome: "WITHIN_SCOPE", noNotesDeclared: true, attest: true }), { id: req });
+    const pub = await publishHandler(rv, post({ revision: opened.revision + 1, outcome: "WITHIN_SCOPE", noNotesDeclared: true, attest: true, noConflict: true }), { id: req });
     expect(pub.status).toBe(200);
     const code = (await pub.json()).code as string;
     const hash = (await pool.query("select sha256 from document_versions where id = $1", [v.versionId])).rows[0].sha256;
@@ -173,7 +173,7 @@ describe("E09 Enhanced disetujui", () => {
   it("pekerjaan tambahan + M1–M7 lulus + bukti + APPROVE eksplisit menerbitkan tepat satu Enhanced; pembayaran saja tidak", async () => {
     const d = await readyDeep();
     expect(await count("select count(*) from document_verifications where kind = 'LEGAL_ENHANCED' and request_id = $1", [d.c.req])).toBe(0); // dibayar, belum diputuskan
-    const r = await decideHandler(deepDeps(d.c.r.reviewer, ["reviewer"]), post({ revision: d.rev, decision: "APPROVE", attest: true }), { id: d.deep });
+    const r = await decideHandler(deepDeps(d.c.r.reviewer, ["reviewer"]), post({ revision: d.rev, decision: "APPROVE", attest: true, noConflict: true }), { id: d.deep });
     expect(r.status).toBe(200);
     const done = await r.json();
     expect(await lookup(done.code)).toMatchObject({ status: "ACTIVE", kind: "LEGAL_ENHANCED" });
@@ -186,11 +186,11 @@ describe("E10 deep dengan kriteria gagal atau tanpa atestasi", () => {
   it("FAIL, catatan material belum selesai, dan tanpa atestasi: nol Enhanced; DENY dengan alasan menyelesaikan pekerjaan", async () => {
     const failing = await readyDeep({ fail: "M3" });
     const rv = deepDeps(failing.c.r.reviewer, ["reviewer"]);
-    const a = await decideHandler(rv, post({ revision: failing.rev, decision: "APPROVE", attest: true }), { id: failing.deep });
+    const a = await decideHandler(rv, post({ revision: failing.rev, decision: "APPROVE", attest: true, noConflict: true }), { id: failing.deep });
     expect([a.status, (await a.json()).reason]).toEqual([422, "MATERIAL_FAIL"]);
-    const b = await decideHandler(rv, post({ revision: failing.rev, decision: "APPROVE", attest: false }), { id: failing.deep });
+    const b = await decideHandler(rv, post({ revision: failing.rev, decision: "APPROVE", attest: false, noConflict: true }), { id: failing.deep });
     expect([b.status, (await b.json()).code]).toEqual([422, "ATTESTATION_REQUIRED"]);
-    const denied = await decideHandler(rv, post({ revision: failing.rev, decision: "DENY", reason: "Butir M3 tidak terpenuhi", attest: true }), { id: failing.deep });
+    const denied = await decideHandler(rv, post({ revision: failing.rev, decision: "DENY", reason: "Butir M3 tidak terpenuhi", attest: true, noConflict: true }), { id: failing.deep });
     expect(denied.status).toBe(200);
     expect((await denied.json()).code).toBeNull();
     expect(await count("select count(*) from document_verifications where kind = 'LEGAL_ENHANCED' and request_id = $1", [failing.c.req])).toBe(0);
@@ -201,7 +201,7 @@ describe("E10 deep dengan kriteria gagal atau tanpa atestasi", () => {
 describe("E11 otoritas dicabut, penugasan basi, dan admin", () => {
   it("otorisasi dicabut, reviewer lain, dan admin tidak dapat menerbitkan Enhanced", async () => {
     const d = await readyDeep();
-    const body = { revision: d.rev, decision: "APPROVE", attest: true };
+    const body = { revision: d.rev, decision: "APPROVE", attest: true, noConflict: true };
     expect((await decideHandler(deepDeps(d.c.f.admin, ["platform_admin"]), post(body), { id: d.deep })).status).toBe(403);
     const other = (await d.c.f.addReviewer()).reviewer;
     expect((await decideHandler(deepDeps(other, ["reviewer"]), post(body), { id: d.deep })).status).toBe(404);
@@ -232,7 +232,7 @@ describe("E13 pencarian publik dan pencabutan", () => {
     expect(await lookup("z".repeat(48))).toEqual({ status: "NOT_FOUND" });
     expect(await lookup("pendek")).toEqual({ status: "NOT_FOUND" });
     const d = await readyDeep();
-    const approved = await (await decideHandler(deepDeps(d.c.r.reviewer, ["reviewer"]), post({ revision: d.rev, decision: "APPROVE", attest: true }), { id: d.deep })).json();
+    const approved = await (await decideHandler(deepDeps(d.c.r.reviewer, ["reviewer"]), post({ revision: d.rev, decision: "APPROVE", attest: true, noConflict: true }), { id: d.deep })).json();
     const active = await lookup(d.c.code);
     expect(active).toMatchObject({ status: "ACTIVE", kind: "LEGAL" });
     expect(JSON.stringify(active)).not.toMatch(/Sinta|Budi|ZZ-RAHASIA|reviewer/);
