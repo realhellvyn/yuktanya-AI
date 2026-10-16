@@ -11,12 +11,20 @@ export function getPool(): Pool {
   return pool;
 }
 
-export async function createUser(p: Pool, opts: { meta?: object } = {}): Promise<string> {
+export type AppRole = "user" | "reviewer" | "partner_admin" | "platform_admin";
+
+export async function createUser(
+  p: Pool,
+  opts: { meta?: object; roles?: AppRole[] } = {},
+): Promise<string> {
   const email = `u-${Math.random().toString(36).slice(2)}@example.test`;
   const { rows } = await p.query<{ id: string }>(
     "insert into auth.users(email, raw_user_meta_data) values ($1, $2) returning id",
     [email, JSON.stringify(opts.meta ?? {})],
   );
+  for (const role of opts.roles ?? []) {
+    await p.query("insert into user_roles(user_id, role) values ($1, $2) on conflict do nothing", [rows[0].id, role]);
+  }
   return rows[0].id;
 }
 
