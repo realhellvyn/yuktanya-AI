@@ -50,6 +50,24 @@ export function makeKit(pool: Pool) {
       const r = await this.settle("mock", p.ref, o.amount_idr, now);
       return { ...o, ...p, settled: r };
     },
+    // Review standar selesai WITH_NOTES (satu catatan aktionabel) → siap untuk penawaran Deep Review.
+    async completedStandard(opts: { severity?: "MINOR" | "MATERIAL"; actionable?: boolean; owner?: string; member?: boolean } = {}) {
+      await pool.query("update firms set is_default = false");
+      const f = await this.firm({ isDefault: true });
+      const r = await f.addReviewer();
+      const owner = opts.owner ?? (opts.member ? await this.member("2026-10-01", "2027-12-01") : await createUser(pool));
+      const v = await this.frozen(owner);
+      const b = await this.buy(owner, "STANDARD_REVIEW", v.versionId);
+      const req = (await pool.query("select id from review_requests where order_id = $1", [b.order_id])).rows[0].id as string;
+      await pool.query("select assign_review($1, $2, $3, $4)", [f.coordinator, req, r.reviewer, NOW]);
+      const s = (await pool.query("select * from start_review($1, $2, $3)", [r.reviewer, req, NOW])).rows[0];
+      let rev = (await pool.query("select save_report_draft($1, $2, $3, 'Klausul kerahasiaan', 'Data benar', '', $4) as r", [r.reviewer, req, s.revision, NOW])).rows[0].r as number;
+      const sev = opts.severity ?? "MATERIAL";
+      const note = { title: "Jangka waktu", finding: "Tidak jelas", severity: sev, actionable: opts.actionable ?? true, recommended_action: "Perjelas", rationale: "Risiko sengketa", escalation: "Konsultasi lanjutan" };
+      rev = (await pool.query("select * from upsert_note($1, $2, $3, $4, $5)", [r.reviewer, req, rev, JSON.stringify(note), NOW])).rows[0].revision as number;
+      const pub = (await pool.query("select * from publish_standard($1, $2, $3, 'WITH_NOTES', false, true, $4)", [r.reviewer, req, rev, NOW])).rows[0] as { verification_id: string; code: string };
+      return { f, r, owner, v, req, verificationId: pub.verification_id, code: pub.code };
+    },
     // Firma bawaan + koordinator + reviewer berotorisasi.
     async firm(opts: { isDefault?: boolean } = {}) {
       const admin = await this.admin();
