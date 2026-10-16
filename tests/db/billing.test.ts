@@ -10,6 +10,7 @@ const cat = async () => Object.fromEntries((await pool.query("select kind || '/'
 
 describe("katalog harga", () => {
   it("seed terkunci sama dengan PRICING", async () => {
+    await pool.query("delete from price_catalog where kind in ('MEMBERSHIP_ANNUAL', 'BUNDLE')");
     const c = await cat();
     expect(c["STANDARD_REVIEW/FREE"]).toBe(PRICING.standard.free);
     expect(c["STANDARD_REVIEW/MEMBER_FIRST"]).toBe(PRICING.standard.memberFirst);
@@ -106,6 +107,7 @@ describe("order dan harga review standar", () => {
 
 describe("produk dengan harga UNKNOWN", () => {
   it("MEMBERSHIP_ANNUAL dan BUNDLE tidak dapat dipesan sampai admin mengisi harga", async () => {
+    await pool.query("delete from price_catalog where kind in ('MEMBERSHIP_ANNUAL', 'BUNDLE')");
     const u = await createUser(pool);
     await expect(kit.order(u, "MEMBERSHIP_ANNUAL", null)).rejects.toThrow(/PRODUCT_UNAVAILABLE/);
     await expect(kit.order(u, "BUNDLE", null)).rejects.toThrow(/PRODUCT_UNAVAILABLE/);

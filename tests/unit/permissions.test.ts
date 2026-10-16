@@ -80,3 +80,25 @@ describe("safeReturnTo", () => {
     },
   );
 });
+
+describe("guardPath: penagihan, review, dan verifikasi", () => {
+  it("permukaan pemilik baru tertutup untuk anonim dan peran profesional/admin", () => {
+    for (const p of ["/membership", "/checkout/x", "/reviews", "/reviews/abc", "/api/orders", "/api/orders/x/pay", "/api/payments/mock/x/settle", "/api/reviews"]) {
+      expect(redirectOf(guardPath(p, null))).toBe(`/login?returnTo=${encodeURIComponent(p)}`);
+      expect(guardPath(p, ["user"])).toEqual({ allow: true });
+      expect(redirectOf(guardPath(p, ["reviewer"]))).toBe("/partner");
+      expect(redirectOf(guardPath(p, ["platform_admin"]))).toBe("/admin");
+    }
+  });
+
+  it("webhook penyedia dan halaman verifikasi publik tetap terbuka", () => {
+    for (const p of ["/api/payments/webhook/midtrans", "/verify/abc"]) expect(guardPath(p, null)).toEqual({ allow: true });
+  });
+
+  it("/api/admin hanya platform_admin dan /api/partner hanya peran profesional", () => {
+    expect(guardPath("/api/admin/payments/x/confirm", ["platform_admin"])).toEqual({ allow: true });
+    expect(redirectOf(guardPath("/api/admin/payments/x/confirm", ["user"]))).toBe("/dashboard");
+    expect(guardPath("/api/partner/reviews", ["reviewer"])).toEqual({ allow: true });
+    expect(redirectOf(guardPath("/api/partner/reviews", ["user"]))).toBe("/dashboard");
+  });
+});
