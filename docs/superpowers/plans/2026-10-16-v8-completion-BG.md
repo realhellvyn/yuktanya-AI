@@ -25,6 +25,10 @@
 - Test commands: unit+DB `npm run check`; browser `bash scripts/e2e/run.sh` (env `VIEWPORTS`, `JOURNEY=./journey-roles.mjs,...`, `SHOTS_DIR`). Never claim a test passed that was not run.
 - UI test rules already enforced in E2E: no horizontal overflow, touch targets ≥43.5px on listed pages, no console errors.
 
+## No-Repeat Rule (owner instruction)
+
+Work that is already finished and passing is NOT redone: sub-project A (AI chat), the standard-review cross-role E2E steps, the 360 DB tests and 231 unit tests. Subagents run only focused tests for what they change while iterating, and the full `npm run check` once before their commit. Full `bash scripts/e2e/run.sh` is run by an implementer only when its task touches browser-visible behavior, and the complete multi-journey run happens once in Task 9. Reviewers do not re-run suites the implementer already ran.
+
 ## Review Focus
 
 - Role pages opened by the wrong role (user→/admin, reviewer→/admin, coordinator of another firm) must redirect/deny; test it.
@@ -41,7 +45,7 @@
 
 **Context:** `bash scripts/e2e/run.sh` currently ends 35/38: in the deep-review step, after the reviewer completes extra work, dispositions and M1–M7 PASS and chooses "Setujui Enhanced" (select `decision`=APPROVE, checkbox `attest`), no `LEGAL_ENHANCED` verification is created (page shows "Tersimpan." only). Two later steps fail as a consequence. Standard flow (register 4 actors → admin firm/members/authorization → owner NDA via chat → pay by bank transfer → admin confirms → coordinator assigns → reviewer publishes WITH_NOTES → public `/verify/<code>` Aktif) already passes.
 
-- [ ] Write/keep the failing E2E; diagnose root cause (check the decision action result code, `decide_deep` guards in `supabase/migrations/20261016000024_deep_decision.sql`, rubric approval row, `ENHANCED_ISSUANCE` flag passed to the dev server env in `tests/e2e/run.mjs`, checklist/disposition form submissions, stale `revision` hidden fields). Fix the real cause in app code or test harness. Do not weaken guards; payment must never bypass checklist/rubric/attestation.
+- [ ] Do NOT rewrite the passing steps of `journey-roles.mjs`; start from the failing deep step. Diagnose root cause (check the decision action result code, `decide_deep` guards in `supabase/migrations/20261016000024_deep_decision.sql`, rubric approval row, `ENHANCED_ISSUANCE` flag passed to the dev server env in `tests/e2e/run.mjs`, checklist/disposition form submissions, stale `revision` hidden fields). Fix the real cause in app code or test harness. Do not weaken guards; payment must never bypass checklist/rubric/attestation.
 - [ ] Extend the journey so it also proves: (a) a regular user and a reviewer-only account get denied on `/admin` and `/admin/payments`; (b) a coordinator cannot see requests of another firm (use DB helper to create a second firm if needed, or assert via DB-level negative test in `tests/db`); (c) after admin revokes the parent LEGAL verification the public page of the Enhanced code shows "Ditangguhkan sementara" or "Dicabut"; (d) a new document version created from the same document shows "baru/belum diperiksa" with no badge (E12).
 - [ ] Run `bash scripts/e2e/run.sh` fully (desktop + mobile for journey.mjs; desktop for roles) → all green. Run `npm run check` → green. Commit.
 - Expected: `NN/NN lulus`, 0 FAIL.
