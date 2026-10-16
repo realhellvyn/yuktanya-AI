@@ -44,6 +44,27 @@ describe("guardPath", () => {
   });
 });
 
+describe("permukaan pemilik dokumen", () => {
+  it("anonim diarahkan ke login; user biasa boleh; peran profesional diarahkan ke home-nya", () => {
+    for (const p of ["/workspace/new", "/workspace/abc", "/documents", "/documents/x", "/vault"]) {
+      expect(redirectOf(guardPath(p, null))).toBe(`/login?returnTo=${encodeURIComponent(p)}`);
+      expect(guardPath(p, ["user"])).toEqual({ allow: true });
+      expect(redirectOf(guardPath(p, ["user", "reviewer"]))).toBe("/partner");
+      expect(redirectOf(guardPath(p, ["user", "platform_admin"]))).toBe("/admin");
+    }
+  });
+
+  it("/api/documents memerlukan sesi tetapi tidak memaksa peran", () => {
+    expect(redirectOf(guardPath("/api/documents/versions/x", null))).toContain("/login");
+    expect(guardPath("/api/documents/versions/x", ["user", "reviewer"])).toEqual({ allow: true });
+  });
+
+  it("prefix mirip tidak ikut terlindungi", () => {
+    expect(guardPath("/documentsx", null)).toEqual({ allow: true });
+    expect(guardPath("/vaultish", null)).toEqual({ allow: true });
+  });
+});
+
 describe("safeReturnTo", () => {
   it("menerima path internal", () => {
     expect(safeReturnTo("/dashboard")).toBe("/dashboard");

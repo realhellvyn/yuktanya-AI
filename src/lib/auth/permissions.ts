@@ -2,7 +2,9 @@ export type Role = "user" | "reviewer" | "partner_admin" | "platform_admin";
 export type Home = "/dashboard" | "/partner" | "/admin";
 export type GuardResult = { allow: true } | { allow: false; redirect: string };
 
-const PROTECTED = ["/dashboard", "/partner", "/admin", "/api/ai"] as const;
+// Permukaan pemilik dokumen: hanya akun pemilik biasa (peran profesional/admin memakai permukaannya sendiri).
+const OWNER = ["/dashboard", "/workspace", "/documents", "/vault"] as const;
+const PROTECTED = [...OWNER, "/partner", "/admin", "/api/ai", "/api/documents"] as const;
 
 const under = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
 
@@ -18,13 +20,13 @@ export function guardPath(pathname: string, roles: Role[] | null): GuardResult {
   if (!roles) return { allow: false, redirect: `/login?returnTo=${encodeURIComponent(pathname)}` };
 
   const home = homeFor(roles);
-  if (prefix === "/api/ai") return { allow: true };
+  if (prefix === "/api/ai" || prefix === "/api/documents") return { allow: true };
   if (prefix === "/admin") return roles.includes("platform_admin") ? { allow: true } : { allow: false, redirect: home };
   if (prefix === "/partner") {
     const ok = roles.includes("reviewer") || roles.includes("partner_admin");
     return ok ? { allow: true } : { allow: false, redirect: home };
   }
-  // /dashboard: hanya akun pemilik biasa; peran profesional/admin tidak memakai identitas pemilik yang sama.
+  // Permukaan pemilik: hanya akun pemilik biasa; peran profesional/admin tidak memakai identitas pemilik yang sama.
   return home === "/dashboard" ? { allow: true } : { allow: false, redirect: home };
 }
 
