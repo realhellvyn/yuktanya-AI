@@ -18,7 +18,7 @@ export default async function FeaturesPage() {
       <h1 className="text-3xl font-semibold">Pemetaan fitur Vault</h1>
       <p>Pengaturan awal untuk fitur Vault hanya usulan dan dapat diubah di sini. Setiap perubahan tercatat di audit.</p>
       <table className="w-full border-collapse">
-        <thead><tr className="border-b border-slate-300 text-left"><th className="py-2">Fitur</th>{PLANS.map((p) => <th key={p} className="py-2">{p === "FREE" ? "Gratis" : "Member"}</th>)}</tr></thead>
+        <thead><tr className="border-b border-line text-left"><th className="py-2">Fitur</th>{PLANS.map((p) => <th key={p} className="py-2">{p === "FREE" ? "Gratis" : "Member"}</th>)}</tr></thead>
         <tbody>
           {FEATURES.map((f) => (
             <tr key={f.key} className="border-b border-slate-200">

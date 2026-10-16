@@ -12,7 +12,7 @@ const VARIANT_TEXT: Record<string, string> = {
 
 export function PriceBreakdown({ service, quote }: { service: string; quote: Quote }) {
   return (
-    <section aria-labelledby="harga-h" className="space-y-3 rounded-lg border border-slate-300 bg-white p-4">
+    <section aria-labelledby="harga-h" className="space-y-3 rounded-lg border border-line bg-white p-4">
       <h2 id="harga-h" className="text-xl font-semibold">Rincian biaya</h2>
       <dl className="space-y-2">
         <div><dt className="font-medium">Layanan</dt><dd>{service}</dd></div>

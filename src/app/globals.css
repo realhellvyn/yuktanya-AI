@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+/* Token dari docs/DESIGN_SYSTEM.md. Warna status selalu disertai teks/simbol. */
+@theme {
+  --color-navy: #17324d;
+  --color-brand: #2563eb;
+  --color-brand-dark: #1d4ed8;
+  --color-ink: #17212b;
+  --color-muted: #475569;
+  --color-line: #cbd5e1;
+  --color-canvas: #f8fafc;
+  --color-success: #166534;
+  --color-danger: #b91c1c;
+}
+
 :root {
   --navy: #17324d;
   --blue: #2563eb;
@@ -9,9 +22,31 @@
   --border: #cbd5e1;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   background: var(--offwhite);
   color: var(--ink);
   font-size: 17px;
   line-height: 1.6;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

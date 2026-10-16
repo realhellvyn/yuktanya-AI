@@ -56,3 +56,8 @@ export function addMonthsIso(iso: string, months: number): string {
   const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
   return toIso(y, mo, Math.min(+m[3], last));
 }
+
+// Instan (ISO UTC) → tanggal ISO menurut WIB (UTC+7), agar tanggal tampil sama dengan hari pengguna.
+export function wibDate(isoInstant: string): string {
+  return new Date(new Date(isoInstant).getTime() + 7 * 3600_000).toISOString().slice(0, 10);
+}

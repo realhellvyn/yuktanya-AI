@@ -11,7 +11,7 @@ const OUTCOME_TITLE: Record<string, string> = {
 
 export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = true }: { review: OwnerReview; verifyUrl?: string; qrDataUrl?: string; isLatestVersion?: boolean }) {
   if (review.status !== "COMPLETED" && review.status !== "DECLINED") {
-    return <p role="status" className="rounded-lg border border-slate-300 bg-white p-4">Pemeriksaan belum selesai. Hasil akan tampil di sini.</p>;
+    return <p role="status" className="rounded-lg border border-line bg-white p-4">Pemeriksaan belum selesai. Hasil akan tampil di sini.</p>;
   }
   const v = review.verification;
   const badge = v && (review.outcome === "WITH_NOTES" || review.outcome === "WITHIN_SCOPE");
@@ -19,7 +19,7 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
     <section aria-labelledby="hasil-h" className="space-y-4">
       <h2 id="hasil-h" className="text-2xl font-semibold">{OUTCOME_TITLE[review.outcome ?? ""] ?? "Selesai"}</h2>
       <p>Versi yang diperiksa: versi {review.versionNo}</p>
-      {!isLatestVersion && <p role="status" className="rounded-lg border border-slate-300 bg-white p-3">{NEW_VERSION_NOT_REVIEWED}. Hasil ini hanya berlaku untuk versi {review.versionNo}.</p>}
+      {!isLatestVersion && <p role="status" className="rounded-lg border border-line bg-white p-3">{NEW_VERSION_NOT_REVIEWED}. Hasil ini hanya berlaku untuk versi {review.versionNo}.</p>}
       {review.scope && <div><h3 className="font-semibold">Ruang lingkup pemeriksaan</h3><p>{review.scope}</p></div>}
       {review.assumptions && <div><h3 className="font-semibold">Asumsi</h3><p>{review.assumptions}</p></div>}
       {review.summary && <div><h3 className="font-semibold">Ringkasan pemeriksa</h3><p>{review.summary}</p></div>}
@@ -27,7 +27,7 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
         <div className="space-y-3"><h3 className="text-xl font-semibold">Legal Note</h3>{review.notes.map((n) => <LegalNoteCard key={n.noteNo} note={n} />)}</div>
       )}
       {badge && v && (
-        <div className="space-y-2 rounded-lg border border-slate-300 bg-white p-4">
+        <div className="space-y-2 rounded-lg border border-line bg-white p-4">
           <h3 className="text-lg font-semibold">Yuktanya Legal Verified</h3>
           <p role="status" className="font-semibold">Status: {v.status === "ACTIVE" ? "Aktif" : v.status === "REVOKED" ? "Dicabut" : "Ditangguhkan sementara"}</p>
           <p>{verificationStatement("LEGAL", review.outcome)}</p>

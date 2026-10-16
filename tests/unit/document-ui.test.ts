@@ -1,8 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
 import { DocumentPreview } from "@/components/documents/document-preview";
 import { VersionList } from "@/components/documents/version-list";
-import { AppNav } from "@/components/app-nav";
+import { BottomNav, SideNav } from "@/components/app-nav";
 import { WizardStep } from "@/components/documents/wizard-step";
 import { AI_DRAFT_LABEL } from "@/lib/copy";
 import { renderDocument } from "@/lib/documents/render";
@@ -79,11 +81,11 @@ describe("DocumentPreview dan VersionList", () => {
         { id: "v2", versionNo: 2, sha256: "b".repeat(64), createdAt: "2026-10-16T06:00:00.000Z" },
       ],
     }));
-    const nav = renderToStaticMarkup(AppNav());
-    for (const html of [list, nav]) {
+    const nav = [renderToStaticMarkup(SideNav()), renderToStaticMarkup(BottomNav())];
+    for (const html of [list, ...nav]) {
       const anchors = html.match(/<a [^>]*>/g) ?? [];
       expect(anchors.length).toBeGreaterThan(0);
-      for (const a of anchors) expect(a).toContain("min-h-12");
+      for (const a of anchors) expect(a).toMatch(/min-h-(12|16)/);
     }
   });
 

@@ -25,19 +25,19 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
   const manual = process.env.MANUAL_PAYMENT_INSTRUCTIONS?.trim() || "Instruksi pembayaran belum tersedia. Hubungi kami sebelum membayar.";
   const production = process.env.NODE_ENV === "production";
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <h1 className="text-3xl font-semibold">Pembayaran</h1>
-      <section className="space-y-2 rounded-lg border border-slate-300 bg-white p-4">
+    <main className="max-w-3xl space-y-6">
+      <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">Pembayaran</h1>
+      <section className="space-y-2 rounded-lg border border-line bg-white p-4">
         <h2 className="text-xl font-semibold">{LABEL[order.kind]}</h2>
         <p className="text-2xl font-semibold">{formatIdr(order.amountIdr)}</p>
         <p>{CHECKOUT_NOTE}</p>
       </section>
-      {q.notice && NOTICE[q.notice] && <p role="alert" className="font-semibold text-red-800">{NOTICE[q.notice]}</p>}
+      {q.notice && NOTICE[q.notice] && <p role="alert" className="font-semibold text-danger">{NOTICE[q.notice]}</p>}
       <OrderStatus order={order} />
       {order.status === "PENDING_PAYMENT" && (
         <section className="space-y-4" aria-label="Cara membayar">
           {pending?.provider === "manual" && (
-            <div className="space-y-2 rounded-lg border border-slate-300 bg-white p-4">
+            <div className="space-y-2 rounded-lg border border-line bg-white p-4">
               <h2 className="text-xl font-semibold">Transfer bank</h2>
               <p className="whitespace-pre-line">{manual}</p>
               <p>Tulis kode berikut pada berita transfer: <strong className="font-mono text-xl">{paymentReference(pending.id)}</strong></p>
@@ -48,7 +48,7 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
             <form action={payAction} className="space-y-3">
               <input type="hidden" name="orderId" value={order.id} />
               <input type="hidden" name="provider" value="manual" />
-              <button type="submit" className={`${btn} bg-blue-600 text-white`}>Bayar dengan transfer bank</button>
+              <button type="submit" className={`${btn} bg-brand hover:bg-brand-dark text-white`}>Bayar dengan transfer bank</button>
             </form>
           )}
           {!production && !pending && (

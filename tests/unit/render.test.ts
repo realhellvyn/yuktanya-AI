@@ -85,3 +85,28 @@ describe("renderDocument", () => {
     expect(() => parseCanonical("{}")).toThrow();
   });
 });
+
+describe("renderPartial (pratinjau bertahap)", () => {
+  it("klausul yang semua isiannya sudah ada ditampilkan, sisanya ditandai belum lengkap", async () => {
+    const { renderPartial } = await import("@/lib/documents/render");
+    const rows = renderPartial(nda, { disclosingParty: "Sinta Dewi", receivingParty: "Budi", signingDate: "2026-10-16" });
+    const parties = rows.find((r) => r.id === "parties")!;
+    expect(parties.complete).toBe(true);
+    expect(parties.text).toContain("Sinta Dewi");
+    expect(parties.text).toContain("16 Oktober 2026");
+    const info = rows.find((r) => r.id === "info")!;
+    expect(info.complete).toBe(false);
+    expect(info.text).toBe("");
+  });
+
+  it("klausul opsional tanpa isian tidak muncul", async () => {
+    const { renderPartial } = await import("@/lib/documents/render");
+    expect(renderPartial(nda, {}).some((r) => r.id === "notes")).toBe(false);
+  });
+
+  it("nilai pengguna berisi {{x}} tidak dipindai ulang", async () => {
+    const { renderPartial } = await import("@/lib/documents/render");
+    const rows = renderPartial(nda, { disclosingParty: "{{receivingParty}}", receivingParty: "B", signingDate: "2026-10-16" });
+    expect(rows.find((r) => r.id === "parties")!.text).toContain("{{receivingParty}}");
+  });
+});

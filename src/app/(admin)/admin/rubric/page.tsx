@@ -12,9 +12,9 @@ export default async function RubricPage({ searchParams }: { searchParams: Promi
   return (
     <main className="mx-auto max-w-2xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">Persetujuan rubrik Enhanced</h1>
-      {q.ok && <p role="status" className="rounded-lg border border-slate-300 bg-white p-3">Persetujuan dicatat.</p>}
-      {q.e && <p role="alert" className="font-semibold text-red-800">Isi referensi persetujuan mitra (minimal 3 karakter).</p>}
-      <section className="space-y-2 rounded-lg border border-slate-300 bg-white p-4">
+      {q.ok && <p role="status" className="rounded-lg border border-line bg-white p-3">Persetujuan dicatat.</p>}
+      {q.e && <p role="alert" className="font-semibold text-danger">Isi referensi persetujuan mitra (minimal 3 karakter).</p>}
+      <section className="space-y-2 rounded-lg border border-line bg-white p-4">
         <p>Versi rubrik: <strong>{RUBRIC_VERSION}</strong> (butir M1–M7 dari docs/DEEP_REVIEW.md).</p>
         <p>Status: {row ? `Disetujui mitra — ${row.signoff_ref}` : "Belum disetujui. Enhanced tidak dapat diterbitkan."}</p>
         <p>Flag pembelian Deep Review: {flags.deepReviewPurchase ? "aktif" : "mati"}. Flag penerbitan Enhanced: {flags.enhancedIssuance ? "aktif" : "mati"} (diatur lewat variabel lingkungan).</p>
@@ -25,7 +25,7 @@ export default async function RubricPage({ searchParams }: { searchParams: Promi
             <input name="signoffRef" required minLength={3} maxLength={200} className="mt-1 block min-h-12 w-full rounded-lg border border-slate-400 px-3" />
           </label>
           <p>Mencatat persetujuan tidak mengaktifkan Enhanced; flag produksi tetap diatur terpisah.</p>
-          <button type="submit" className="min-h-12 rounded-lg bg-blue-600 px-5 font-semibold text-white">Catat persetujuan</button>
+          <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Catat persetujuan</button>
         </form>
       )}
     </main>

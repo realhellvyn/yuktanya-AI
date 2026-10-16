@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { googleAuthEnabled } from "@/lib/auth/google";
 import { signInWithGoogle } from "./actions";
+import { PasswordField } from "./password-field";
 
 const MESSAGES: Record<string, string> = {
   invalid: "Email atau kata sandi belum sesuai. Kata sandi minimal 8 karakter.",
@@ -19,49 +22,44 @@ type Props = {
 export function AuthForm({ mode, action, error, sent, returnTo }: Props) {
   const isLogin = mode === "login";
   return (
-    <main className="mx-auto max-w-md p-6">
-      <h1 className="text-3xl font-semibold">{isLogin ? "Masuk ke Yuktanya" : "Buat akun Yuktanya"}</h1>
-      {sent && (
-        <p role="status" className="mt-4 rounded-lg border border-slate-300 bg-white p-4">
-          Kami sudah mengirim email konfirmasi. Buka email Anda lalu tekan tautannya. Belum menerima? Periksa folder spam,
-          lalu daftar ulang dengan email yang sama.
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="mt-4 rounded-lg border border-red-700 bg-white p-4 text-red-800">
-          {MESSAGES[error] ?? MESSAGES.failed}
-        </p>
-      )}
-      {googleAuthEnabled(process.env) && (
-        <>
-          <form action={signInWithGoogle} className="mt-6">
-            <input type="hidden" name="returnTo" value={returnTo} />
-            <button type="submit" className="min-h-12 w-full rounded-lg border border-slate-400 bg-white px-4 font-semibold text-slate-900">
-              {isLogin ? "Masuk dengan Google" : "Daftar dengan Google"}
-            </button>
-          </form>
-          <p className="mt-4 text-center text-slate-600" aria-hidden="true">atau</p>
-        </>
-      )}
-      <form action={action} className="mt-6 space-y-5">
-        <input type="hidden" name="returnTo" value={returnTo} />
-        <label className="block">
-          <span className="font-medium">Email <span className="text-slate-600">(Wajib)</span></span>
-          <input name="email" type="email" required autoComplete="email" className="mt-1 block min-h-12 w-full rounded-lg border border-slate-300 px-3" />
-        </label>
-        <label className="block">
-          <span className="font-medium">Kata sandi <span className="text-slate-600">(Wajib, minimal 8 karakter)</span></span>
-          <input name="password" type="password" required minLength={8} autoComplete={isLogin ? "current-password" : "new-password"} className="mt-1 block min-h-12 w-full rounded-lg border border-slate-300 px-3" />
-        </label>
-        <button type="submit" className="min-h-12 w-full rounded-lg bg-blue-600 px-4 font-semibold text-white">
-          {isLogin ? "Masuk" : "Daftar Gratis"}
-        </button>
-      </form>
-      <p className="mt-6">
+    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-4 py-10">
+      <Link href="/" className="inline-flex min-h-12 items-center self-start text-2xl font-bold tracking-tight text-navy">Yuktanya</Link>
+      <Card className="space-y-5 !p-6 md:!p-8">
+        <h1 className="text-[1.75rem] font-bold leading-tight text-navy">{isLogin ? "Masuk ke Yuktanya" : "Buat akun Yuktanya"}</h1>
+        {sent && (
+          <p role="status" className="rounded-xl border border-blue-300 bg-blue-50 p-4">
+            Kami sudah mengirim email konfirmasi. Buka email Anda lalu tekan tautannya. Belum menerima? Periksa folder spam, lalu daftar ulang dengan email yang sama.
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">
+            {MESSAGES[error] ?? MESSAGES.failed}
+          </p>
+        )}
+        {googleAuthEnabled(process.env) && (
+          <>
+            <form action={signInWithGoogle}>
+              <input type="hidden" name="returnTo" value={returnTo} />
+              <Button type="submit" variant="secondary" className="w-full">{isLogin ? "Masuk dengan Google" : "Daftar dengan Google"}</Button>
+            </form>
+            <p className="text-center text-muted" aria-hidden="true">atau</p>
+          </>
+        )}
+        <form action={action} className="space-y-5">
+          <input type="hidden" name="returnTo" value={returnTo} />
+          <label className="block">
+            <span className="font-semibold">Email <span className="font-normal text-muted">(Wajib)</span></span>
+            <input name="email" type="email" required autoComplete="email" className="mt-2 block min-h-12 w-full rounded-xl border border-slate-400 bg-white px-4 text-lg" />
+          </label>
+          <PasswordField autoComplete={isLogin ? "current-password" : "new-password"} />
+          <Button type="submit" className="w-full text-lg">{isLogin ? "Masuk" : "Daftar Gratis"}</Button>
+        </form>
+      </Card>
+      <p className="text-center">
         {isLogin ? (
-          <>Belum punya akun? <Link className="text-blue-700 underline" href="/register">Daftar Gratis</Link></>
+          <>Belum punya akun? <Link className="inline-flex min-h-12 items-center font-semibold text-brand-dark underline" href="/register">Daftar Gratis</Link></>
         ) : (
-          <>Sudah punya akun? <Link className="text-blue-700 underline" href="/login">Masuk</Link></>
+          <>Sudah punya akun? <Link className="inline-flex min-h-12 items-center font-semibold text-brand-dark underline" href="/login">Masuk</Link></>
         )}
       </p>
     </main>

@@ -21,15 +21,15 @@ export default async function VerificationsAdminPage({ searchParams }: { searchP
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">Pencabutan verifikasi</h1>
-      {q.ok && <p role="status" className="rounded-lg border border-slate-300 bg-white p-3">Verifikasi dicabut. Halaman publik langsung menampilkan status Dicabut.</p>}
-      {q.e && <p role="alert" className="font-semibold text-red-800">{ERR[q.e] ?? "Terjadi kendala."}</p>}
+      {q.ok && <p role="status" className="rounded-lg border border-line bg-white p-3">Verifikasi dicabut. Halaman publik langsung menampilkan status Dicabut.</p>}
+      {q.e && <p role="alert" className="font-semibold text-danger">{ERR[q.e] ?? "Terjadi kendala."}</p>}
       <form className="flex flex-wrap items-end gap-3">
         <label className="block"><span className="font-medium">Awalan kode (minimal 8 karakter)</span><input name="q" defaultValue={code} className={field} /></label>
         <button type="submit" className="min-h-12 rounded-lg border border-slate-400 bg-white px-5 font-medium">Cari</button>
       </form>
       <ul className="space-y-4">
         {rows.map((r) => (
-          <li key={r.id} className="space-y-2 rounded-lg border border-slate-300 bg-white p-4">
+          <li key={r.id} className="space-y-2 rounded-lg border border-line bg-white p-4">
             <p className="font-semibold">{KIND[r.kind] ?? r.kind} · Status: {STATUS[r.status] ?? r.status}</p>
             <p className="font-mono break-all">{r.code}</p>
             {r.status !== "REVOKED" && (
@@ -39,7 +39,7 @@ export default async function VerificationsAdminPage({ searchParams }: { searchP
                   <select name="reason" className={field}><option value="ERROR">Terdapat kesalahan</option><option value="MISLEADING">Menyesatkan</option><option value="AUTHORITY_REVOKED">Otoritas pemeriksa dicabut</option><option value="OWNER_REQUEST">Permintaan pemilik</option><option value="OTHER">Lainnya</option></select>
                 </label>
                 <label className="block"><span className="font-medium">Catatan pribadi (Wajib, tidak tampil publik)</span><input name="note" required minLength={5} maxLength={2000} className={field} /></label>
-                <button type="submit" className="min-h-12 rounded-lg bg-blue-600 px-5 font-semibold text-white">Cabut verifikasi</button>
+                <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Cabut verifikasi</button>
               </form>
             )}
           </li>

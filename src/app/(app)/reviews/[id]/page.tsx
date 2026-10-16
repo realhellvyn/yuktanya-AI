@@ -36,8 +36,8 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
   if (deep?.verification) deepUrl = verifyUrl(deep.verification.code);
   const elig = flags.deepReviewPurchase && !deep && review.status === "COMPLETED" && review.outcome === "WITH_NOTES" ? await deepService().eligibility(userId, id) : null;
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
-      <h1 className="text-3xl font-semibold">{review.title} — versi {review.versionNo}</h1>
+    <main className="max-w-3xl space-y-6">
+      <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">{review.title} — versi {review.versionNo}</h1>
       <ReviewTimeline status={review.status} />
       <ResultPanel review={review} verifyUrl={url} qrDataUrl={qr} isLatestVersion={review.versionNo === latest} />
       {q.notice && <p role="alert" className="font-semibold text-red-800">Pemeriksaan mendalam belum dapat dipesan ({q.notice}).</p>}

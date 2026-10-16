@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FormatError, formatDateId, parseDateId, parseIdr } from "@/lib/documents/format";
+import { FormatError, formatDateId, parseDateId, parseIdr, wibDate } from "@/lib/documents/format";
 
 describe("parseIdr", () => {
   it.each(["Rp5.000.000", "5.000.000", "5000000", " Rp 5.000.000 ", "rp5.000.000"])("menerima %j", (raw) => {
@@ -44,5 +44,12 @@ describe("addMonthsIso", () => {
     expect(addMonthsIso("2028-01-31", 1)).toBe("2028-02-29");
     expect(addMonthsIso("2026-11-30", 3)).toBe("2027-02-28");
     expect(addMonthsIso("2026-12-15", 1)).toBe("2027-01-15");
+  });
+});
+
+describe("wibDate", () => {
+  it("mengubah instan UTC menjadi tanggal ISO WIB (UTC+7)", () => {
+    expect(wibDate("2026-10-16T16:59:59.000Z")).toBe("2026-10-16");
+    expect(wibDate("2026-10-16T17:00:00.000Z")).toBe("2026-10-17");
   });
 });

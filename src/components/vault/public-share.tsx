@@ -36,14 +36,14 @@ export function PublicShare({ view, token, requestAction, verifyAction, step, em
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">{view.title}</h1>
       <p>Versi {view.versionNo} · kode versi <span className="font-mono">{view.sha256.slice(0, 12)}</span> · Versi baru belum diperiksa</p>
-      {view.hasNewer && <p role="status" className="rounded-lg border border-slate-300 bg-white p-3">Ada versi yang lebih baru. Minta tautan baru kepada pemilik dokumen.</p>}
+      {view.hasNewer && <p role="status" className="rounded-lg border border-line bg-white p-3">Ada versi yang lebih baru. Minta tautan baru kepada pemilik dokumen.</p>}
       <DocumentPreview doc={view.doc} />
 
-      <section aria-labelledby="ack-h" className="space-y-3 rounded-lg border border-slate-300 bg-white p-4">
+      <section aria-labelledby="ack-h" className="space-y-3 rounded-lg border border-line bg-white p-4">
         <h2 id="ack-h" className="text-xl font-semibold">Konfirmasi baca (opsional)</h2>
         <p>Konfirmasi baca hanya menyatakan Anda sudah membaca versi ini. Ini bukan tanda tangan elektronik.</p>
         {resultMsg && <p role="status" className="font-semibold">{resultMsg}</p>}
-        {errorMsg && <p role="alert" className="font-semibold text-red-800">{errorMsg}</p>}
+        {errorMsg && <p role="alert" className="font-semibold text-danger">{errorMsg}</p>}
         {step === "kode" ? (
           <div className="space-y-4">
             <p>Kode dikirim ke {email}</p>
@@ -54,7 +54,7 @@ export function PublicShare({ view, token, requestAction, verifyAction, step, em
                 <span className="font-medium">Kode 6 digit dari email Anda (Wajib)</span>
                 <input name="code" inputMode="numeric" pattern="\d{6}" maxLength={6} required autoComplete="one-time-code" className={box} />
               </label>
-              <button type="submit" className="min-h-12 rounded-lg bg-blue-600 px-5 font-semibold text-white">Konfirmasi</button>
+              <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Konfirmasi</button>
             </form>
             <div className="flex flex-wrap gap-3">
               <form action={requestAction}>
@@ -72,7 +72,7 @@ export function PublicShare({ view, token, requestAction, verifyAction, step, em
               <span className="font-medium">Email Anda (Wajib)</span>
               <input name="email" type="email" required autoComplete="email" className={box} />
             </label>
-            <button type="submit" className="min-h-12 rounded-lg bg-blue-600 px-5 font-semibold text-white">Kirim kode</button>
+            <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Kirim kode</button>
           </form>
         )}
       </section>

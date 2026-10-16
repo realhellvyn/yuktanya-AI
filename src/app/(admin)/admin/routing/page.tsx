@@ -26,23 +26,23 @@ export default async function RoutingPage({ searchParams }: { searchParams: Prom
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">Perutean Review</h1>
-      {q.e && <p role="alert" className="font-semibold text-red-800">{ERR[q.e] ?? "Terjadi kendala."}</p>}
-      {q.ok && <p role="status" className="rounded-lg border border-slate-300 bg-white p-3">Penugasan disimpan.</p>}
+      {q.e && <p role="alert" className="font-semibold text-danger">{ERR[q.e] ?? "Terjadi kendala."}</p>}
+      {q.ok && <p role="status" className="rounded-lg border border-line bg-white p-3">Penugasan disimpan.</p>}
       <section aria-labelledby="belum-h" className="space-y-3">
         <h2 id="belum-h" className="text-2xl font-semibold">Belum ditugaskan ({unassigned.length})</h2>
         {unassigned.map((r) => (
-          <form key={r.requestId} action={assignAction} className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-300 bg-white p-4">
+          <form key={r.requestId} action={assignAction} className="flex flex-wrap items-end gap-3 rounded-lg border border-line bg-white p-4">
             <input type="hidden" name="requestId" value={r.requestId} />
             <p className="w-full font-semibold">{CATEGORY[r.category] ?? r.category}</p>
             <label className="block"><span className="font-medium">Tugaskan kepada</span>{select}</label>
-            <button type="submit" className="min-h-12 rounded-lg bg-blue-600 px-5 font-semibold text-white">Tugaskan</button>
+            <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Tugaskan</button>
           </form>
         ))}
       </section>
       <section aria-labelledby="jalan-h" className="space-y-3">
         <h2 id="jalan-h" className="text-2xl font-semibold">Sedang dikerjakan ({inflight.length})</h2>
         {inflight.map((r) => (
-          <form key={r.requestId} action={reassignAction} className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-300 bg-white p-4">
+          <form key={r.requestId} action={reassignAction} className="flex flex-wrap items-end gap-3 rounded-lg border border-line bg-white p-4">
             <input type="hidden" name="requestId" value={r.requestId} />
             <p className="w-full font-semibold">{CATEGORY[r.category] ?? r.category} · Reviewer {r.reviewerId.slice(0, 8)}{!r.reviewerAuthorized ? " · otorisasi tidak aktif" : ""}</p>
             <label className="block"><span className="font-medium">Pindahkan ke</span>{select}</label>
@@ -53,11 +53,11 @@ export default async function RoutingPage({ searchParams }: { searchParams: Prom
       <section aria-labelledby="deep-h" className="space-y-3">
         <h2 id="deep-h" className="text-2xl font-semibold">Pemeriksaan mendalam ({dUn.length + dIn.length})</h2>
         {[...dUn.map((r) => ({ id: r.deepId, mode: "assign", note: "Belum ditugaskan", cat: r.category })), ...dIn.map((r) => ({ id: r.deepId, mode: "reassign", note: `Reviewer ${r.reviewerId.slice(0, 8)}${r.reviewerAuthorized ? "" : " · otorisasi tidak aktif"}`, cat: r.category }))].map((r) => (
-          <form key={r.id} action={assignDeepAction} className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-300 bg-white p-4">
+          <form key={r.id} action={assignDeepAction} className="flex flex-wrap items-end gap-3 rounded-lg border border-line bg-white p-4">
             <input type="hidden" name="deepId" value={r.id} /><input type="hidden" name="mode" value={r.mode} />
             <p className="w-full font-semibold">{CATEGORY[r.cat] ?? r.cat} · {r.note}</p>
             <label className="block"><span className="font-medium">{r.mode === "assign" ? "Tugaskan kepada" : "Pindahkan ke"}</span>{select}</label>
-            <button type="submit" className="min-h-12 rounded-lg bg-blue-600 px-5 font-semibold text-white">Simpan</button>
+            <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Simpan</button>
           </form>
         ))}
       </section>

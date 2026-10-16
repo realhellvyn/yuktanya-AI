@@ -30,16 +30,16 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">Dashboard Mitra Hukum</h1>
-      {q.e && <p role="alert" className="font-semibold text-red-800">{ERR[q.e] ?? "Terjadi kendala. Coba lagi."}</p>}
-      {q.done && <p role="status" className="rounded-lg border border-slate-300 bg-white p-3">Pemeriksaan diselesaikan dengan hasil: {q.done}. Pemilik dokumen sudah diberi tahu.</p>}
-      {q.ok && <p role="status" className="rounded-lg border border-slate-300 bg-white p-3">Penugasan disimpan.</p>}
+      {q.e && <p role="alert" className="font-semibold text-danger">{ERR[q.e] ?? "Terjadi kendala. Coba lagi."}</p>}
+      {q.done && <p role="status" className="rounded-lg border border-line bg-white p-3">Pemeriksaan diselesaikan dengan hasil: {q.done}. Pemilik dokumen sudah diberi tahu.</p>}
+      {q.ok && <p role="status" className="rounded-lg border border-line bg-white p-3">Penugasan disimpan.</p>}
       {isReviewer && (
         <section aria-labelledby="antrean-h" className="space-y-3">
           <h2 id="antrean-h" className="text-2xl font-semibold">Antrean saya</h2>
           {queue.length === 0 ? <p>Belum ada pekerjaan yang ditugaskan kepada Anda.</p> : (
             <ul className="space-y-3">
               {queue.map((r) => (
-                <li key={r.requestId} className="rounded-lg border border-slate-300 bg-white p-4">
+                <li key={r.requestId} className="rounded-lg border border-line bg-white p-4">
                   <Link className="inline-flex min-h-12 items-center text-lg font-semibold underline" href={`/partner/reviews/${r.requestId}`}>{CATEGORY[r.category] ?? r.category}</Link>
                   <p>Status: {r.status === "IN_REVIEW" ? "Sedang diperiksa" : "Ditugaskan"} · Usia {age(r.createdAt)}</p>
                 </li>
@@ -54,7 +54,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
           {coord.requests.length === 0 ? <p>Tidak ada permintaan yang menunggu penugasan.</p> : (
             <ul className="space-y-3">
               {coord.requests.map((r) => (
-                <li key={r.requestId} className="space-y-2 rounded-lg border border-slate-300 bg-white p-4">
+                <li key={r.requestId} className="space-y-2 rounded-lg border border-line bg-white p-4">
                   <p className="font-semibold">{CATEGORY[r.category] ?? r.category} · Usia {age(r.createdAt)}</p>
                   {coord.reviewers.length === 0 ? <p>Belum ada reviewer di firma Anda.</p> : (
                     <form action={assignAction} className="flex flex-wrap items-end gap-3">
@@ -65,7 +65,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
                           {coord.reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>Reviewer {rv.reviewerId.slice(0, 8)} ({rv.active} aktif)</option>)}
                         </select>
                       </label>
-                      <button type="submit" className="min-h-12 rounded-lg bg-blue-600 px-5 font-semibold text-white">Tugaskan</button>
+                      <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Tugaskan</button>
                     </form>
                   )}
                 </li>
@@ -79,7 +79,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
           <h2 id="deepq-h" className="text-2xl font-semibold">Pemeriksaan mendalam saya</h2>
           <ul className="space-y-3">
             {deepQueue.map((r) => (
-              <li key={r.deepId} className="rounded-lg border border-slate-300 bg-white p-4">
+              <li key={r.deepId} className="rounded-lg border border-line bg-white p-4">
                 <Link className="inline-flex min-h-12 items-center text-lg font-semibold underline" href={`/partner/deep/${r.deepId}`}>{CATEGORY[r.category] ?? r.category}</Link>
                 <p>Status: {r.status === "IN_REVIEW" ? "Sedang diperiksa" : "Ditugaskan"} · Usia {age(r.createdAt)}</p>
               </li>
@@ -91,13 +91,13 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
         <section aria-labelledby="deepc-h" className="space-y-3">
           <h2 id="deepc-h" className="text-2xl font-semibold">Pemeriksaan mendalam: penugasan</h2>
           {[...deepCoord.requests.map((r) => ({ id: r.deepId, mode: "assign", note: "Belum ditugaskan", ok: true, cat: r.category })), ...deepCoord.inflight.map((r) => ({ id: r.deepId, mode: "reassign", note: r.reviewerAuthorized ? `Dikerjakan ${r.reviewerId.slice(0, 8)}` : `Dikerjakan ${r.reviewerId.slice(0, 8)} (otorisasi tidak aktif)`, ok: r.reviewerAuthorized, cat: r.category }))].map((r) => (
-            <form key={r.id} action={assignDeepAction} className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-300 bg-white p-4">
+            <form key={r.id} action={assignDeepAction} className="flex flex-wrap items-end gap-3 rounded-lg border border-line bg-white p-4">
               <input type="hidden" name="deepId" value={r.id} /><input type="hidden" name="mode" value={r.mode} />
-              <p className={`w-full font-semibold ${r.ok ? "" : "text-red-800"}`}>{CATEGORY[r.cat] ?? r.cat} · {r.note}</p>
+              <p className={`w-full font-semibold ${r.ok ? "" : "text-danger"}`}>{CATEGORY[r.cat] ?? r.cat} · {r.note}</p>
               <label className="block"><span className="font-medium">{r.mode === "assign" ? "Tugaskan kepada" : "Pindahkan ke"}</span>
                 <select name="reviewerId" className="mt-1 block min-h-12 rounded-lg border border-slate-400 px-3">{coord.reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>Reviewer {rv.reviewerId.slice(0, 8)} ({rv.active} aktif)</option>)}</select>
               </label>
-              <button type="submit" className="min-h-12 rounded-lg bg-blue-600 px-5 font-semibold text-white">Simpan</button>
+              <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Simpan</button>
             </form>
           ))}
         </section>
@@ -107,9 +107,9 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
           <h2 id="jalan-h" className="text-2xl font-semibold">Sedang dikerjakan</h2>
           <ul className="space-y-3">
             {coord.inflight.map((r) => (
-              <li key={r.requestId} className="space-y-2 rounded-lg border border-slate-300 bg-white p-4">
+              <li key={r.requestId} className="space-y-2 rounded-lg border border-line bg-white p-4">
                 <p className="font-semibold">{CATEGORY[r.category] ?? r.category} · Usia {age(r.createdAt)} · Reviewer {r.reviewerId.slice(0, 8)}</p>
-                {!r.reviewerAuthorized && <p role="alert" className="font-semibold text-red-800">Otorisasi reviewer ini tidak aktif. Pindahkan penugasan.</p>}
+                {!r.reviewerAuthorized && <p role="alert" className="font-semibold text-danger">Otorisasi reviewer ini tidak aktif. Pindahkan penugasan.</p>}
                 <form action={reassignAction} className="flex flex-wrap items-end gap-3">
                   <input type="hidden" name="requestId" value={r.requestId} />
                   <label className="block">

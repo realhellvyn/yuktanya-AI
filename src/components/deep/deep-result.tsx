@@ -12,7 +12,7 @@ const STATUS: Record<string, string> = { QUEUED: "Dalam antrean", IN_REVIEW: "Se
 
 export function DeepResult({ deep, verifyUrl }: { deep: OwnerDeep; verifyUrl?: string }) {
   if (deep.status !== "COMPLETED") {
-    return <p role="status" className="rounded-lg border border-slate-300 bg-white p-4">Pemeriksaan mendalam: {STATUS[deep.status] ?? deep.status}.</p>;
+    return <p role="status" className="rounded-lg border border-line bg-white p-4">Pemeriksaan mendalam: {STATUS[deep.status] ?? deep.status}.</p>;
   }
   const enhanced = deep.outcome === "ENHANCED_APPROVED" && deep.verification;
   return (
@@ -28,7 +28,7 @@ export function DeepResult({ deep, verifyUrl }: { deep: OwnerDeep; verifyUrl?: s
         </div>
       )}
       {enhanced && deep.verification && (
-        <div className="space-y-2 rounded-lg border border-slate-300 bg-white p-4">
+        <div className="space-y-2 rounded-lg border border-line bg-white p-4">
           <h3 className="text-lg font-semibold">Yuktanya Legal Verified — Enhanced</h3>
           <p role="status" className="font-semibold">Status: {deep.verification.status === "ACTIVE" ? "Aktif" : deep.verification.status === "SUSPENDED" ? "Ditangguhkan sementara" : "Dicabut"}</p>
           <p>{VERIFICATION_STATEMENTS.LEGAL_ENHANCED}</p>

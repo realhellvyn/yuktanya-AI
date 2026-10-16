@@ -33,7 +33,7 @@ export function PublicVerification({ result, code }: { result: PublicVerificatio
       <h1 className="text-3xl font-semibold">{title}</h1>
       <p role="status" className="font-semibold">Status: Aktif</p>
       <p>{verificationStatement(result.kind, result.outcome)}</p>
-      <dl className="space-y-2 rounded-lg border border-slate-300 bg-white p-4">
+      <dl className="space-y-2 rounded-lg border border-line bg-white p-4">
         <div><dt className="font-medium">Tanggal terbit</dt><dd>{formatDateId(wibDay(result.issuedAt))}</dd></div>
         <div><dt className="font-medium">Kode</dt><dd className="font-mono break-all">{code}</dd></div>
         <div><dt className="font-medium">Kode versi dokumen</dt><dd className="font-mono break-all">{result.sha256}</dd></div>

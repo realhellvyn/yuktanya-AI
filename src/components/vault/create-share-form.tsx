@@ -26,10 +26,10 @@ export function CreateShareForm({
           <option value="30">30 hari</option>
         </select>
       </label>
-      <button type="submit" disabled={pending} className="min-h-12 rounded-lg bg-blue-600 px-5 font-semibold text-white">Buat tautan berbagi</button>
-      {state.error && <p role="alert" className="font-semibold text-red-800">{state.error}</p>}
+      <button type="submit" disabled={pending} className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Buat tautan berbagi</button>
+      {state.error && <p role="alert" className="font-semibold text-danger">{state.error}</p>}
       {state.link && (
-        <p role="status" className="break-all rounded-lg border border-slate-300 bg-white p-3">
+        <p role="status" className="break-all rounded-lg border border-line bg-white p-3">
           Salin tautan ini dan kirim ke pihak lawan. Tautan hanya ditampilkan sekali: <strong>{state.link}</strong>
         </p>
       )}

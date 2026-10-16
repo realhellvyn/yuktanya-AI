@@ -19,18 +19,18 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
     <main className="mx-auto max-w-4xl space-y-8 p-6">
       <h1 className="text-3xl font-semibold">Mitra hukum</h1>
       <p>Admin hanya mencatat firma, anggota, dan otorisasi profesional yang sudah diverifikasi di luar sistem. Admin tidak dapat memberi dirinya kewenangan profesional dan tidak menerbitkan hasil pemeriksaan.</p>
-      {q.ok && <p role="status" className="rounded-lg border border-slate-300 bg-white p-3">Tersimpan.</p>}
-      {q.e && <p role="alert" className="font-semibold text-red-800">{MSG[q.e] ?? "Terjadi kendala."}</p>}
+      {q.ok && <p role="status" className="rounded-lg border border-line bg-white p-3">Tersimpan.</p>}
+      {q.e && <p role="alert" className="font-semibold text-danger">{MSG[q.e] ?? "Terjadi kendala."}</p>}
 
-      <form action={registerFirmAction} className="space-y-3 rounded-lg border border-slate-300 bg-white p-4">
+      <form action={registerFirmAction} className="space-y-3 rounded-lg border border-line bg-white p-4">
         <h2 className="text-xl font-semibold">Daftarkan firma</h2>
         <label className="block"><span className="font-medium">Nama firma (Wajib)</span><input name="name" required minLength={2} maxLength={120} className={field} /></label>
         <label className="flex min-h-12 items-center gap-3"><input type="checkbox" name="isDefault" value="yes" className="h-6 w-6" /><span>Jadikan firma bawaan untuk permintaan baru</span></label>
-        <button type="submit" className={`${btn} bg-blue-600 text-white`}>Daftarkan</button>
+        <button type="submit" className={`${btn} bg-brand hover:bg-brand-dark text-white`}>Daftarkan</button>
       </form>
 
       {firms.map((f) => (
-        <section key={f.firmId} aria-label={f.firmName} className="space-y-3 rounded-lg border border-slate-300 bg-white p-4">
+        <section key={f.firmId} aria-label={f.firmName} className="space-y-3 rounded-lg border border-line bg-white p-4">
           <h2 className="text-xl font-semibold">{f.firmName}{f.isDefault ? " (bawaan)" : ""}</h2>
           <ul className="space-y-2">
             {rows.filter((r) => r.firmId === f.firmId && r.userId).map((r) => (
@@ -56,7 +56,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
             <label className="block"><span className="font-medium">Lingkup</span><input name="scope" maxLength={500} className={field} /></label>
             <label className="block"><span className="font-medium">Berlaku dari</span><input name="validFrom" type="date" required className={field} /></label>
             <label className="block"><span className="font-medium">Berlaku sampai</span><input name="validTo" type="date" required className={field} /></label>
-            <button type="submit" className={`${btn} bg-blue-600 text-white`}>Beri otorisasi</button>
+            <button type="submit" className={`${btn} bg-brand hover:bg-brand-dark text-white`}>Beri otorisasi</button>
           </form>
         </section>
       ))}

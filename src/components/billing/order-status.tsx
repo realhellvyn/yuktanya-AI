@@ -11,7 +11,7 @@ const STATUS: Record<string, string> = {
 
 export function OrderStatus({ order }: { order: Pick<OrderView, "status" | "amountIdr" | "expiresAt"> }) {
   return (
-    <div className="space-y-1 rounded-lg border border-slate-300 bg-white p-4">
+    <div className="space-y-1 rounded-lg border border-line bg-white p-4">
       <p role="status" className="text-lg font-semibold">Status: {STATUS[order.status] ?? order.status}</p>
       <p>Jumlah: {formatIdr(order.amountIdr)}</p>
       {order.status === "PENDING_PAYMENT" && <p>Selesaikan pembayaran sebelum {new Date(order.expiresAt).toLocaleString("id-ID", { timeZone: "Asia/Jakarta", dateStyle: "long", timeStyle: "short" })} WIB.</p>}

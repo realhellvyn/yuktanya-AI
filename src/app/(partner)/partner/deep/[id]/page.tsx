@@ -44,8 +44,8 @@ export default async function DeepEditorPage({ params, searchParams }: { params:
   return (
     <main className="mx-auto max-w-4xl space-y-8 p-6">
       <h1 className="text-3xl font-semibold">Pemeriksaan mendalam — {d.title}</h1>
-      {q.ok && <p role="status" className="rounded-lg border border-slate-300 bg-white p-3">Tersimpan.</p>}
-      {q.e && <p role="alert" className="font-semibold text-red-800">{ERR[q.e] ?? "Terjadi kendala."}{q.r && REASON[q.r] ? ` ${REASON[q.r]}` : ""}</p>}
+      {q.ok && <p role="status" className="rounded-lg border border-line bg-white p-3">Tersimpan.</p>}
+      {q.e && <p role="alert" className="font-semibold text-danger">{ERR[q.e] ?? "Terjadi kendala."}{q.r && REASON[q.r] ? ` ${REASON[q.r]}` : ""}</p>}
       <section aria-labelledby="isi-h" className="space-y-3"><h2 id="isi-h" className="text-2xl font-semibold">Isi dokumen yang diperiksa</h2><DocumentPreview doc={d.doc} /></section>
 
       <section aria-labelledby="draf-h" className="space-y-3">
@@ -61,7 +61,7 @@ export default async function DeepEditorPage({ params, searchParams }: { params:
       <section aria-labelledby="cat-h" className="space-y-4">
         <h2 id="cat-h" className="text-2xl font-semibold">Tindak lanjut catatan pemeriksaan standar</h2>
         {d.parentNotes.map((n) => (
-          <form key={n.noteNo} action={setDispositionAction} className="space-y-2 rounded-lg border border-slate-300 bg-white p-4">
+          <form key={n.noteNo} action={setDispositionAction} className="space-y-2 rounded-lg border border-line bg-white p-4">
             <input type="hidden" name="deepId" value={id} /><input type="hidden" name="revision" value={d.revision} /><input type="hidden" name="noteNo" value={n.noteNo} />
             <p className="font-semibold">Catatan {n.noteNo}: {n.title} ({n.severity === "CRITICAL" ? "Sangat penting" : n.severity === "MATERIAL" ? "Penting" : n.severity === "MINOR" ? "Perlu diperhatikan" : "Informasi"})</p>
             <p>{n.finding}</p>
@@ -79,7 +79,7 @@ export default async function DeepEditorPage({ params, searchParams }: { params:
       <section aria-labelledby="chk-h" className="space-y-4">
         <h2 id="chk-h" className="text-2xl font-semibold">Checklist material (usulan, menunggu persetujuan mitra)</h2>
         {Object.entries(ITEMS).map(([item, label]) => (
-          <form key={item} action={setChecklistAction} className="space-y-2 rounded-lg border border-slate-300 bg-white p-4">
+          <form key={item} action={setChecklistAction} className="space-y-2 rounded-lg border border-line bg-white p-4">
             <input type="hidden" name="deepId" value={id} /><input type="hidden" name="revision" value={d.revision} /><input type="hidden" name="item" value={item} />
             <p className="font-semibold">{item} — {label}</p>
             <label className="block"><span className="font-medium">Hasil</span>
@@ -94,7 +94,7 @@ export default async function DeepEditorPage({ params, searchParams }: { params:
         ))}
       </section>
 
-      <section aria-labelledby="putus-h" className="space-y-3 rounded-lg border border-slate-300 bg-white p-4">
+      <section aria-labelledby="putus-h" className="space-y-3 rounded-lg border border-line bg-white p-4">
         <h2 id="putus-h" className="text-2xl font-semibold">Keputusan akhir</h2>
         <p>Pembayaran tidak menjamin hasil apa pun. Enhanced hanya terbit bila semua syarat terpenuhi dan Anda menyetujui secara eksplisit. Keputusan tidak dapat diubah setelah disimpan.</p>
         {!flags.enhancedIssuance && <p role="status" className="font-medium">Penerbitan Enhanced belum diaktifkan. Anda masih dapat memilih keputusan lain.</p>}
@@ -108,7 +108,7 @@ export default async function DeepEditorPage({ params, searchParams }: { params:
           </label>
           <label className="block"><span className="font-medium">Alasan (wajib selain Setujui)</span><textarea name="reason" rows={3} className={input} /></label>
           <label className="flex min-h-12 items-start gap-3"><input type="checkbox" name="attest" value="yes" className="mt-1 h-6 w-6" /><span>Saya menyatakan bahwa saya profesional yang berwenang dan telah melakukan pemeriksaan tambahan ini sendiri.</span></label>
-          <button type="submit" className={`${btn} bg-blue-600 text-white`}>Simpan keputusan</button>
+          <button type="submit" className={`${btn} bg-brand hover:bg-brand-dark text-white`}>Simpan keputusan</button>
         </form>
       </section>
     </main>

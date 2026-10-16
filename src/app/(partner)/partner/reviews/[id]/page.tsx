@@ -43,9 +43,9 @@ export default async function ReviewEditorPage({ params, searchParams }: { param
   return (
     <main className="mx-auto max-w-4xl space-y-8 p-6">
       <h1 className="text-3xl font-semibold">{review.title}</h1>
-      {q.done && <p role="status" className="rounded-lg border border-slate-300 bg-white p-4">Pemeriksaan diselesaikan dengan hasil: {q.done}.</p>}
-      {q.ok && <p role="status" className="rounded-lg border border-slate-300 bg-white p-3">Tersimpan.</p>}
-      {q.e && <p role="alert" className="font-semibold text-red-800">{ERR[q.e] ?? "Terjadi kendala."}{q.r && REASON[q.r] ? ` ${REASON[q.r]}` : ""}</p>}
+      {q.done && <p role="status" className="rounded-lg border border-line bg-white p-4">Pemeriksaan diselesaikan dengan hasil: {q.done}.</p>}
+      {q.ok && <p role="status" className="rounded-lg border border-line bg-white p-3">Tersimpan.</p>}
+      {q.e && <p role="alert" className="font-semibold text-danger">{ERR[q.e] ?? "Terjadi kendala."}{q.r && REASON[q.r] ? ` ${REASON[q.r]}` : ""}</p>}
 
       <section aria-labelledby="isi-h" className="space-y-3">
         <h2 id="isi-h" className="text-2xl font-semibold">Isi dokumen yang diperiksa</h2>
@@ -77,7 +77,7 @@ export default async function ReviewEditorPage({ params, searchParams }: { param
             </form>
           </div>
         ))}
-        <form action={upsertNoteAction} className="space-y-3 rounded-lg border border-slate-300 bg-white p-4">
+        <form action={upsertNoteAction} className="space-y-3 rounded-lg border border-line bg-white p-4">
           <h3 className="text-lg font-semibold">Tambah catatan</h3>
           <input type="hidden" name="requestId" value={id} />
           <input type="hidden" name="revision" value={review.revision} />
@@ -94,11 +94,11 @@ export default async function ReviewEditorPage({ params, searchParams }: { param
           <label className="block"><span className="font-medium">Tindakan yang disarankan</span><textarea name="recommendedAction" rows={2} className={input} /></label>
           <label className="block"><span className="font-medium">Alasan (wajib untuk Penting/Sangat penting)</span><textarea name="rationale" rows={2} className={input} /></label>
           <label className="block"><span className="font-medium">Langkah lanjutan (wajib untuk Penting/Sangat penting)</span><textarea name="escalation" rows={2} className={input} /></label>
-          <button type="submit" className={`${btn} bg-blue-600 text-white`}>Simpan catatan</button>
+          <button type="submit" className={`${btn} bg-brand hover:bg-brand-dark text-white`}>Simpan catatan</button>
         </form>
       </section>
 
-      <section aria-labelledby="terbit-h" className="space-y-3 rounded-lg border border-slate-300 bg-white p-4">
+      <section aria-labelledby="terbit-h" className="space-y-3 rounded-lg border border-line bg-white p-4">
         <h2 id="terbit-h" className="text-2xl font-semibold">Konfirmasi akhir</h2>
         <p>Anda akan menyelesaikan pemeriksaan versi ini. Setelah diterbitkan, laporan dan catatan tidak dapat diubah.</p>
         <ul className="list-disc space-y-1 pl-6">
@@ -119,7 +119,7 @@ export default async function ReviewEditorPage({ params, searchParams }: { param
           </label>
           <label className="flex min-h-12 items-center gap-3"><input type="checkbox" name="noNotesDeclared" value="yes" className="h-6 w-6" /><span>Saya menyatakan tidak ada catatan yang tersisa dan kriteria terpenuhi dalam lingkup ini.</span></label>
           <label className="flex min-h-12 items-start gap-3"><input type="checkbox" name="attest" value="yes" className="mt-1 h-6 w-6" /><span>Saya menyatakan bahwa saya profesional yang berwenang dan telah memeriksa versi ini sendiri sesuai ruang lingkup di atas.</span></label>
-          <button type="submit" disabled={blockers.length > 0} className={`${btn} bg-blue-600 text-white disabled:opacity-50`}>Terbitkan hasil</button>
+          <button type="submit" disabled={blockers.length > 0} className={`${btn} bg-brand hover:bg-brand-dark text-white disabled:opacity-50`}>Terbitkan hasil</button>
         </form>
       </section>
     </main>

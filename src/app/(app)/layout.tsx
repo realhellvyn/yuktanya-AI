@@ -1,10 +1,5 @@
-import { AppNav } from "@/components/app-nav";
+import { AppShell } from "@/components/app-shell";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      <AppNav />
-      {children}
-    </>
-  );
+  return <AppShell>{children}</AppShell>;
 }

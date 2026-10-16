@@ -65,3 +65,25 @@ export function parseCanonical(text: string): RenderedDoc {
   if (!ok) throw new Error("Byte kanonik dokumen tidak valid");
   return v as RenderedDoc;
 }
+
+export type PartialRow = { id: string; heading?: string; text: string; complete: boolean };
+
+// Pratinjau saat mengisi: hanya klausul yang seluruh isiannya sudah ada. Bukan dokumen resmi; tidak dipakai untuk membuat versi.
+export function renderPartial(t: Template, data: Data): PartialRow[] {
+  const byKey = new Map(t.fields.map((f) => [f.key, f]));
+  const blank = (v: unknown) => v === undefined || v === null || (typeof v === "string" && v.trim() === "");
+  const rows: PartialRow[] = [];
+  for (const c of t.clauses) {
+    if (c.whenKey && blank(data[c.whenKey])) continue;
+    const keys = [...c.text.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]);
+    const complete = keys.every((k) => !blank(data[k]));
+    const text = complete
+      ? c.text.replace(/\{\{(\w+)\}\}/g, (_m, key: string) => {
+          const f = byKey.get(key);
+          return f ? show(f, data[key] as string | number) : "";
+        })
+      : "";
+    rows.push({ id: c.id, heading: c.heading, text, complete });
+  }
+  return rows;
+}

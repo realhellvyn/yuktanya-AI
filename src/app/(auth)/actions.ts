@@ -63,3 +63,8 @@ export async function signInWithGoogle(formData: FormData) {
   if (error || !data.url) back("login", "failed", returnTo);
   redirect(data!.url!);
 }
+
+export async function signOut(): Promise<void> {
+  if (hasSupabaseEnv()) await (await createSupabaseServerClient()).auth.signOut();
+  redirect("/");
+}

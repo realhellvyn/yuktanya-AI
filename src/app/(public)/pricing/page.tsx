@@ -26,7 +26,7 @@ export default function PricingPage() {
         <table className="w-full border-collapse">
           <caption className="sr-only">Daftar harga layanan Yuktanya</caption>
           <thead>
-            <tr className="border-b border-slate-300 text-left">
+            <tr className="border-b border-line text-left">
               <th scope="col" className="py-2 pr-4">Layanan</th>
               <th scope="col" className="py-2">Biaya</th>
             </tr>
@@ -43,7 +43,7 @@ export default function PricingPage() {
             ))}
           </tbody>
         </table>
-        <p className="rounded-lg border border-slate-300 bg-white p-4">{CHECKOUT_NOTE}</p>
+        <p className="rounded-lg border border-line bg-white p-4">{CHECKOUT_NOTE}</p>
       </main>
     </>
   );
