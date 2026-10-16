@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { clearDraft, loadDraft, reconcileDraft, safeLocalStorage, saveDraft } from "@/lib/documents/chat-draft";
+import { claimDrafts, clearDraft, loadDraft, reconcileDraft, safeLocalStorage, saveDraft } from "@/lib/documents/chat-draft";
 
 export type ChatLine = { id: string; role: "user" | "assistant"; content: string };
 
@@ -43,10 +43,12 @@ type Props = {
   retryKey: string;
   hasUnanswered: boolean;
   placeholder: string;
+  // Akun yang sedang masuk: draf di perangkat ini hanya dipakai untuk akun yang sama.
+  userId: string;
 };
 
 // Percakapan: transkrip + kotak pesan. Pesan pengguna yang belum terjawab tampil dengan tombol Coba lagi.
-export function ChatPanel({ documentId, lines, greeting, action, sendKey, retryKey, hasUnanswered, placeholder }: Props) {
+export function ChatPanel({ documentId, lines, greeting, action, sendKey, retryKey, hasUnanswered, placeholder, userId }: Props) {
   const end = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
   const [offline, setOffline] = useState(false);
@@ -58,6 +60,7 @@ export function ChatPanel({ documentId, lines, greeting, action, sendKey, retryK
   // terkirim (gagal, dialihkan ke login, muat ulang) dikembalikan ke kotak pesan.
   useEffect(() => {
     const storage = safeLocalStorage();
+    claimDrafts(storage, userId);
     const draft = loadDraft(storage, documentId);
     const verdict = reconcileDraft(draft, lastUser);
     if (verdict === "clear") {
@@ -67,7 +70,7 @@ export function ChatPanel({ documentId, lines, greeting, action, sendKey, retryK
       box.current.value = draft!;
       setRestored(true);
     }
-  }, [documentId, sendKey, lastUser]);
+  }, [documentId, sendKey, lastUser, userId]);
 
   useEffect(() => {
     const sync = () => setOffline(typeof navigator !== "undefined" && navigator.onLine === false);

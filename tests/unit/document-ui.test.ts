@@ -21,7 +21,7 @@ const data: Data = {
 describe("ChatPanel", () => {
   const noop2 = async () => {};
   const html = (over: Partial<Parameters<typeof ChatPanel>[0]> = {}) =>
-    renderToStaticMarkup(createElement(ChatPanel, { documentId: "d1", lines: [], greeting: "Halo!", action: noop2, sendKey: "k1", retryKey: "k2", hasUnanswered: false, placeholder: "Contoh", ...over }));
+    renderToStaticMarkup(createElement(ChatPanel, { documentId: "d1", lines: [], greeting: "Halo!", action: noop2, sendKey: "k1", retryKey: "k2", hasUnanswered: false, placeholder: "Contoh", userId: "u1", ...over }));
 
   it("memuat sapaan, kotak pesan berlabel, dan tidak ada isian per-kolom manual", () => {
     const h = html();

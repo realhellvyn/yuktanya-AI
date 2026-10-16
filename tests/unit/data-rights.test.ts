@@ -2,7 +2,9 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { cronAuthError } from "@/lib/jobs/cron-auth";
-import { clearAllDrafts, clearDraft, DRAFT_PREFIX, loadDraft, reconcileDraft, saveDraft, type DraftStorage } from "@/lib/documents/chat-draft";
+import { claimDrafts, clearAllDrafts, clearDraft, DRAFT_PREFIX, loadDraft, reconcileDraft, saveDraft, type DraftStorage } from "@/lib/documents/chat-draft";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { OfflineNotice } from "@/components/documents/chat-panel";
 import { eraseAccount, ERASE_BLOCK_MESSAGES, type AuthAdmin } from "@/lib/retention/erasure";
 import { accountExportHandler } from "@/lib/retention/export";
@@ -74,6 +76,27 @@ describe("draf pesan percakapan (localStorage)", () => {
     expect([...s.map.keys()]).toEqual(["lain"]);
   });
 
+  it("draf milik akun lain di perangkat yang sama dibuang saat akun berbeda membuka percakapan", () => {
+    const s = memStorage();
+    claimDrafts(s, "user-a");
+    saveDraft(s, "d1", "rahasia A", 0);
+    claimDrafts(s, "user-a");
+    expect(loadDraft(s, "d1", 0)).toBe("rahasia A");
+    claimDrafts(s, "user-b");
+    expect(loadDraft(s, "d1", 0)).toBeNull();
+    expect([...s.map.keys()].filter((k) => k.startsWith(DRAFT_PREFIX))).toEqual([]);
+    expect(() => claimDrafts({ ...throwing, length: 1, key: () => { throw new Error("SecurityError"); } }, "user-c")).not.toThrow();
+    expect(() => claimDrafts(null, "user-c")).not.toThrow();
+  });
+
+  it("clearAllDrafts juga membuang penanda pemilik draf", () => {
+    const s = memStorage();
+    claimDrafts(s, "user-a");
+    saveDraft(s, "d1", "a", 0);
+    clearAllDrafts(s);
+    expect(s.map.size).toBe(0);
+  });
+
   it("pemberitahuan offline memakai kalimat tetap dan hanya tampil saat offline", () => {
     const on = renderToStaticMarkup(createElement(OfflineNotice, { offline: true }));
     expect(on).toContain("Anda sedang offline. Pesan belum bisa dikirim.");
@@ -136,15 +159,21 @@ describe("eraseAccount (orkestrasi)", () => {
   it("BLOCKED: tidak menyentuh berkas maupun Auth; setiap alasan punya pesan bahasa sehari-hari", async () => {
     const b = blob();
     const a = auth();
-    const r = await eraseAccount({ pool: pool({ status: "BLOCKED", reasons: ["REVIEW_IN_PROGRESS", "PAYMENT_PENDING"] }), blob: b, auth: a }, "u1");
-    expect(r).toEqual({ status: "BLOCKED", reasons: ["REVIEW_IN_PROGRESS", "PAYMENT_PENDING"] });
+    const r = await eraseAccount({ pool: pool({ status: "BLOCKED", reasons: ["STANDARD_IN_PROGRESS", "PAYMENT_PENDING"] }), blob: b, auth: a }, "u1");
+    expect(r).toEqual({ status: "BLOCKED", reasons: ["STANDARD_IN_PROGRESS", "PAYMENT_PENDING"] });
     expect(b.deleted).toEqual([]);
     expect(a.deleted).toEqual([]);
-    for (const k of ["STAFF_ACCOUNT", "REVIEW_IN_PROGRESS", "SPECIAL_CASE_OPEN", "PAYMENT_PENDING"]) expect(ERASE_BLOCK_MESSAGES[k]).toMatch(/\w{5,}/);
+    const keys = ["STAFF_ACCOUNT", "STANDARD_IN_PROGRESS", "DEEP_IN_PROGRESS", "SPECIAL_CASE_OPEN", "PAYMENT_RECONCILIATION", "PAYMENT_PENDING"];
+    expect(Object.keys(ERASE_BLOCK_MESSAGES).sort()).toEqual([...keys].sort());
+    // Pesan berbeda per alasan dan masing-masing memuat langkah berikutnya yang jelas.
+    expect(new Set(keys.map((k) => ERASE_BLOCK_MESSAGES[k])).size).toBe(keys.length);
+    for (const k of keys) expect(ERASE_BLOCK_MESSAGES[k]).toMatch(/Tunggu|Hubungi|Tarik|Selesaikan/);
+    expect(ERASE_BLOCK_MESSAGES.DEEP_IN_PROGRESS).toMatch(/ditahan/);
   });
 });
 
 describe("accountExportHandler", () => {
+  const req = new Request("http://app.test/settings/export");
   const deps = (over: Partial<Parameters<typeof accountExportHandler>[0]> = {}) => ({
     getUserId: async () => "u1",
     load: async () => ({ format: "yuktanya-export-v1", user_id: "u1", documents: [] }),
@@ -153,18 +182,37 @@ describe("accountExportHandler", () => {
     now: () => new Date("2026-10-16T05:00:00Z"),
     ...over,
   });
-  it("tanpa sesi → 401; batas laju → 429; terlalu besar → 413", async () => {
-    expect((await accountExportHandler(deps({ getUserId: async () => null }))).status).toBe(401);
-    expect((await accountExportHandler(deps({ allow: () => false }))).status).toBe(429);
-    expect((await accountExportHandler(deps({ maxBytes: 10 }))).status).toBe(413);
+  const loc = (r: Response) => new URL(r.headers.get("location")!).pathname + new URL(r.headers.get("location")!).search;
+  it("kegagalan tidak pernah menjadi berkas unduhan: dialihkan ke halaman dengan pesan biasa", async () => {
+    const anon = await accountExportHandler(deps({ getUserId: async () => null }), req);
+    expect(anon.status).toBe(303);
+    expect(loc(anon)).toBe("/login?returnTo=%2Fsettings");
+    const limited = await accountExportHandler(deps({ allow: () => false }), req);
+    expect(limited.status).toBe(303);
+    expect(loc(limited)).toBe("/settings?notice=export-limit");
+    const big = await accountExportHandler(deps({ maxBytes: 10 }), req);
+    expect(loc(big)).toBe("/settings?notice=export-large");
+    for (const r of [anon, limited, big]) expect(r.headers.get("content-disposition")).toBeNull();
   });
   it("sukses: unduhan JSON privat bernama tanggal WIB", async () => {
-    const res = await accountExportHandler(deps());
+    const res = await accountExportHandler(deps(), req);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("application/json");
     expect(res.headers.get("content-disposition")).toBe('attachment; filename="data-yuktanya-2026-10-16.json"');
     expect(res.headers.get("cache-control")).toContain("no-store");
     expect(JSON.parse(await res.text())).toMatchObject({ user_id: "u1" });
+  });
+});
+
+describe("varian migrasi staging (diterapkan lewat alat MCP)", () => {
+  it("tidak memuat literal DROP atau 'delete from' di mana pun, termasuk komentar", () => {
+    const dir = path.join(process.cwd(), "supabase/staging");
+    const files = readdirSync(dir).filter((f) => f.endsWith(".sql"));
+    expect(files.length).toBeGreaterThanOrEqual(2);
+    for (const f of files) {
+      const text = readFileSync(path.join(dir, f), "utf8");
+      expect(text, f).not.toMatch(/\bdrop\b|delete\s+from/i);
+    }
   });
 });
 

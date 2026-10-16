@@ -2,7 +2,7 @@
 -- Isi dan perilaku identik; satu-satunya beda: setiap pernyataan penghapusan baris ditulis sebagai SQL dinamis
 -- (execute format('%s from ...', 'de' || 'lete') using ...) karena alat MCP Supabase membatalkan pernyataan literalnya.
 -- Dibuat mekanis dari berkas asli; diverifikasi dengan tests/db/data-rights.test.ts saat berkas ini menggantikan migrasi 34.
--- Untuk produksi terapkan berkas asli dengan Supabase CLI. Urutan: 33 -> 34. Tanpa DROP.
+-- Untuk produksi terapkan berkas asli dengan Supabase CLI. Urutan: 33 -> 34. Tidak menghapus objek skema apa pun.
 -- Kebijakan retensi/penghapusan: lihat komentar berkas asli dan docs/RUNBOOK.md (menunggu persetujuan mitra hukum).
 
 alter table public.profiles add column erased_at timestamptz;
@@ -11,7 +11,7 @@ create index ack_challenges_expires_idx on public.ack_challenges (expires_at);
 
 -- Gerbang kekekalan: tetap menolak semua ubah/hapus, kecuali di dalam transaksi erase_account yang menyetel penanda
 -- bernilai ID transaksi berjalan (menyetel penanda sendiri dengan nilai lain tidak membuka gerbang).
-create or replace function public.forbid_immutable_change() returns trigger language plpgsql as $$
+create or replace function public.forbid_immutable_change() returns trigger language plpgsql set search_path = public as $$
 begin
   if tg_level = 'ROW' and coalesce(current_setting('yuktanya.erasure', true), '') = txid_current()::text then
     if tg_op = 'DELETE' then
@@ -108,12 +108,19 @@ language sql stable security definer set search_path = public as $$
            or exists (select 1 from public.professional_authorizations a where a.user_id = p_user)
          then 'STAFF_ACCOUNT' end,
     case when exists (select 1 from public.review_requests r where r.owner_id = p_user and r.status in ('QUEUED', 'ASSIGNED', 'IN_REVIEW'))
-           or exists (select 1 from public.deep_requests d where d.owner_id = p_user and d.status in ('QUEUED', 'IN_REVIEW', 'READY_FOR_DECISION', 'ON_HOLD'))
-         then 'REVIEW_IN_PROGRESS' end,
+         then 'STANDARD_IN_PROGRESS' end,
+    -- Deep yang ditahan (ON_HOLD) hanya menahan penghapusan selama pesanannya belum dibatalkan/dikembalikan.
+    case when exists (select 1 from public.deep_requests d join public.orders o on o.id = d.order_id
+                       where d.owner_id = p_user
+                         and (d.status in ('QUEUED', 'IN_REVIEW', 'READY_FOR_DECISION')
+                              or (d.status = 'ON_HOLD' and o.status <> 'CANCELLED'
+                                  and not exists (select 1 from public.payments y where y.order_id = o.id and y.status = 'REFUNDED'))))
+         then 'DEEP_IN_PROGRESS' end,
     case when exists (select 1 from public.special_cases c where c.owner_id = p_user and c.status in ('SUBMITTED', 'TRIAGED', 'QUOTED', 'ACCEPTED'))
          then 'SPECIAL_CASE_OPEN' end,
-    case when exists (select 1 from public.orders o where o.user_id = p_user
-                        and ((o.status = 'PENDING_PAYMENT' and o.expires_at > p_now) or o.status = 'RECONCILIATION_REQUIRED'))
+    case when exists (select 1 from public.orders o where o.user_id = p_user and o.status = 'RECONCILIATION_REQUIRED')
+         then 'PAYMENT_RECONCILIATION' end,
+    case when exists (select 1 from public.orders o where o.user_id = p_user and o.status = 'PENDING_PAYMENT' and o.expires_at > p_now)
          then 'PAYMENT_PENDING' end
   ], null);
 $$;

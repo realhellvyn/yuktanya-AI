@@ -93,6 +93,7 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
           retryKey={randomUUID()}
           hasUnanswered={Boolean(hasUnanswered)}
           placeholder={PLACEHOLDER[doc.category]}
+          userId={userId}
         />
         {doc.versions.length > 0 && <Link className="inline-flex min-h-12 items-center font-semibold text-brand-dark underline" href={`/documents/${id}`}>Lihat versi yang sudah dibuat</Link>}
         <details className="rounded-2xl border border-line bg-white p-4 lg:hidden">

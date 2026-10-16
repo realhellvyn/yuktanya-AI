@@ -49,7 +49,7 @@ export default async function DeleteAccountPage({ searchParams }: { searchParams
             <li>Dokumen yang sudah diperiksa pengacara atau punya kode verifikasi: kode verifikasinya tetap bisa dicek orang lain di halaman Cek Keaslian (hanya status dan sidik jari), tetapi judul dan isi dokumennya dikosongkan. Laporan pemeriksaan pengacara tetap disimpan sebagai catatan kerja mereka.</li>
           </ul>
           <p className="text-muted">Aturan ini adalah pengaturan awal sistem dan menunggu persetujuan mitra hukum.</p>
-          <p>Ingin menyimpan salinan? <a className={link} href="/settings/export" download>Unduh data saya dulu</a></p>
+          <p>Ingin menyimpan salinan? <a className={link} href="/settings/export">Unduh data saya dulu</a></p>
         </Card>
       </section>
 

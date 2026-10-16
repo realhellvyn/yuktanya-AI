@@ -16,10 +16,10 @@ Sumber kebenaran: `supabase/migrations/20261016000034_data_rights.sql` (fungsi `
 - Menjalankan manual: `curl -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/jobs/retention` atau SQL `select run_retention(now(), 5000);` (ulangi sampai `more = false`).
 
 ## 2. Ekspor data ("Unduh data saya")
-- `/settings` → tombol **Unduh data saya** → `GET /settings/export` (hanya akun pemilik yang masuk; staf/admin diarahkan ke dashboard-nya).
+- `/settings` → tombol **Unduh data saya** → `GET /settings/export` (hanya akun pemilik yang masuk). Kegagalan tidak pernah menjadi berkas: tanpa sesi → 303 ke `/login?returnTo=/settings`; staf/admin dialihkan proxy ke dashboard-nya; batas laju → 303 ke `/settings?notice=export-limit`; terlalu besar → `/settings?notice=export-large` (pesan tampil di Pengaturan). Tautan tidak memakai atribut `download`; unduhan dipicu `Content-Disposition` hanya pada respons sukses.
 - Isi: profil, keanggotaan, dokumen + setiap versi (teks kanonik, SHA-256, isian), draf, percakapan, metadata unggahan, tautan bagikan (tanggal saja), kode verifikasi milik sendiri, pengingat, laporan analisis awal AI, pesanan + pembayaran, Review Standar (laporan FINAL & catatan PUBLISHED yang memang terlihat pemilik), status Pemeriksaan Mendalam, Kasus Hukum Khusus (ringkasan, penawaran, alasan tutup).
 - Tidak pernah ikut: data pengguna lain, identitas reviewer/koordinator/firma/admin, laporan/catatan draf, kolom triase internal (`triaged_by`, `quoted_by`, `closed_by`), jalur penyimpanan, hash token tautan, kunci idempoten, alasan privat pencabutan.
-- Batas: 5 unduhan per jam per akun (dalam memori per proses); respons > 20 MB ditolak (413).
+- Batas: 5 unduhan per jam per akun (dalam memori per proses); respons > 20 MB ditolak.
 
 ## 3. Penghapusan akun
 Alur pengguna: `/settings` → **Hapus akun** → `/settings/hapus-akun` (daftar yang dihapus/disimpan, ketik `HAPUS`) → `/akun-dihapus` (publik). Draf pesan lokal di perangkat ikut dibersihkan.
@@ -30,7 +30,13 @@ Urutan teknis (`src/lib/retention/erasure.ts`):
 3. Hapus akun Auth lewat Supabase Admin API dengan **soft delete** (`auth.admin.deleteUser(id, true)`; butuh `SUPABASE_SERVICE_ROLE_KEY` di server). Identitas & login hilang; ID tetap ada sebagai rujukan anonim.
 4. Cookie sesi dibersihkan. Karena semua peran dicabut di langkah 1, token yang tersisa tidak lagi membuka halaman terlindungi (`fetchSessionRoles` → tanpa peran = tidak masuk).
 
-Ditolak (tidak ada yang berubah) bila: akun staf/admin (`STAFF_ACCOUNT`, offboarding lewat admin), Review Standar/Pemeriksaan Mendalam belum selesai termasuk `ON_HOLD` (`REVIEW_IN_PROGRESS`), Kasus Hukum Khusus masih terbuka (`SPECIAL_CASE_OPEN`), pesanan menunggu bayar yang belum kedaluwarsa atau status `RECONCILIATION_REQUIRED` (`PAYMENT_PENDING`). Halaman konfirmasi menampilkan alasannya dalam bahasa sehari-hari.
+Ditolak (tidak ada yang berubah) bila, masing-masing dengan pesan dan langkah berikutnya sendiri di halaman konfirmasi:
+- `STAFF_ACCOUNT` — peran reviewer/partner_admin/platform_admin, anggota firma, atau punya otorisasi profesional (offboarding lewat admin).
+- `STANDARD_IN_PROGRESS` — Review Standar `QUEUED/ASSIGNED/IN_REVIEW`.
+- `DEEP_IN_PROGRESS` — Pemeriksaan Mendalam `QUEUED/IN_REVIEW/READY_FOR_DECISION`, atau `ON_HOLD` selama pesanannya belum `CANCELLED` dan pembayarannya belum `REFUNDED` (deep yang ditahan lalu dikembalikan/ditutup admin tidak lagi menahan penghapusan).
+- `SPECIAL_CASE_OPEN` — Kasus Hukum Khusus `SUBMITTED/TRIAGED/QUOTED/ACCEPTED`.
+- `PAYMENT_RECONCILIATION` — pesanan `RECONCILIATION_REQUIRED` (admin menyelesaikan rekonsiliasi dulu).
+- `PAYMENT_PENDING` — pesanan `PENDING_PAYMENT` yang belum lewat batas waktu bayar.
 
 | Data | Perlakuan | Alasan |
 |---|---|---|
@@ -55,5 +61,5 @@ Gerbang kekekalan: trigger `forbid_immutable_change` (versi, ekspor, unggahan) h
 
 ### Celah yang diketahui
 - Pembatas laju ekspor ada di memori per proses (sama seperti pembatas publik lain).
-- Draf pesan percakapan disimpan di `localStorage` perangkat (maksimal 7 hari) dan hanya dibersihkan otomatis setelah terkirim atau setelah akun dihapus di perangkat yang sama; keluar akun biasa tidak menghapusnya (perangkat bersama: risiko kecil, catat untuk tinjauan privasi).
+- Draf pesan percakapan disimpan di `localStorage` perangkat (maksimal 7 hari). Dibuang saat terkirim, saat menekan Keluar, saat akun lain membuka percakapan di perangkat yang sama (penanda pemilik draf), dan setelah akun dihapus. Sesi yang berakhir sendiri tanpa menekan Keluar meninggalkan draf sampai akun lain masuk atau 7 hari lewat.
 - Permintaan pesanan baru yang berlangsung bersamaan dengan penghapusan tidak dikunci terhadap `erase_account`; jendela sangat kecil.

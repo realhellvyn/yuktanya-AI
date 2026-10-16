@@ -9,7 +9,7 @@ export interface AuthAdmin {
   deleteUser(userId: string): Promise<void>;
 }
 
-export type EraseBlocker = "STAFF_ACCOUNT" | "REVIEW_IN_PROGRESS" | "SPECIAL_CASE_OPEN" | "PAYMENT_PENDING";
+export type EraseBlocker = "STAFF_ACCOUNT" | "STANDARD_IN_PROGRESS" | "DEEP_IN_PROGRESS" | "SPECIAL_CASE_OPEN" | "PAYMENT_RECONCILIATION" | "PAYMENT_PENDING";
 export type EraseResult =
   | { status: "ERASED"; filesFailed: number; authDeleted: boolean }
   | { status: "BLOCKED"; reasons: string[] }
@@ -18,11 +18,13 @@ export type EraseResult =
 // Kata yang harus diketik pengguna untuk mengonfirmasi penghapusan akun.
 export const CONFIRM_WORD = "HAPUS";
 
-export const ERASE_BLOCK_MESSAGES: Record<string, string> = {
-  STAFF_ACCOUNT: "Akun mitra hukum atau admin tidak dapat dihapus dari sini. Hubungi admin platform.",
-  REVIEW_IN_PROGRESS: "Masih ada pemeriksaan pengacara (Review Standar atau Pemeriksaan Mendalam) yang sedang berjalan. Tunggu sampai selesai, lalu coba lagi.",
-  SPECIAL_CASE_OPEN: "Masih ada Kasus Hukum Khusus yang terbuka. Tarik permintaan atau tunggu sampai kasus ditutup, lalu coba lagi.",
-  PAYMENT_PENDING: "Masih ada pembayaran yang menunggu atau sedang dicocokkan. Tunggu sampai selesai atau batas waktu bayar lewat, lalu coba lagi.",
+export const ERASE_BLOCK_MESSAGES: Record<EraseBlocker, string> & Record<string, string | undefined> = {
+  STAFF_ACCOUNT: "Akun ini terdaftar sebagai mitra hukum atau admin, jadi tidak dapat dihapus sendiri. Hubungi admin platform agar akses Anda dicabut lebih dulu.",
+  STANDARD_IN_PROGRESS: "Review Standar Anda masih dikerjakan pengacara. Tunggu sampai hasilnya terbit di Review Saya, lalu coba lagi.",
+  DEEP_IN_PROGRESS: "Pemeriksaan Mendalam Anda masih berjalan atau sedang ditahan. Tunggu sampai selesai. Jika pemeriksaan ditahan dan Anda ingin berhenti, Hubungi tim Yuktanya (lihat halaman Bantuan) agar pembayarannya diselesaikan dulu.",
+  SPECIAL_CASE_OPEN: "Kasus Hukum Khusus Anda masih terbuka. Tarik permintaan dari halaman kasus, atau tunggu sampai kasus ditutup, lalu coba lagi.",
+  PAYMENT_RECONCILIATION: "Ada pembayaran yang sedang dicocokkan tim kami. Tunggu sampai pencocokan selesai, atau Hubungi tim Yuktanya (lihat halaman Bantuan).",
+  PAYMENT_PENDING: "Ada pesanan yang menunggu pembayaran. Selesaikan pembayarannya, atau tunggu sampai batas waktu bayar lewat (pesanan batal sendiri), lalu coba lagi.",
 };
 
 export async function erasureBlockers(pool: Queryable, userId: string, now: Date = new Date()): Promise<string[]> {

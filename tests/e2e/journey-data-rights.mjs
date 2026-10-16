@@ -2,7 +2,7 @@
 // unduh data milik sendiri (dua akun, saling terisolasi), hapus akun end-to-end lewat Auth palsu (login sesudahnya gagal),
 // /verify untuk verifikasi yang terbit sebelumnya tetap bekerja. /settings & /settings/hapus-akun pada 375px.
 import { readFile } from "node:fs/promises";
-import { createNdaVersion, PASSWORD, register, say } from "./helpers.mjs";
+import { createNdaVersion, login, PASSWORD, register, say } from "./helpers.mjs";
 
 export const onlyViewport = "desktop";
 
@@ -72,12 +72,34 @@ export async function journey({ step, base, db, newActor, fake }) {
     await p.waitForSelector("text=Anda sedang offline", { state: "detached", timeout: 5000 });
     if (await p.locator("button:has-text('Kirim')").isDisabled()) throw new Error("tombol Kirim tidak aktif lagi setelah online");
     await say(p, draft, "Baik, saya catat");
+    // Langsung setelah kirim sukses (termasuk setelah reset formulir React yang ditunda): kotak harus kosong, tidak dikembalikan.
+    await p.waitForTimeout(800);
+    const right = await box.inputValue();
+    if (right !== "") throw new Error("draf dikembalikan setelah kirim sukses: " + right);
+    if (await p.locator("text=Tulisan Anda yang belum terkirim sudah dikembalikan").count()) throw new Error("pesan pemulihan tampil setelah kirim sukses");
     await p.reload();
     await p.waitForSelector("textarea[name=message]");
     const after = await box.inputValue();
     if (after !== "") throw new Error("draf tidak dibersihkan setelah terkirim: " + after);
     const stored = await p.evaluate((id) => { try { return localStorage.getItem("yuktanya:chat-draft:" + id); } catch { return "ERR"; } }, docB);
     if (stored !== null) throw new Error("localStorage masih menyimpan draf: " + stored);
+  });
+
+  await step(tag("keluar akun membuang draf di perangkat; masuk lagi → kotak pesan kosong"), async () => {
+    const p = actors.b.page;
+    await p.goto(`${base}/workspace/${docB}`);
+    await p.locator("textarea[name=message]").fill("Draf yang tidak boleh tertinggal di perangkat bersama");
+    const has = await p.evaluate((id) => localStorage.getItem("yuktanya:chat-draft:" + id), docB);
+    if (!has) throw new Error("draf tidak tersimpan sebelum keluar");
+    await Promise.all([p.waitForURL((u) => u.pathname === "/", { timeout: 20000 }), p.locator("button:has-text('Keluar'):visible").first().click()]);
+    const left = await p.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("yuktanya:chat-draft")));
+    if (left.length) throw new Error("draf tertinggal setelah keluar: " + left.join(","));
+    await login(p, base, mail("b"));
+    await p.goto(`${base}/workspace/${docB}`);
+    await p.waitForSelector("textarea[name=message]");
+    await p.waitForTimeout(500);
+    const v = await p.locator("textarea[name=message]").inputValue();
+    if (v !== "") throw new Error("draf muncul lagi setelah masuk ulang: " + v);
   });
 
   await step(tag("/settings dan /settings/hapus-akun pada 375px: tanpa overflow, target sentuh >= 44px"), async () => {
@@ -122,10 +144,27 @@ export async function journey({ step, base, db, newActor, fake }) {
     if (!ea.json.orders.length || !ea.json.reviews.length) throw new Error("pesanan/review A tidak ikut");
   });
 
-  await step(tag("Unduh data tanpa login → tidak mendapat data"), async () => {
+  await step(tag("Unduh data tanpa login → diarahkan ke halaman masuk, bukan berkas galat"), async () => {
     const anon = await newActor("hak-anon");
     const r = await anon.page.request.get(base + "/settings/export", { maxRedirects: 0 });
-    if (r.status() === 200 && (r.headers()["content-type"] ?? "").includes("json")) throw new Error("data terunduh tanpa login");
+    if (r.status() === 200) throw new Error("data terunduh tanpa login");
+    if (!/\/login/.test(r.headers().location ?? "")) throw new Error("tidak diarahkan ke /login: " + r.status() + " " + r.headers().location);
+  });
+
+  await step(tag("Unduh data terlalu sering → halaman Pengaturan dengan pesan biasa, tanpa berkas terunduh"), async () => {
+    const p = actors.b.page;
+    let limited = false;
+    for (let i = 0; i < 8 && !limited; i++) {
+      const r = await p.request.get(base + "/settings/export", { maxRedirects: 0 });
+      limited = r.status() === 303 && (r.headers().location ?? "").includes("notice=export-limit");
+    }
+    if (!limited) throw new Error("batas unduhan tidak berlaku");
+    await p.goto(base + "/settings");
+    let downloaded = false;
+    p.once("download", () => (downloaded = true));
+    await Promise.all([p.waitForURL(/notice=export-limit/, { timeout: 20000 }), p.click("[data-testid=export-link]")]);
+    await p.waitForSelector("[data-testid=settings-notice]:has-text('Coba lagi nanti')");
+    if (downloaded) throw new Error("galat tersimpan sebagai berkas unduhan");
   });
 
   await step(tag("hapus akun: kata konfirmasi salah ditolak; HAPUS → halaman akun dihapus, Auth palsu menghapus akun"), async () => {

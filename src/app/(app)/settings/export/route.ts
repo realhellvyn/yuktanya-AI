@@ -7,7 +7,7 @@ import { getSessionRoles } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 // Unduh data saya: hanya akun pemilik yang sedang masuk; isi dari export_account_data (milik sendiri saja).
-export async function GET(): Promise<Response> {
+export async function GET(req: Request): Promise<Response> {
   return accountExportHandler({
     getUserId: async () => {
       const s = await getSessionRoles();
@@ -15,5 +15,5 @@ export async function GET(): Promise<Response> {
     },
     load: (userId, now) => loadAccountExport(getPool(), userId, now),
     allow: (userId) => exportLimiter.allow(userId),
-  });
+  }, req);
 }

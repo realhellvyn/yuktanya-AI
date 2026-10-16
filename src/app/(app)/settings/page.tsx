@@ -14,15 +14,22 @@ export const metadata = { title: "Pengaturan | Yuktanya" };
 
 const link = "inline-flex min-h-12 items-center font-semibold text-brand-dark underline";
 
-export default async function SettingsPage() {
+const NOTICES: Record<string, string> = {
+  "export-limit": "Anda sudah mengunduh data beberapa kali dalam satu jam terakhir. Coba lagi nanti.",
+  "export-large": "Data Anda terlalu besar untuk diunduh sekaligus. Hubungi tim Yuktanya lewat halaman Bantuan.",
+};
+
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ notice?: string }> }) {
   // Sesi dan peran diperiksa ulang di server; email hanya dari sesi, bukan dari parameter.
   const userId = await requireUserId();
+  const notice = NOTICES[(await searchParams).notice ?? ""];
   const { data } = await (await createSupabaseServerClient()).auth.getUser();
   const pool = getPool();
   const [usage, member] = await Promise.all([createPgUsageStore(pool).snapshot(userId), getMembershipState(pool, userId)]);
   return (
     <main className="max-w-3xl space-y-6">
       <PageHeading title="Pengaturan" lead="Data akun dan privasi Anda." />
+      {notice && <p role="alert" data-testid="settings-notice" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold">{notice}</p>}
 
       <section aria-labelledby="akun">
         <Card className="space-y-4">
@@ -71,7 +78,7 @@ export default async function SettingsPage() {
           <h2 id="data-anda" className="text-xl font-bold text-navy">Data Anda</h2>
           <div className="space-y-2">
             <p>Unduh salinan data Anda dalam satu berkas (JSON): profil, dokumen dan isinya, percakapan, unggahan, pesanan, dan Kasus Hukum Khusus.</p>
-            <a className={buttonClass("secondary")} href="/settings/export" download data-testid="export-link">Unduh data saya</a>
+            <a className={buttonClass("secondary")} href="/settings/export" data-testid="export-link">Unduh data saya</a>
           </div>
           <div className="space-y-2 border-t border-line pt-4">
             <p>Hapus akun beserta dokumen dan percakapan Anda. Sebelum menghapus, Anda akan melihat apa yang dihapus dan apa yang tetap disimpan.</p>

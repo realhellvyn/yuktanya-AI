@@ -236,16 +236,70 @@ describe("erase_account", () => {
     expect(b.settled).toBe("SETTLED");
     const r = await erase(u);
     expect(r).toMatchObject({ status: "BLOCKED" });
-    expect(r.reasons).toContain("REVIEW_IN_PROGRESS");
+    expect(r.reasons).toEqual(["STANDARD_IN_PROGRESS"]);
     expect(await count("select count(*)::int as n from document_versions where id = $1", [v.versionId])).toBe(1);
     expect((await pool.query("select erased_at from profiles where id = $1", [u])).rows[0].erased_at).toBeNull();
-    expect((await pool.query("select account_erasure_blockers($1, $2) as b", [u, NOW])).rows[0].b).toContain("REVIEW_IN_PROGRESS");
+    expect((await pool.query("select account_erasure_blockers($1, $2) as b", [u, NOW])).rows[0].b).toEqual(["STANDARD_IN_PROGRESS"]);
 
     const p = await createUser(pool);
     await kit.order(p, "MEMBERSHIP_MONTHLY", null);
-    expect((await erase(p)).reasons).toContain("PAYMENT_PENDING");
+    expect((await erase(p)).reasons).toEqual(["PAYMENT_PENDING"]);
     // Setelah batas waktu bayar lewat, pesanan menunggu tidak lagi menahan penghapusan.
     expect((await erase(p, new Date(NOW.getTime() + 30 * DAY))).status).toBe("ERASED");
+  });
+
+  it("Kasus Hukum Khusus yang masih terbuka menahan penghapusan; setelah ditutup boleh", async () => {
+    const u = await createUser(pool);
+    const id = (await pool.query(
+      "insert into special_cases (owner_id, summary, consent_at, idempotency_key) values ($1, 'Ringkasan kasus yang masih terbuka sekali', $2, $3) returning id",
+      [u, NOW, key()],
+    )).rows[0].id;
+    expect((await erase(u)).reasons).toEqual(["SPECIAL_CASE_OPEN"]);
+    await pool.query("update special_cases set status = 'CLOSED', closed_at = $2 where id = $1", [id, NOW]);
+    expect((await erase(u)).status).toBe("ERASED");
+  });
+
+  it("pembayaran dalam pencocokan (RECONCILIATION_REQUIRED) menahan penghapusan dengan alasan sendiri", async () => {
+    const u = await createUser(pool);
+    const o = await kit.order(u, "MEMBERSHIP_MONTHLY", null);
+    await pool.query("update orders set status = 'RECONCILIATION_REQUIRED' where id = $1", [o.order_id]);
+    expect((await erase(u)).reasons).toEqual(["PAYMENT_RECONCILIATION"]);
+  });
+
+  it("Pemeriksaan Mendalam: berjalan atau ditahan dengan pesanan aktif → ditolak; ditahan tetapi dikembalikan/dibatalkan → boleh", async () => {
+    const deep = async () => {
+      const std = await kit.completedStandard({ member: true });
+      const b = await kit.buy(std.owner, "DEEP_REVIEW", std.req);
+      expect(b.settled).toBe("SETTLED");
+      const id = (await pool.query("select id from deep_requests where order_id = $1", [b.order_id])).rows[0].id as string;
+      return { owner: std.owner, id, orderId: b.order_id, paymentId: b.paymentId };
+    };
+    const running = await deep();
+    expect((await erase(running.owner)).reasons).toEqual(["DEEP_IN_PROGRESS"]);
+
+    const held = await deep();
+    await pool.query("update deep_requests set status = 'ON_HOLD' where id = $1", [held.id]);
+    expect((await erase(held.owner)).reasons).toEqual(["DEEP_IN_PROGRESS"]);
+
+    const refunded = await deep();
+    await pool.query("update deep_requests set status = 'ON_HOLD' where id = $1", [refunded.id]);
+    await pool.query("update orders set status = 'CANCELLED' where id = $1", [refunded.orderId]);
+    await pool.query("update payments set status = 'REFUNDED' where id = $1", [refunded.paymentId]);
+    expect((await erase(refunded.owner)).status).toBe("ERASED");
+
+    const closed = await deep();
+    await pool.query("update deep_requests set status = 'ON_HOLD' where id = $1", [closed.id]);
+    await pool.query("update orders set status = 'CANCELLED' where id = $1", [closed.orderId]);
+    expect((await erase(closed.owner)).status).toBe("ERASED");
+  });
+
+  it("setiap fungsi migrasi 34 (dan gerbang kekekalan) memakai search_path tetap", async () => {
+    const { rows } = await pool.query(
+      "select proname, proconfig from pg_proc where pronamespace = 'public'::regnamespace and proname = any($1)",
+      [["forbid_immutable_change", "run_retention", "export_account_data", "account_erasure_blockers", "erase_account"]],
+    );
+    expect(rows.map((r) => r.proname).sort()).toEqual(["account_erasure_blockers", "erase_account", "export_account_data", "forbid_immutable_change", "run_retention"]);
+    for (const r of rows) expect(r.proconfig ?? [], r.proname).toContain("search_path=public");
   });
 
   it("akun profesional/admin tidak dapat menghapus diri lewat jalur ini", async () => {

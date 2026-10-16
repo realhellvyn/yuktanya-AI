@@ -12,21 +12,21 @@ export async function loadAccountExport(pool: Queryable, userId: string, now: Da
 
 export const EXPORT_MAX_BYTES = 20 * 1024 * 1024;
 
+// Kegagalan dialihkan (303) ke halaman dengan pesan biasa, bukan JSON galat, agar browser tidak menyimpannya sebagai berkas.
 export async function accountExportHandler(deps: {
   getUserId: () => Promise<string | null>;
   load: (userId: string, now: Date) => Promise<Record<string, unknown>>;
   allow: (userId: string) => boolean;
   maxBytes?: number;
   now?: () => Date;
-}): Promise<Response> {
+}, req: Request): Promise<Response> {
+  const to = (path: string) => Response.redirect(new URL(path, req.url), 303);
   const userId = await deps.getUserId();
-  if (!userId) return Response.json({ code: "AUTH_REQUIRED" }, { status: 401 });
-  if (!deps.allow(userId)) return Response.json({ code: "RATE_LIMITED", message: "Terlalu sering mengunduh. Coba lagi dalam satu jam." }, { status: 429 });
+  if (!userId) return to("/login?returnTo=%2Fsettings");
+  if (!deps.allow(userId)) return to("/settings?notice=export-limit");
   const now = deps.now?.() ?? new Date();
   const body = JSON.stringify(await deps.load(userId, now), null, 2);
-  if (Buffer.byteLength(body) > (deps.maxBytes ?? EXPORT_MAX_BYTES)) {
-    return Response.json({ code: "TOO_LARGE", message: "Data terlalu besar untuk diunduh sekaligus. Hubungi bantuan." }, { status: 413 });
-  }
+  if (Buffer.byteLength(body) > (deps.maxBytes ?? EXPORT_MAX_BYTES)) return to("/settings?notice=export-large");
   return new Response(body, {
     status: 200,
     headers: {

@@ -5,6 +5,7 @@ type EnumerableStorage = DraftStorage & { readonly length: number; key(index: nu
 
 export const DRAFT_PREFIX = "yuktanya:chat-draft:";
 const MAX_AGE_MS = 7 * 86_400_000;
+const OWNER_KEY = "yuktanya:chat-draft-owner";
 const keyOf = (documentId: string) => `${DRAFT_PREFIX}${documentId}`;
 
 export function safeLocalStorage(): EnumerableStorage | null {
@@ -50,7 +51,7 @@ export function clearDraft(storage: DraftStorage | null | undefined, documentId:
   }
 }
 
-// Dipakai setelah akun dihapus: buang semua draf Yuktanya di perangkat ini.
+// Dipakai saat keluar akun dan setelah akun dihapus: buang semua draf Yuktanya di perangkat ini.
 export function clearAllDrafts(storage: EnumerableStorage | null | undefined): void {
   if (!storage) return;
   try {
@@ -60,6 +61,19 @@ export function clearAllDrafts(storage: EnumerableStorage | null | undefined): v
       if (k?.startsWith(DRAFT_PREFIX)) keys.push(k);
     }
     keys.forEach((k) => storage.removeItem(k));
+    storage.removeItem(OWNER_KEY);
+  } catch {
+    // diabaikan
+  }
+}
+
+// Draf hanya untuk akun yang menulisnya: bila akun lain membuka percakapan di perangkat yang sama, semua draf lama dibuang.
+export function claimDrafts(storage: EnumerableStorage | null | undefined, userId: string): void {
+  if (!storage) return;
+  try {
+    if (storage.getItem(OWNER_KEY) === userId) return;
+    clearAllDrafts(storage);
+    storage.setItem(OWNER_KEY, userId);
   } catch {
     // diabaikan
   }
