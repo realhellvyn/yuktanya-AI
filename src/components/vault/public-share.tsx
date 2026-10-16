@@ -45,15 +45,26 @@ export function PublicShare({ view, token, requestAction, verifyAction, step, em
         {resultMsg && <p role="status" className="font-semibold">{resultMsg}</p>}
         {errorMsg && <p role="alert" className="font-semibold text-red-800">{errorMsg}</p>}
         {step === "kode" ? (
-          <form action={verifyAction} className="space-y-3">
-            <input type="hidden" name="token" value={token} />
-            <input type="hidden" name="email" value={email ?? ""} />
-            <label className="block">
-              <span className="font-medium">Kode 6 digit dari email Anda (Wajib)</span>
-              <input name="code" inputMode="numeric" pattern="\d{6}" maxLength={6} required autoComplete="one-time-code" className={box} />
-            </label>
-            <button type="submit" className="min-h-12 rounded-lg bg-blue-600 px-5 font-semibold text-white">Konfirmasi</button>
-          </form>
+          <div className="space-y-4">
+            <p>Kode dikirim ke {email}</p>
+            <form action={verifyAction} className="space-y-3">
+              <input type="hidden" name="token" value={token} />
+              <input type="hidden" name="email" value={email ?? ""} />
+              <label className="block">
+                <span className="font-medium">Kode 6 digit dari email Anda (Wajib)</span>
+                <input name="code" inputMode="numeric" pattern="\d{6}" maxLength={6} required autoComplete="one-time-code" className={box} />
+              </label>
+              <button type="submit" className="min-h-12 rounded-lg bg-blue-600 px-5 font-semibold text-white">Konfirmasi</button>
+            </form>
+            <div className="flex flex-wrap gap-3">
+              <form action={requestAction}>
+                <input type="hidden" name="token" value={token} />
+                <input type="hidden" name="email" value={email ?? ""} />
+                <button type="submit" className="min-h-12 rounded-lg border border-slate-400 bg-white px-5 font-medium">Kirim ulang kode</button>
+              </form>
+              <a href={`/s/${encodeURIComponent(token)}`} className="inline-flex min-h-12 items-center rounded-lg border border-slate-400 bg-white px-5 font-medium">Ubah email</a>
+            </div>
+          </div>
         ) : (
           <form action={requestAction} className="space-y-3">
             <input type="hidden" name="token" value={token} />

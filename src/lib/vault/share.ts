@@ -11,6 +11,13 @@ export class InvalidExpiryError extends Error {
   }
 }
 
+export class TooManySharesError extends Error {
+  constructor() {
+    super("TOO_MANY_SHARES");
+    this.name = "TooManySharesError";
+  }
+}
+
 export type ShareView =
   | { status: "OK"; versionNo: number; sha256: string; title: string; doc: RenderedDoc; hasNewer: boolean }
   | { status: "EXPIRED" | "REVOKED" | "NOT_FOUND" };
@@ -24,6 +31,7 @@ export function mapShareError(e: unknown): never {
   if (m.includes("NOT_FOUND")) throw new NotFoundError();
   if (m.includes("FEATURE_NOT_AVAILABLE")) throw new FeatureNotAvailableError();
   if (m.includes("INVALID_EXPIRY")) throw new InvalidExpiryError();
+  if (m.includes("TOO_MANY_SHARES")) throw new TooManySharesError();
   throw e;
 }
 

@@ -60,6 +60,49 @@ describe("konfirmasi baca", () => {
     expect(await shares.verifyAck(token, to, code!, at(2))).toBe("LOCKED");
   });
 
+  it("kunci tidak di-reset oleh kode baru: 10 tebakan salah per share+email dalam 24 jam mengunci", async () => {
+    const { token } = await sharedToken();
+    const to = email();
+    for (let round = 0; round < 2; round++) {
+      const { code } = await requestAndRead(token, to, at(round * 15));
+      const wrong = code === "000000" ? "111111" : "000000";
+      for (let i = 0; i < 5; i++) await shares.verifyAck(token, to, wrong, at(round * 15 + 1));
+    }
+    const { code } = await requestAndRead(token, to, at(31));
+    expect(await shares.verifyAck(token, to, code!, at(32))).toBe("LOCKED");
+  });
+
+  it("tebakan salah dibatasi per email lintas share (20 per 24 jam)", async () => {
+    const to = email();
+    const wrongOf = (c: string | undefined) => (c === "000000" ? "111111" : "000000");
+    for (let k = 0; k < 4; k++) {
+      const { token } = await sharedToken();
+      const { code } = await requestAndRead(token, to, at(k));
+      for (let i = 0; i < 5; i++) await shares.verifyAck(token, to, wrongOf(code), at(k + 1));
+    }
+    const { token } = await sharedToken();
+    const { code } = await requestAndRead(token, to, at(10));
+    expect(await shares.verifyAck(token, to, code!, at(11))).toBe("LOCKED");
+  });
+
+  it("permintaan kode per email lintas share dibatasi 10 per jam", async () => {
+    const to = email();
+    const results: string[] = [];
+    for (let k = 0; k < 11; k++) {
+      const { token } = await sharedToken();
+      results.push(await shares.requestAck(token, to, at(k)));
+    }
+    expect(results.slice(0, 10).every((r) => r === "SENT")).toBe(true);
+    expect(results[10]).toBe("RATE_LIMITED");
+  });
+
+  it("permintaan kode serentak tidak melampaui batas 5 per jam", async () => {
+    const { token } = await sharedToken();
+    const to = email();
+    const rs = await Promise.all(Array.from({ length: 8 }, () => shares.requestAck(token, to, T0)));
+    expect(rs.filter((r) => r === "SENT")).toHaveLength(5);
+  });
+
   it("kode kedaluwarsa setelah 10 menit", async () => {
     const { token } = await sharedToken();
     const to = email();
@@ -105,6 +148,27 @@ describe("konfirmasi baca", () => {
     expect(sender.sent.filter((m) => m.to === to)).toHaveLength(1);
   });
 
+  it("email kode yang sudah kedaluwarsa dibatalkan, bukan dikirim terlambat, dan payload dikosongkan", async () => {
+    const { token } = await sharedToken();
+    const to = email();
+    expect(await shares.requestAck(token, to, T0)).toBe("SENT");
+    const sender = createMockEmailSender();
+    const r = await processOutbox(pool, sender, at(11), 1000);
+    expect(sender.sent.some((m) => m.to === to)).toBe(false);
+    expect(r.failed).toBe(0);
+    const ob = (await pool.query("select status, payload from outbox_events where kind = 'ack_code' and payload->>'to' = $1 or (kind = 'ack_code' and status = 'CANCELLED' and payload = '{}'::jsonb)", [to])).rows;
+    expect(ob.some((x) => x.status === "CANCELLED")).toBe(true);
+  });
+
+  it("pengirim yang menggantung dihentikan setelah batas waktu dan dianggap gagal", async () => {
+    const { token } = await sharedToken();
+    const to = email();
+    await shares.requestAck(token, to, T0);
+    const hang = { async send() { await new Promise(() => {}); } };
+    const r = await processOutbox(pool, hang, T0, 1000, { sendTimeoutMs: 30 });
+    expect(r.failed).toBeGreaterThan(0);
+  });
+
   it("kegagalan pengirim → dijadwalkan ulang lalu terkirim pada percobaan berikutnya", async () => {
     const { token } = await sharedToken();
     const to = email();
@@ -114,7 +178,7 @@ describe("konfirmasi baca", () => {
     expect(r1.failed).toBeGreaterThan(0);
     const ok = createMockEmailSender();
     expect((await processOutbox(pool, ok, T0, 1000)).sent).toBe(0); // belum jatuh tempo ulang
-    await processOutbox(pool, ok, at(10), 1000);
+    await processOutbox(pool, ok, at(6), 1000);
     expect(ok.sent.some((m) => m.to === to)).toBe(true);
   });
 

@@ -30,7 +30,7 @@ export async function verifyAckAction(formData: FormData): Promise<void> {
   const token = str(formData, "token");
   const email = str(formData, "email");
   const back = (q: string): never => redirect(`/s/${encodeURIComponent(token)}?${q}`);
-  if (!ackLimiter.allow(await ip())) back("error=busy");
+  if (!ackLimiter.allow(await ip())) back(`step=kode&e=${encodeURIComponent(email)}&error=busy`);
   try {
     const r = await shareService().verifyAck(token, email, str(formData, "code"));
     back(r === "VERIFIED" ? "result=VERIFIED" : `step=kode&e=${encodeURIComponent(email)}&result=${r}`);

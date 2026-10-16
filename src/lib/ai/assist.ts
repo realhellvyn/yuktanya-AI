@@ -6,15 +6,29 @@ import { TEMPLATES } from "@/lib/documents/templates/registry";
 import type { Data, Template } from "@/lib/documents/types";
 import { GatewayError, type ChatMessage, type chat as gatewayChat } from "./gateway";
 import { parseInterviewJson } from "./interview";
+import type { AttemptLimiter } from "./attempts";
 import type { UsageStore } from "./quota";
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const collapse = (s: string) => s.replace(/\s+/g, " ").trim();
 
+// Batas kata Unicode: nilai tidak boleh hanya potongan di tengah kata/angka lain ("Budi" bukan bagian dari "Budiman").
+const BEFORE = "(?<![\\p{L}\\p{N}])";
+const AFTER = "(?![\\p{L}\\p{N}])";
+const wholeToken = (literal: string): RegExp => new RegExp(BEFORE + esc(collapse(literal)).replace(/ /g, "\\s+") + AFTER, "iu");
+
+// Tanggal di cerita tidak boleh menyumbang angka hari/tahun sebagai kandidat jumlah.
+const DATE_SPANS = new RegExp(
+  "\\d{4}-\\d{2}-\\d{2}|\\d{1,2}/\\d{1,2}/\\d{4}|\\d{1,2}\\s+(?:januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember)\\s+\\d{4}",
+  "giu",
+);
+
 // Token angka di cerita: "5.000.000" → 5000000, "24" → 24. Desimal/koma (mis. "5,5") sengaja tidak dihitung.
+// Tanda baca di ujung token ("Rp5.000.000.") dibuang sebelum dinilai.
 function numbersIn(story: string): Set<number> {
   const out = new Set<number>();
-  for (const tok of story.match(/\d[\d.,]*/g) ?? []) {
+  for (const raw of story.replace(DATE_SPANS, " ").match(/\d[\d.,]*/g) ?? []) {
+    const tok = raw.replace(/[.,]+$/, "");
     if (/^\d+$/.test(tok)) out.add(Number(tok));
     else if (/^\d{1,3}(\.\d{3})+$/.test(tok)) out.add(Number(tok.replace(/\./g, "")));
   }
@@ -30,7 +44,7 @@ export function groundSuggestions(template: Template, story: string, raw: Record
     if (v === undefined || v === null) continue;
     if (f.kind === "text" || f.kind === "longtext" || f.kind === "choice") {
       if (typeof v !== "string" || collapse(v) === "") continue;
-      const m = new RegExp(esc(collapse(v)).replace(/ /g, "\\s+"), "i").exec(story);
+      const m = wholeToken(v).exec(story);
       if (!m) continue;
       const found = collapse(m[0]);
       if (f.kind === "choice") {
@@ -50,8 +64,7 @@ export function groundSuggestions(template: Template, story: string, raw: Record
       }
       const [y, mo, d] = iso.split("-").map(Number);
       const forms = [iso, formatDateId(iso), `${d}/${mo}/${y}`, `${String(d).padStart(2, "0")}/${String(mo).padStart(2, "0")}/${y}`];
-      const hay = story.toLowerCase();
-      if (forms.some((x) => hay.includes(x.toLowerCase()))) out[f.key] = iso;
+      if (forms.some((x) => wholeToken(x).test(story))) out[f.key] = iso;
     }
   }
   return out;
@@ -64,6 +77,7 @@ export type AssistDeps = {
   chat: typeof gatewayChat;
   inflight: Set<string>;
   now?: () => Date;
+  attempts?: AttemptLimiter;
 };
 
 const json = (body: unknown, status = 200, headers?: Record<string, string>) => Response.json(body, { status, headers });
@@ -100,6 +114,7 @@ export async function handleAssist(deps: AssistDeps, req: Request, params: { id:
   deps.inflight.add(userId);
   const now = deps.now?.() ?? new Date();
   try {
+    if (deps.attempts && !(await deps.attempts.allow(userId, "assist", now))) return json({ code: "TOO_MANY_ATTEMPTS" }, 429, { "retry-after": "60" });
     const reservation = await deps.store.reserve(userId, "MESSAGE", key, now);
     if (!reservation.ok) {
       const retryAfter = Math.max(1, Math.ceil((new Date(reservation.resetAt).getTime() - now.getTime()) / 1000));

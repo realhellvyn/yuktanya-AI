@@ -15,6 +15,15 @@ describe("FsBlobStore", () => {
     expect(await s.get("u1/d1/tidak-ada.pdf")).toBeNull();
   });
 
+  it("delete menghapus berkas dan tidak melempar bila sudah tidak ada", async () => {
+    const s = createFsBlobStore(root());
+    await s.put("u1/d1/a.pdf", bytes("halo"));
+    await s.delete("u1/d1/a.pdf");
+    expect(await s.get("u1/d1/a.pdf")).toBeNull();
+    await expect(s.delete("u1/d1/a.pdf")).resolves.toBeUndefined();
+    await expect(s.delete("../x")).rejects.toThrow(/path/i);
+  });
+
   it.each(["../x", "/abs/x", "a/../b", "a\\b", "a\0b", "", "a//b", "..", "./x"])("menolak path tidak aman %j", async (p) => {
     const s = createFsBlobStore(root());
     await expect(s.put(p, bytes("x"))).rejects.toThrow(/path/i);

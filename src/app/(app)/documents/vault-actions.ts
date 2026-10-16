@@ -9,7 +9,7 @@ import { NotFoundError } from "@/lib/documents/service";
 import { buildEvidencePack, RateLimitedError } from "@/lib/vault/evidence";
 import { FeatureNotAvailableError } from "@/lib/vault/features";
 import { InvalidOffsetsError } from "@/lib/vault/reminders";
-import { InvalidExpiryError } from "@/lib/vault/share";
+import { InvalidExpiryError, TooManySharesError } from "@/lib/vault/share";
 import type { CreateShareState } from "@/components/vault/create-share-form";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "");
@@ -26,6 +26,7 @@ export async function createShareAction(_prev: CreateShareState, formData: FormD
     if (e instanceof FeatureNotAvailableError) return { error: "Fitur ini tersedia untuk Member." };
     if (e instanceof NotFoundError) return { error: "Versi tidak ditemukan." };
     if (e instanceof InvalidExpiryError) return { error: "Masa berlaku tautan tidak valid." };
+    if (e instanceof TooManySharesError) return { error: "Tautan aktif untuk versi ini sudah 20. Cabut tautan yang tidak dipakai lebih dulu." };
     throw e;
   }
 }
@@ -85,6 +86,6 @@ export async function assistAction(formData: FormData): Promise<void> {
   const body = (await res.json().catch(() => ({}))) as { applied?: string[]; fallback?: string; code?: string };
   let code = "down";
   if (res.status === 200) code = body.fallback ? "manual" : (body.applied?.length ?? 0) > 0 ? "ok" : "none";
-  else if (res.status === 429) code = body.code === "AI_BUSY" ? "busy" : "quota";
+  else if (res.status === 429) code = body.code === "AI_BUSY" || body.code === "TOO_MANY_ATTEMPTS" ? "busy" : "quota";
   redirect(`/workspace/${id}?step=ringkasan&assist=${code}`);
 }

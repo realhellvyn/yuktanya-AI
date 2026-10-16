@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { createPgDocumentsService } from "@/lib/documents/service";
 import { FeatureNotAvailableError } from "@/lib/vault/features";
-import { createPgShareService, InvalidExpiryError } from "@/lib/vault/share";
+import { createPgShareService, InvalidExpiryError, TooManySharesError } from "@/lib/vault/share";
 import { NotFoundError } from "@/lib/documents/service";
 import type { Data } from "@/lib/documents/types";
 import { asUser, createUser, getPool } from "./helpers";
@@ -85,6 +85,24 @@ describe("berbagi versi", () => {
     expect((await shares.resolve(b.token, NOW)).status).toBe("OK");
     await shares.revoke(u, b.shareId, NOW);
     expect(await shares.resolve(b.token, NOW)).toEqual({ status: "REVOKED" });
+  });
+
+  it("pencabutan berlaku seketika walau jam pemanggil berbeda (revoked_at non-null selalu berarti dicabut)", async () => {
+    const u = await member();
+    const v = await frozen(u);
+    const { token, shareId } = await shares.create(u, v.versionId, 24 * HOUR, NOW);
+    await shares.revoke(u, shareId, new Date(NOW.getTime() + 60_000));
+    expect(await shares.resolve(token, NOW)).toEqual({ status: "REVOKED" });
+  });
+
+  it("batas 20 tautan aktif per versi; tautan yang dicabut tidak dihitung", async () => {
+    const u = await member();
+    const v = await frozen(u);
+    const made = [];
+    for (let i = 0; i < 20; i++) made.push(await shares.create(u, v.versionId, 24 * HOUR, NOW));
+    await expect(shares.create(u, v.versionId, 24 * HOUR, NOW)).rejects.toBeInstanceOf(TooManySharesError);
+    await shares.revoke(u, made[0].shareId, NOW);
+    await expect(shares.create(u, v.versionId, 24 * HOUR, NOW)).resolves.toBeTruthy();
   });
 
   it("revoke oleh orang lain → NotFound", async () => {

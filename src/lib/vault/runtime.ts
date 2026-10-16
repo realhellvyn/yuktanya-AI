@@ -1,5 +1,6 @@
 import "server-only";
 import { chat } from "@/lib/ai/gateway";
+import { createPgAttemptLimiter } from "@/lib/ai/attempts";
 import { createPgUsageStore } from "@/lib/ai/quota";
 import { getPool } from "@/lib/db";
 import { getBlobStore } from "@/lib/documents/runtime";
@@ -39,5 +40,6 @@ export function assistDeps(): AssistDeps {
     store: createPgUsageStore(getPool()),
     chat,
     inflight: assistInflight,
+    attempts: createPgAttemptLimiter(getPool()),
   };
 }

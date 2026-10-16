@@ -92,8 +92,18 @@ describe("PublicShare", () => {
     expect(evil).not.toContain("diblokir");
   });
 
+  it("langkah kode menampilkan alamat tujuan, tombol kirim ulang kode, dan tautan ubah email", () => {
+    const html = renderToStaticMarkup(PublicShare({ ...base, view: ok, step: "kode", email: "pihak@example.test" }));
+    expect(html).toContain("Kode dikirim ke pihak@example.test");
+    expect(html).toContain("Kirim ulang kode");
+    expect(html).toContain("Ubah email");
+    expect(html).toContain(`href="/s/${base.token}"`);
+  });
+
   it("semua tautan dan tombol min-h-12", () => {
     const html = renderToStaticMarkup(PublicShare({ ...base, view: ok }));
     for (const tag of html.match(/<(a|button) [^>]*>/g) ?? []) expect(tag).toContain("min-h-12");
+    const kode = renderToStaticMarkup(PublicShare({ ...base, view: ok, step: "kode", email: "a@b.co" }));
+    for (const tag of kode.match(/<(a|button) [^>]*>/g) ?? []) expect(tag).toContain("min-h-12");
   });
 });

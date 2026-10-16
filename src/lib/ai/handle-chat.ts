@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { GatewayError, type ChatMessage, type chat as gatewayChat } from "./gateway";
+import type { AttemptLimiter } from "./attempts";
 import type { UsageStore } from "./quota";
 
 // Prompt sistem selalu dari server; pesan "system" dari klien ditolak.
@@ -28,6 +29,7 @@ export type ChatDeps = {
   // Satu panggilan upstream aktif per user (per proses); dibagikan lewat modul route.
   inflight: Set<string>;
   now?: () => Date;
+  attempts?: AttemptLimiter;
 };
 
 const CACHE_TTL_MS = 5 * 60_000;
@@ -64,6 +66,7 @@ async function runChat(
   cacheKey: string,
   now: Date,
 ): Promise<Response> {
+  if (deps.attempts && !(await deps.attempts.allow(userId, "chat", now))) return json({ code: "TOO_MANY_ATTEMPTS" }, 429, { "retry-after": "60" });
   const reservation = await deps.store.reserve(userId, "MESSAGE", key, now);
   if (!reservation.ok) {
     const retryAfter = Math.max(1, Math.ceil((new Date(reservation.resetAt).getTime() - now.getTime()) / 1000));

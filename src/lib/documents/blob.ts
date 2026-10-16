@@ -1,10 +1,12 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface BlobStore {
   put(path: string, bytes: Uint8Array): Promise<void>;
   get(path: string): Promise<Uint8Array | null>;
+  // Idempoten: menghapus berkas yang tidak ada tidak melempar.
+  delete(path: string): Promise<void>;
 }
 
 // Path relatif tanpa segmen kosong, '.', '..', backslash, atau NUL; tidak boleh berawalan '/'.
@@ -36,6 +38,9 @@ export function createFsBlobStore(rootDir: string): BlobStore {
         throw e;
       }
     },
+    async delete(p) {
+      await rm(resolve(p), { force: true });
+    },
   };
 }
 
@@ -55,6 +60,11 @@ export function createSupabaseBlobStore(client: SupabaseClient, bucket: string):
         throw new Error(`Gagal membaca berkas: ${error.message}`);
       }
       return new Uint8Array(await data.arrayBuffer());
+    },
+    async delete(p) {
+      assertSafePath(p);
+      const { error } = await client.storage.from(bucket).remove([p]);
+      if (error) throw new Error(`Gagal menghapus berkas: ${error.message}`);
     },
   };
 }

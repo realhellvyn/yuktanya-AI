@@ -1,4 +1,5 @@
 import { chat } from "@/lib/ai/gateway";
+import { createPgAttemptLimiter } from "@/lib/ai/attempts";
 import { createChatCache, handleChat } from "@/lib/ai/handle-chat";
 import { createPgUsageStore } from "@/lib/ai/quota";
 import { recordEvent } from "@/lib/analytics/events";
@@ -17,6 +18,7 @@ export async function POST(req: Request) {
       chat,
       cache,
       inflight,
+      attempts: createPgAttemptLimiter(pool),
       recordMetric: (m) =>
         recordEvent(pool, {
           name: m.status === "SUCCESS" ? "ai_request_succeeded" : "ai_request_failed",

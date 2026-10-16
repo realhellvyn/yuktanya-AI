@@ -76,6 +76,17 @@ describe("pengingat tenggat", () => {
     expect((await pending(b.reminderId)).map((x) => x.status)).toEqual(["CANCELLED"]);
   });
 
+  it("set serentak (klik ganda) menghasilkan tepat satu pengingat aktif dan satu set email", async () => {
+    const n = await setup("NDA", ndaData);
+    await Promise.all([reminders.set(n.u, n.versionId, "end", [30, 7, 1], NOW), reminders.set(n.u, n.versionId, "end", [30, 7, 1], NOW)]);
+    const active = (await pool.query("select id from reminders where version_id = $1 and cancelled_at is null", [n.versionId])).rows;
+    expect(active).toHaveLength(1);
+    const pendingRows = (await pool.query("select count(*) from outbox_events where kind = 'reminder' and status = 'PENDING' and dedupe_key like $1", [`reminder:${active[0].id}:%`])).rows[0].count;
+    expect(pendingRows).toBe("3");
+    const allPending = (await pool.query("select count(*) from outbox_events o join reminders r on o.dedupe_key like 'reminder:' || r.id::text || ':%' where r.version_id = $1 and o.status = 'PENDING'", [n.versionId])).rows[0].count;
+    expect(allPending).toBe("3");
+  });
+
   it("tanpa fitur → FeatureNotAvailable; versi orang lain → NotFound; spec tak dikenal → NotFound", async () => {
     const free = await setup("NDA", ndaData, false);
     await expect(reminders.set(free.u, free.versionId, "end", [1], NOW)).rejects.toBeInstanceOf(FeatureNotAvailableError);

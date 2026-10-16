@@ -122,6 +122,15 @@ describe("paket bukti", () => {
     expect(await downloadEvidencePack(deps, other, pack.packId)).toBeNull();
   });
 
+  it("pembuatan serentak: satu berhasil, satu RateLimited, dan tidak ada berkas yatim", async () => {
+    const m = await member();
+    const list = async () => (await import("node:fs/promises")).readdir(path.join(root, m.u, m.documentId, "evidence")).catch(() => [] as string[]);
+    const rs = await Promise.allSettled([buildEvidencePack(deps, m.u, m.documentId, T0), buildEvidencePack(deps, m.u, m.documentId, T0)]);
+    expect(rs.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(rs.filter((r) => r.status === "rejected" && r.reason instanceof RateLimitedError)).toHaveLength(1);
+    expect(await list()).toHaveLength(1);
+  });
+
   it("berkas blob diubah → IntegrityError", async () => {
     const m = await member();
     const pack = (await buildEvidencePack(deps, m.u, m.documentId, T0))!;

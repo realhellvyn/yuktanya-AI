@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { handleAssist, type AssistDeps } from "@/lib/ai/assist";
+import { createPgAttemptLimiter } from "@/lib/ai/attempts";
 import { GatewayError } from "@/lib/ai/gateway";
 import { createPgUsageStore } from "@/lib/ai/quota";
 import { createPgDocumentsService } from "@/lib/documents/service";
@@ -123,5 +124,24 @@ describe("handleAssist", () => {
     expect((await second.json()).code).toBe("AI_BUSY");
     release();
     await first;
+  });
+});
+
+describe("handleAssist: batas percobaan", () => {
+  it("keluaran tak terbaca yang dikembalikan kuotanya tetap dihitung sebagai percobaan; setelah batas → 429 TOO_MANY_ATTEMPTS", async () => {
+    const u = await createUser(pool);
+    const id = await newDoc(u);
+    const chat = vi.fn(async () => ({ text: "bukan json", requestId: "r" }));
+    const deps: AssistDeps = {
+      getUserId: async () => u, service: docs, store, chat: chat as unknown as AssistDeps["chat"], inflight: new Set(), now: () => NOW,
+      attempts: createPgAttemptLimiter(pool, { chat: { limit: 40, windowSeconds: 600 }, assist: { limit: 2, windowSeconds: 600 } }),
+    };
+    const call = () => handleAssist(deps, new Request("http://t/x", { method: "POST", headers: { "content-type": "application/json", "idempotency-key": `k-${Math.random().toString(36).slice(2)}-abcdef` }, body: JSON.stringify({ story: STORY }) }), { id });
+    expect((await call()).status).toBe(200);
+    expect((await call()).status).toBe(200);
+    const third = await call();
+    expect(third.status).toBe(429);
+    expect((await third.json()).code).toBe("TOO_MANY_ATTEMPTS");
+    expect(chat).toHaveBeenCalledTimes(6);
   });
 });

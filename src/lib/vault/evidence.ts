@@ -88,6 +88,8 @@ export async function buildEvidencePack(deps: Deps, userId: string, documentId: 
     const { rows } = await pool.query("select register_evidence_pack($1, $2, $3, $4, $5, $6) as id", [userId, documentId, sha256, bytes.byteLength, path, now]);
     return { packId: rows[0].id, sha256, byteSize: bytes.byteLength };
   } catch (e) {
+    // Pendaftaran gagal (mis. permintaan serentak ditolak): jangan tinggalkan berkas yatim di penyimpanan.
+    await blob.delete(path).catch(() => undefined);
     return mapDbError(e);
   }
 }
