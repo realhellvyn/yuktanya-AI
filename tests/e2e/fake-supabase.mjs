@@ -70,3 +70,27 @@ export function startFakeSupabase({ databaseUrl, port }) {
   });
   return new Promise((r) => server.listen(port, "127.0.0.1", () => r({ server, close: () => { server.close(); return pool.end(); } })));
 }
+
+// LLM palsu (pengganti FreeLLMAPI): menjawab JSON dari cerita pengguna lewat aturan sederhana, dan sengaja menambahkan
+// satu nilai karangan (disputeCity) agar lapisan "hanya yang tertulis di cerita" teruji. Mencatat model yang diminta.
+export function startFakeLlm({ port }) {
+  const seen = [];
+  const server = http.createServer(async (req, res) => {
+    let d = "";
+    for await (const c of req) d += c;
+    const body = d ? JSON.parse(d) : {};
+    seen.push({ path: req.url, model: body.model, auth: req.headers.authorization });
+    const story = String((body.messages ?? []).filter((m) => m.role === "user").at(0)?.content ?? "");
+    const person = (re) => re.exec(story)?.[1];
+    const out = {
+      disclosingParty: person(/Saya ([A-Z][a-z]+ [A-Z][a-z]+)/),
+      receivingParty: person(/dari ([A-Z][a-z]+ [A-Z][a-z]+)/),
+      confidentialInfo: person(/rahasia (daftar pelanggan)/),
+      termMonths: Number(person(/selama (\d+) bulan/)) || null,
+      disputeCity: "Jakarta Selatan",
+    };
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ id: "fake-1", choices: [{ message: { role: "assistant", content: JSON.stringify(out) } }] }));
+  });
+  return new Promise((r) => server.listen(port, "127.0.0.1", () => r({ seen, close: () => server.close() })));
+}

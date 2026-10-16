@@ -15,9 +15,16 @@ import { ASSIST_NOTICES } from "@/lib/vault/messages";
 import { freezeAction, saveStepAction } from "../../documents/actions";
 import { assistAction } from "../../documents/vault-actions";
 import { AssistBox } from "@/components/documents/assist-box";
+import { StoryFirst } from "@/components/documents/story-first";
 
 // Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
 export const dynamic = "force-dynamic";
+
+const STORY_EXAMPLE = {
+  UTANG_PIUTANG: "Saya Sinta Dewi meminjamkan Rp5.000.000 kepada Budi Santoso dan akan dikembalikan pada 16 April 2027.",
+  NDA: "Saya Sinta Dewi ingin menjaga rahasia daftar pelanggan dari Budi Santoso selama 12 bulan.",
+  PKS: "Saya Sinta Dewi dan Budi Santoso ingin bekerja sama membuka kedai kopi selama 24 bulan.",
+} as const;
 
 export default async function WorkspacePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ step?: string; error?: string; assist?: string }> }) {
   const { id } = await params;
@@ -68,6 +75,15 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
     );
   }
 
+  if (!q.step && bar.done === 0) {
+    return (
+      <main className="max-w-2xl space-y-5">
+        <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-3xl">{t.title}</h1>
+        {q.assist && ASSIST_NOTICES[q.assist] && <p role="status" className="rounded-xl border border-line bg-white p-4">{ASSIST_NOTICES[q.assist]}</p>}
+        <StoryFirst documentId={id} action={assistAction} manualHref={`/workspace/${id}?step=1`} example={STORY_EXAMPLE[doc.category]} />
+      </main>
+    );
+  }
   const steps = buildSteps(t);
   const index = Math.min(Math.max(Number(q.step) || missing?.index || 1, 1), steps.length);
   const step = steps[index - 1];

@@ -1,6 +1,6 @@
 const SAMPLE = { text: "Contoh Isi", longtext: "daftar pelanggan dan harga modal untuk rencana kerja sama", date: "16 Oktober 2026", idr: "Rp1.000.000", integer: "12" };
 let lastExport = "";
-export async function journey({ page, step, shot, base, vp, issues }) {
+export async function journey({ page, step, shot, base, vp, issues, llm }) {
   const email = `uji+${Date.now()}@example.com`;
   await step(`[${vp.name}] beranda publik tampil`, async () => { await page.goto(base + "/"); await page.waitForSelector("h1"); await shot("00-home"); });
   await step(`[${vp.name}] /dashboard tanpa login dialihkan ke /login`, async () => {
@@ -16,6 +16,7 @@ export async function journey({ page, step, shot, base, vp, issues }) {
   await step(`[${vp.name}] pilih NDA dan isi seluruh langkah`, async () => {
     await page.goto(base + "/workspace/new"); await shot("03-new");
     await Promise.all([page.waitForURL("**/workspace/**", { timeout: 30000 }), page.click("form:has(input[value=NDA]) button")]);
+    await page.click("a:has-text('Isi manual satu per satu')"); await page.waitForURL(/step=1/);
     for (let i = 0; i < 12; i++) {
       if (page.url().includes("ringkasan")) break;
       await shot(`04-step-${i + 1}`);
@@ -47,6 +48,20 @@ export async function journey({ page, step, shot, base, vp, issues }) {
     const link = page.locator("a:has-text('Berkas siap')"); await link.waitFor({ timeout: 30000 });
     const [dl] = await Promise.all([page.waitForEvent("download"), link.click()]);
     if (!dl.suggestedFilename().endsWith(".pdf")) throw new Error(dl.suggestedFilename());
+  });
+  await step(`[${vp.name}] AI: cerita mengisi kolom yang tertulis, tidak yang dikarang`, async () => {
+    await page.goto(base + "/workspace/new");
+    await Promise.all([page.waitForURL(/\/workspace\/[0-9a-f-]{36}/, { timeout: 30000 }), page.click("form:has(input[value=NDA]) button")]);
+    await page.waitForSelector("textarea[name=story]");
+    await shot("04b-story");
+    await page.fill("textarea[name=story]", "Saya Sinta Dewi ingin menjaga rahasia daftar pelanggan dari Budi Santoso selama 12 bulan.");
+    await Promise.all([page.waitForURL(/ringkasan/, { timeout: 60000 }), page.click("button:has-text('Isi dengan AI')")]);
+    await shot("04c-after-ai");
+    const body = await page.locator("body").innerText();
+    for (const must of ["Sinta Dewi", "Budi Santoso", "daftar pelanggan", "12"]) if (!body.includes(must)) throw new Error(`tidak terisi: ${must}`);
+    const row = await page.locator("dt:has-text('Kota pengadilan') + dd").innerText();
+    if (!/belum diisi/.test(row)) throw new Error("nilai karangan AI masuk: " + row);
+    if (!llm.seen.length || llm.seen.some((r) => r.model !== "auto")) throw new Error("model bukan literal auto: " + JSON.stringify(llm.seen));
   });
   for (const [p, h] of [["/documents", "docs"], ["/vault", "vault"], ["/membership", "membership"], ["/reviews", "reviews"], ["/pricing", "pricing"]]) {
     await step(`[${vp.name}] ${p} tampil tanpa error`, async () => {
