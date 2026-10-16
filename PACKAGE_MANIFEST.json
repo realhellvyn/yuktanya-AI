@@ -4,8 +4,8 @@
   "files": [
     {
       "path": ".env.example",
-      "sha256": "c4203defb107bee1c8240986dfc6194ec61047ac15d49e0b609d46fc2e42b801",
-      "bytes": 455
+      "sha256": "fe21878adc957ab714d820d31bbf30ce3dcfac953fe98955543c370c7ef266aa",
+      "bytes": 470
     },
     {
       "path": ".gitignore",
@@ -154,18 +154,13 @@
     },
     {
       "path": "README.md",
-      "sha256": "c4d67044ac268d1459ddc0f7ac84c703f2cecb65dd9e45a72d3db87adda32abf",
-      "bytes": 3347
+      "sha256": "fd04914221b5a5cc11fccd43b83953532810a14cdd6e22168ca9edca92259918",
+      "bytes": 3769
     },
     {
       "path": "scripts/validate_package.py",
       "sha256": "353d9d7e5498fcf4805a4fa093776e393517b27854d5125d9ec1743aa34251af",
       "bytes": 635
-    },
-    {
-      "path": "supabase/migrations/.gitkeep",
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "bytes": 0
     },
     {
       "path": "tests/e2e/SCENARIOS.md",
