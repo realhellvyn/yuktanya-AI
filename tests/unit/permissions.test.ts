@@ -102,3 +102,18 @@ describe("guardPath: penagihan, review, dan verifikasi", () => {
     expect(redirectOf(guardPath("/api/partner/reviews", ["user"]))).toBe("/dashboard");
   });
 });
+
+describe("guardPath: halaman publik baru dan /settings", () => {
+  it("halaman publik dan alur lupa kata sandi terbuka tanpa login", () => {
+    for (const p of ["/privacy", "/terms", "/bantuan", "/design-preview", "/forgot-password", "/reset-password"]) {
+      expect(guardPath(p, null)).toEqual({ allow: true });
+    }
+  });
+
+  it("/settings butuh login dan mengikuti permukaan pemilik", () => {
+    expect(redirectOf(guardPath("/settings", null))).toBe(`/login?returnTo=${encodeURIComponent("/settings")}`);
+    expect(guardPath("/settings", ["user"])).toEqual({ allow: true });
+    expect(redirectOf(guardPath("/settings", ["reviewer"]))).toBe("/partner");
+    expect(redirectOf(guardPath("/settings", ["platform_admin"]))).toBe("/admin");
+  });
+});

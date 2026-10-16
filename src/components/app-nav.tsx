@@ -12,6 +12,7 @@ export const NAV = [
   { href: "/reviews", label: "Review Saya", short: "Review", icon: "M5 12l4 4L19 6" },
   { href: "/vault", label: "Legal Vault", short: "Vault", icon: "M5 10V7a7 7 0 0 1 14 0v3M4 10h16v11H4z" },
   { href: "/membership", label: "Membership", short: "Akun", icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21a8 8 0 0 1 16 0" },
+  { href: "/settings", label: "Pengaturan", short: "Pengaturan", icon: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14 3h-4l-.4 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2L10 21h4l.4-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2" },
 ] as const;
 const BOTTOM = ["/dashboard", "/workspace/new", "/documents", "/membership"];
 

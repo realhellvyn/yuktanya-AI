@@ -1,3 +1,4 @@
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -110,12 +111,7 @@ export default function Home() {
           </section>
         </div>
       </main>
-      <footer className="border-t border-line bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-sm text-muted md:px-8">
-          <p>© Yuktanya. {SLOGAN}</p>
-          <ButtonLink href="/pricing" variant="quiet">Harga</ButtonLink>
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   );
 }

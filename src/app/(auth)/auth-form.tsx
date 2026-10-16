@@ -2,24 +2,21 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { googleAuthEnabled } from "@/lib/auth/google";
-import { signInWithGoogle } from "./actions";
+import { AUTH_MESSAGES } from "@/lib/auth/messages";
+import { resendConfirmation, signInWithGoogle } from "./actions";
 import { PasswordField } from "./password-field";
 
-const MESSAGES: Record<string, string> = {
-  invalid: "Email atau kata sandi belum sesuai. Kata sandi minimal 8 karakter.",
-  failed: "Belum berhasil. Periksa email dan kata sandi Anda, lalu coba lagi.",
-  unconfigured: "Layanan masuk belum disiapkan di lingkungan ini.",
-};
 
 type Props = {
   mode: "login" | "register";
   action: (formData: FormData) => Promise<void>;
   error?: string;
   sent?: boolean;
+  resent?: boolean;
   returnTo: string;
 };
 
-export function AuthForm({ mode, action, error, sent, returnTo }: Props) {
+export function AuthForm({ mode, action, error, sent, resent, returnTo }: Props) {
   const isLogin = mode === "login";
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-4 py-10">
@@ -28,12 +25,17 @@ export function AuthForm({ mode, action, error, sent, returnTo }: Props) {
         <h1 className="text-[1.75rem] font-bold leading-tight text-navy">{isLogin ? "Masuk ke Yuktanya" : "Buat akun Yuktanya"}</h1>
         {sent && (
           <p role="status" className="rounded-xl border border-blue-300 bg-blue-50 p-4">
-            Kami sudah mengirim email konfirmasi. Buka email Anda lalu tekan tautannya. Belum menerima? Periksa folder spam, lalu daftar ulang dengan email yang sama.
+            Kami sudah mengirim email konfirmasi. Buka email Anda lalu tekan tautannya. Belum menerima? Periksa folder spam, lalu kirim ulang lewat kotak di bawah.
+          </p>
+        )}
+        {resent && (
+          <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">
+            Email konfirmasi dikirim ulang. Periksa kotak masuk dan folder spam Anda.
           </p>
         )}
         {error && (
           <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">
-            {MESSAGES[error] ?? MESSAGES.failed}
+            {AUTH_MESSAGES[error] ?? AUTH_MESSAGES.failed}
           </p>
         )}
         {googleAuthEnabled(process.env) && (
@@ -52,8 +54,26 @@ export function AuthForm({ mode, action, error, sent, returnTo }: Props) {
             <input name="email" type="email" required autoComplete="email" className="mt-2 block min-h-12 w-full rounded-xl border border-slate-400 bg-white px-4 text-lg" />
           </label>
           <PasswordField autoComplete={isLogin ? "current-password" : "new-password"} />
+          {isLogin && <Link className="inline-flex min-h-12 items-center font-semibold text-brand-dark underline" href="/forgot-password">Lupa kata sandi?</Link>}
+          {!isLogin && (
+            <p className="text-sm text-muted">
+              Sebelum mendaftar, baca <Link className="inline-flex min-h-11 items-center font-semibold text-brand-dark underline" href="/privacy">Kebijakan Privasi</Link> dan <Link className="inline-flex min-h-11 items-center font-semibold text-brand-dark underline" href="/terms">Syarat Penggunaan</Link>.
+            </p>
+          )}
           <Button type="submit" className="w-full text-lg">{isLogin ? "Masuk" : "Daftar Gratis"}</Button>
         </form>
+        {(error || sent || resent) && (
+          <form action={resendConfirmation} className="space-y-3 border-t border-line pt-5">
+            <input type="hidden" name="returnTo" value={returnTo} />
+            <input type="hidden" name="page" value={mode} />
+            <label className="block">
+              <span className="font-semibold">Belum menerima email konfirmasi?</span>
+              <span className="mt-1 block text-muted">Tulis email Anda, lalu kirim ulang.</span>
+              <input name="email" type="email" required autoComplete="email" aria-label="Email untuk kirim ulang konfirmasi" className="mt-2 block min-h-12 w-full rounded-xl border border-slate-400 bg-white px-4 text-lg" />
+            </label>
+            <Button type="submit" variant="secondary" className="w-full">Kirim ulang email konfirmasi</Button>
+          </form>
+        )}
       </Card>
       <p className="text-center">
         {isLogin ? (

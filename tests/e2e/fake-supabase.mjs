@@ -21,6 +21,7 @@ const verify = (t) => {
 export function startFakeSupabase({ databaseUrl, port }) {
   const pool = new Pool({ connectionString: databaseUrl, max: 3 });
   const users = new Map(); // email -> { id, email, password }
+  const outbox = []; // email palsu yang "terkirim": { kind: "recover" | "resend", email }
   const session = (u) => {
     const exp = Math.floor(Date.now() / 1000) + 3600;
     const user = { id: u.id, aud: "authenticated", role: "authenticated", email: u.email, app_metadata: { provider: "email" }, user_metadata: {}, created_at: new Date().toISOString() };
@@ -51,6 +52,24 @@ export function startFakeSupabase({ databaseUrl, port }) {
         const u = users.get(b.email);
         return u && u.password === b.password ? send(res, 200, session(u)) : send(res, 400, { error_code: "invalid_credentials", msg: "Invalid login credentials" });
       }
+      // Lupa kata sandi / kirim ulang konfirmasi: selalu 200 (seperti Supabase, tidak membocorkan keberadaan akun).
+      if (url.pathname === "/auth/v1/recover" && req.method === "POST") {
+        outbox.push({ kind: "recover", email: (await body(req)).email });
+        return send(res, 200, {});
+      }
+      if (url.pathname === "/auth/v1/resend" && req.method === "POST") {
+        outbox.push({ kind: "resend", email: (await body(req)).email });
+        return send(res, 200, { message_id: randomUUID() });
+      }
+      if (url.pathname === "/auth/v1/user" && req.method === "PUT") {
+        const pl = verify((req.headers.authorization ?? "").replace(/^Bearer /, ""));
+        const u = pl && [...users.values()].find((x) => x.id === pl.sub);
+        if (!u) return send(res, 401, { code: 401, error_code: "bad_jwt", msg: "invalid JWT" });
+        const { password } = await body(req);
+        if (password && password === u.password) return send(res, 422, { code: 422, error_code: "same_password", msg: "New password should be different from the old password." });
+        if (password) u.password = password;
+        return send(res, 200, session(u).user);
+      }
       if (url.pathname === "/auth/v1/user") {
         const pl = verify((req.headers.authorization ?? "").replace(/^Bearer /, ""));
         const u = pl && [...users.values()].find((x) => x.id === pl.sub);
@@ -68,7 +87,7 @@ export function startFakeSupabase({ databaseUrl, port }) {
       send(res, 500, { message: String(e) });
     }
   });
-  return new Promise((r) => server.listen(port, "127.0.0.1", () => r({ server, close: () => { server.close(); return pool.end(); } })));
+  return new Promise((r) => server.listen(port, "127.0.0.1", () => r({ server, outbox, close: () => { server.close(); return pool.end(); } })));
 }
 
 // LLM palsu (pengganti FreeLLMAPI): menjawab JSON dari pesan terakhir pengguna lewat aturan sederhana, dan sengaja

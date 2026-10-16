@@ -1,0 +1,32 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { AUTH_MESSAGES } from "@/lib/auth/messages";
+import { requestPasswordReset } from "../actions";
+import { AuthShell, linkClass } from "../auth-shell";
+
+export const metadata = { title: "Lupa kata sandi | Yuktanya" };
+
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const q = await searchParams;
+  return (
+    <AuthShell title="Lupa kata sandi" footer={<Link className={linkClass} href="/login">Kembali ke halaman masuk</Link>}>
+      {q.sent === "1" ? (
+        <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 text-green-900">
+          <strong>Permintaan diterima.</strong> Jika email itu terdaftar, kami mengirim tautan untuk membuat kata sandi baru. Periksa kotak masuk dan folder spam. Tautan hanya berlaku sementara.
+        </p>
+      ) : (
+        <>
+          <p className="text-muted">Tulis email akun Anda. Kami akan mengirim tautan untuk membuat kata sandi baru.</p>
+          {q.error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{q.error === "invalid" ? "Email belum sesuai. Periksa penulisannya." : AUTH_MESSAGES[q.error] ?? AUTH_MESSAGES.failed}</p>}
+          <form action={requestPasswordReset} className="space-y-5">
+            <label className="block">
+              <span className="font-semibold">Email <span className="font-normal text-muted">(Wajib)</span></span>
+              <input name="email" type="email" required autoComplete="email" className="mt-2 block min-h-12 w-full rounded-xl border border-slate-400 bg-white px-4 text-lg" />
+            </label>
+            <Button type="submit" className="w-full text-lg">Kirim tautan</Button>
+          </form>
+        </>
+      )}
+    </AuthShell>
+  );
+}

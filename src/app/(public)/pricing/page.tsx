@@ -1,3 +1,4 @@
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { CHECKOUT_NOTE, SPECIAL_CASE_NOTE } from "@/lib/copy";
 import { PRICING, formatIdr } from "@/lib/pricing/catalog";
@@ -45,6 +46,7 @@ export default function PricingPage() {
         </table>
         <p className="rounded-lg border border-line bg-white p-4">{CHECKOUT_NOTE}</p>
       </main>
+      <SiteFooter />
     </>
   );
 }
