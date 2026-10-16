@@ -1,6 +1,7 @@
 import "server-only";
 import { homeFor } from "@/lib/auth/permissions";
 import { getPool } from "@/lib/db";
+import { flags } from "@/lib/flags";
 import { ForbiddenError } from "@/lib/documents/handlers";
 import { getSessionRoles } from "@/lib/supabase/server";
 import { createManualAdapter, createMockAdapter } from "./adapters";
@@ -31,5 +32,6 @@ export function billingDeps(): BillingDeps {
     },
     service: billingService(),
     production: production(),
+    deepEnabled: flags.deepReviewPurchase,
   };
 }

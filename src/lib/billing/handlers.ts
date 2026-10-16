@@ -8,6 +8,8 @@ export type BillingDeps = {
   getAdminId(): Promise<string | null>;
   service: BillingService;
   production: boolean;
+  // Pembelian Deep Review hanya bila flag aktif; selain itu jalur API generik juga menolak.
+  deepEnabled?: boolean;
   now?: () => Date;
 };
 type Params = Record<string, string>;
@@ -27,6 +29,7 @@ function mapError(e: unknown): Response {
   if (e instanceof BillingError) {
     switch (e.code) {
       case "NOT_FOUND": return notFound();
+      case "NOT_ELIGIBLE": return json({ code: "NOT_ELIGIBLE", reason: e.reason }, 409);
       case "FORBIDDEN": return json({ code: "FORBIDDEN" }, 403);
       case "ALREADY_REVIEWED": return json({ code: "ALREADY_REVIEWED" }, 409);
       case "PRODUCT_UNAVAILABLE": return json({ code: "PRODUCT_UNAVAILABLE" }, 409);
@@ -59,15 +62,18 @@ function userGuard(ids: string[], run: (userId: string, deps: BillingDeps, req: 
 }
 
 // Harga selalu dihitung server: field amount/plan dari klien diabaikan (skema strict menolak kunci lain tidak dikenal hanya pada field yang disebut).
-const orderBody = z.object({ kind: z.enum(ORDER_KINDS as unknown as [string, ...string[]]), versionId: z.string().regex(UUID).optional() }).passthrough();
+const orderBody = z.object({ kind: z.enum(ORDER_KINDS as unknown as [string, ...string[]]), versionId: z.string().regex(UUID).optional(), parentRequestId: z.string().regex(UUID).optional() }).passthrough();
 
 export const createOrderHandler = userGuard([], async (userId, deps, req) => {
   const key = idemKey(req);
   const body = orderBody.safeParse(await readJson(req));
   if (!key || !body.success) return invalid();
-  const { kind, versionId } = body.data;
+  const { kind, versionId, parentRequestId } = body.data;
+  if (kind === "DEEP_REVIEW" && !deps.deepEnabled) return json({ code: "FEATURE_DISABLED" }, 404);
   if (kind === "STANDARD_REVIEW" && !versionId) return invalid();
-  const r = await deps.service.createOrder(userId, kind as never, kind === "STANDARD_REVIEW" ? versionId! : null, key, deps.now?.());
+  if (kind === "DEEP_REVIEW" && !parentRequestId) return invalid();
+  const ref = kind === "STANDARD_REVIEW" ? versionId! : kind === "DEEP_REVIEW" ? parentRequestId! : null;
+  const r = await deps.service.createOrder(userId, kind as never, ref, key, deps.now?.());
   return json({ orderId: r.orderId, status: r.status, amountIdr: r.amountIdr, duplicate: r.duplicate }, r.duplicate ? 200 : 201);
 });
 

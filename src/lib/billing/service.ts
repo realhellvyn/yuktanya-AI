@@ -1,8 +1,8 @@
 import type { Pool } from "pg";
 import type { PaymentAdapter } from "./adapters";
 
-export type OrderKind = "MEMBERSHIP_MONTHLY" | "MEMBERSHIP_ANNUAL" | "BUNDLE" | "STANDARD_REVIEW";
-export const ORDER_KINDS: readonly OrderKind[] = ["MEMBERSHIP_MONTHLY", "MEMBERSHIP_ANNUAL", "BUNDLE", "STANDARD_REVIEW"];
+export type OrderKind = "MEMBERSHIP_MONTHLY" | "MEMBERSHIP_ANNUAL" | "BUNDLE" | "STANDARD_REVIEW" | "DEEP_REVIEW";
+export const ORDER_KINDS: readonly OrderKind[] = ["MEMBERSHIP_MONTHLY", "MEMBERSHIP_ANNUAL", "BUNDLE", "STANDARD_REVIEW", "DEEP_REVIEW"];
 export type Quote = { amountIdr: number; variant: string; usesCredit: boolean };
 export type OrderResult = { orderId: string; status: string; amountIdr: number; duplicate: boolean };
 export type OrderView = {
@@ -11,14 +11,16 @@ export type OrderView = {
 };
 
 export class BillingError extends Error {
-  constructor(readonly code: "NOTE_REQUIRED" | "NOT_RECONCILIATION" | "AMOUNT_MISMATCH" | "CONFLICT" | "INVALID_ACTION" | "NOT_FOUND" | "ALREADY_REVIEWED" | "PRODUCT_UNAVAILABLE" | "ORDER_NOT_PAYABLE" | "INVALID_KIND" | "FORBIDDEN" | "PROVIDER_UNAVAILABLE") {
-    super(code);
+  constructor(readonly code: "NOT_ELIGIBLE" | "NOTE_REQUIRED" | "NOT_RECONCILIATION" | "AMOUNT_MISMATCH" | "CONFLICT" | "INVALID_ACTION" | "NOT_FOUND" | "ALREADY_REVIEWED" | "PRODUCT_UNAVAILABLE" | "ORDER_NOT_PAYABLE" | "INVALID_KIND" | "FORBIDDEN" | "PROVIDER_UNAVAILABLE", readonly reason?: string) {
+    super(reason ? `${code}: ${reason}` : code);
     this.name = "BillingError";
   }
 }
 const CODES = ["NOT_FOUND", "ALREADY_REVIEWED", "PRODUCT_UNAVAILABLE", "ORDER_NOT_PAYABLE", "INVALID_KIND", "FORBIDDEN"] as const;
 function mapError(e: unknown): never {
   const m = e instanceof Error ? e.message : "";
+  const el = /NOT_ELIGIBLE: ([A-Z_]+)/.exec(m);
+  if (el) throw new BillingError("NOT_ELIGIBLE", el[1]);
   for (const c of CODES) if (m.includes(c)) throw new BillingError(c);
   throw e;
 }
