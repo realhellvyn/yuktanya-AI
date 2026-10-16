@@ -13,8 +13,8 @@ async function reserveReview(user: string, key = `r-${Math.random()}`) {
   if (!r.ok) throw new Error("reservasi gagal");
   return r.groupId;
 }
-const save = (user: string, group: string, logical: string, sha = SHA) =>
-  pool.query("select save_ai_review($1, $2, $3, 'v1', $4, $5, 'policy-1') as id", [user, group, logical, sha, JSON.stringify({ ringkasan: "sintetis" })]);
+const save = (user: string, group: string, logical: string, sha = SHA, now: Date = NOW) =>
+  pool.query("select save_ai_review($1, $2, $3, 'v1', $4, $5, 'policy-1', $6) as id", [user, group, logical, sha, JSON.stringify({ ringkasan: "sintetis" }), now]);
 const uuid = () => crypto.randomUUID();
 const reports = async (user: string) => (await pool.query("select * from ai_review_reports where user_id = $1", [user])).rows;
 
@@ -55,6 +55,13 @@ describe("save_ai_review", () => {
     const group = await reserveReview(owner);
     await expect(save(other, group, uuid())).rejects.toThrow(/RESERVATION_NOT_ACTIVE/);
     expect(await reports(other)).toHaveLength(0);
+  });
+
+  it("reservasi yang sudah kedaluwarsa ditolak dan tidak ada laporan", async () => {
+    const u = await createUser(pool);
+    const group = await reserveReview(u);
+    await expect(save(u, group, uuid(), SHA, new Date("2026-10-16T05:06:00Z"))).rejects.toThrow(/RESERVATION_NOT_ACTIVE/);
+    expect(await reports(u)).toHaveLength(0);
   });
 
   it("sha256 tidak valid ditolak dan reservasi tetap aktif", async () => {

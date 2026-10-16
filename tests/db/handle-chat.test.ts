@@ -19,6 +19,7 @@ function setup(userId: string | null, chatImpl?: ChatDeps["chat"]) {
     chat: chat as unknown as ChatDeps["chat"],
     recordMetric: async (m) => void metrics.push(m),
     cache: createChatCache(),
+    inflight: new Set<string>(),
     now: () => NOW,
   };
   const call = (opts: { key?: string | null; body?: unknown; headers?: Record<string, string> } = {}) => {
@@ -123,6 +124,49 @@ describe("handleChat", () => {
     const t = setup(u);
     await t.call({ body: { messages: [{ role: "user", content: "RAHASIA-PROMPT-123" }] } });
     expect(JSON.stringify(t.metrics)).not.toContain("RAHASIA-PROMPT-123");
+  });
+});
+
+describe("handleChat: ketahanan", () => {
+  it("kegagalan mencatat metrik setelah sukses tidak menghilangkan jawaban", async () => {
+    const u = await createUser(pool);
+    const t = setup(u);
+    t.deps.recordMetric = async () => { throw new Error("db hiccup"); };
+    const res = await t.call();
+    expect(res.status).toBe(200);
+    expect((await store.snapshot(u, NOW)).messagesUsed).toBe(1);
+  });
+
+  it("error tak terduga → 500 INTERNAL bertipe dan kuota dilepas", async () => {
+    const u = await createUser(pool);
+    const t = setup(u, async () => { throw new Error("boom"); });
+    const res = await t.call();
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ code: "INTERNAL" });
+    expect((await store.snapshot(u, NOW)).messagesUsed).toBe(0);
+  });
+
+  it("satu panggilan upstream aktif per user: yang kedua ditolak AI_BUSY", async () => {
+    const u = await createUser(pool);
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    const t = setup(u, async () => { await gate; return { text: "ok", requestId: "r" }; });
+    const first = t.call();
+    await new Promise((r) => setTimeout(r, 50));
+    const second = await t.call();
+    expect(second.status).toBe(429);
+    expect((await second.json()).code).toBe("AI_BUSY");
+    release();
+    expect((await first).status).toBe(200);
+    expect(t.chat).toHaveBeenCalledTimes(1);
+    expect((await t.call()).status).toBe(200);
+  });
+
+  it("kunci in-flight dilepas juga saat gateway gagal", async () => {
+    const u = await createUser(pool);
+    const t = setup(u, async () => { throw new GatewayError("TIMEOUT"); });
+    await t.call();
+    expect(t.deps.inflight.size).toBe(0);
   });
 });
 

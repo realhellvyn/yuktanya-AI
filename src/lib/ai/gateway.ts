@@ -23,41 +23,63 @@ function mock(messages: ChatMessage[]) {
   return { text: `[MOCK] ${id}`, requestId: `mock-${id}` };
 }
 
+async function readCapped(res: Response, maxChars: number): Promise<string> {
+  if (!res.body) {
+    const text = await res.text();
+    if (text.length > maxChars) throw new GatewayError("BAD_RESPONSE");
+    return text;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let out = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    out += decoder.decode(value, { stream: true });
+    if (out.length > maxChars) {
+      await reader.cancel().catch(() => undefined);
+      throw new GatewayError("BAD_RESPONSE");
+    }
+  }
+  return out + decoder.decode();
+}
+
 async function attempt(messages: ChatMessage[], base: string, key: string, f: typeof fetch, timeoutMs: number) {
   const controller = new AbortController();
+  // Timer tetap hidup selama badan respons dibaca, bukan hanya sampai header tiba.
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  let res: Response;
   try {
     // Literal "auto" pada setiap panggilan; tidak ada pemilih model atau override env.
-    res = await f(`${base}/chat/completions`, {
+    const res = await f(`${base}/chat/completions`, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
       body: JSON.stringify({ model: "auto", messages }),
       signal: controller.signal,
     });
+    if (res.status === 429) throw new GatewayError("RATE_LIMITED");
+    if (res.status >= 500) throw new GatewayError("UPSTREAM_5XX");
+    if (!res.ok) throw new GatewayError("UNAVAILABLE");
+
+    const raw = await readCapped(res, MAX_BODY_CHARS);
+    let json: unknown;
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      throw new GatewayError("BAD_RESPONSE");
+    }
+    if (!json || typeof json !== "object") throw new GatewayError("BAD_RESPONSE");
+    const body = json as { id?: unknown; choices?: { message?: { content?: unknown } }[] };
+    const text = body.choices?.[0]?.message?.content;
+    if (typeof text !== "string" || text.length === 0 || text.length > MAX_TEXT_CHARS) throw new GatewayError("BAD_RESPONSE");
+    const requestId = typeof body.id === "string" ? body.id : (res.headers.get("x-request-id") ?? randomUUID());
+    return { text, requestId };
   } catch (err) {
+    if (err instanceof GatewayError) throw err;
     if (err instanceof Error && err.name === "AbortError") throw new GatewayError("TIMEOUT");
     throw new GatewayError("UNAVAILABLE");
   } finally {
     clearTimeout(timer);
   }
-
-  if (res.status === 429) throw new GatewayError("RATE_LIMITED");
-  if (res.status >= 500) throw new GatewayError("UPSTREAM_5XX");
-  if (!res.ok) throw new GatewayError("UNAVAILABLE");
-
-  const raw = await res.text();
-  if (raw.length > MAX_BODY_CHARS) throw new GatewayError("BAD_RESPONSE");
-  let json: { id?: unknown; choices?: { message?: { content?: unknown } }[] };
-  try {
-    json = JSON.parse(raw);
-  } catch {
-    throw new GatewayError("BAD_RESPONSE");
-  }
-  const text = json.choices?.[0]?.message?.content;
-  if (typeof text !== "string" || text.length === 0 || text.length > MAX_TEXT_CHARS) throw new GatewayError("BAD_RESPONSE");
-  const requestId = typeof json.id === "string" ? json.id : (res.headers.get("x-request-id") ?? randomUUID());
-  return { text, requestId };
 }
 
 export async function chat(messages: ChatMessage[], opts: Opts = {}): Promise<{ text: string; requestId: string }> {

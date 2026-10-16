@@ -10,7 +10,7 @@ type Row = { status: string; group_id: string | null; reset_at: Date };
 async function reserve(user: string, kind: string, key: string, now = T): Promise<Row> {
   return (await pool.query("select * from reserve_usage($1, $2, $3, $4)", [user, kind, key, now])).rows[0];
 }
-const finalize = (g: string) => pool.query("select finalize_usage($1)", [g]);
+const finalize = (g: string, now = T) => pool.query("select finalize_usage($1, $2)", [g, now]);
 const release = (g: string) => pool.query("select release_usage($1)", [g]);
 
 async function use(user: string, kind: string, n: number, now = T) {
@@ -29,11 +29,11 @@ async function seedFinalized(user: string, type: "MESSAGE" | "DOCUMENT" | "REVIE
   );
 }
 
-const countUsed = async (user: string, type: string, date = "2026-10-16") =>
+const countUsed = async (user: string, type: string, date = "2026-10-16", at = T) =>
   Number((await pool.query(
     `select count(*) from ai_usage_reservations where user_id = $1 and local_date = $2 and quota_type = $3
        and (status = 'FINALIZED' or (status = 'RESERVED' and expires_at > $4))`,
-    [user, date, type, T],
+    [user, date, type, at],
   )).rows[0].count);
 
 const makeMember = (user: string, start = "2026-10-01T00:00:00Z", end = "2026-11-01T00:00:00Z") =>
@@ -167,6 +167,20 @@ describe("perubahan plan di tengah hari", () => {
     await makeMember(u, "2026-10-01T00:00:00Z", "2026-10-16T06:00:00Z");
     await seedFinalized(u, "MESSAGE", 30, "2026-10-16");
     expect((await reserve(u, "MESSAGE", "late", "2026-10-16T07:00:00Z")).status).toBe("QUOTA_MESSAGE");
+  });
+});
+
+describe("kedaluwarsa reservasi", () => {
+  it("finalize terlambat setelah TTL ditolak dan tidak melampaui batas", async () => {
+    const u = await createUser(pool);
+    await seedFinalized(u, "MESSAGE", 19, "2026-10-16");
+    const a = await reserve(u, "MESSAGE", "slow-a"); // kedaluwarsa 05:05:00Z
+    const later = "2026-10-16T05:06:00Z";
+    const b = await reserve(u, "MESSAGE", "fast-b", later);
+    expect(b.status).toBe("RESERVED");
+    await finalize(b.group_id!, later);
+    await expect(finalize(a.group_id!, later)).rejects.toThrow(/RESERVATION_EXPIRED/);
+    expect(await countUsed(u, "MESSAGE", "2026-10-16", later)).toBe(20);
   });
 });
 

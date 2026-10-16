@@ -78,9 +78,39 @@ describe("gateway chat", () => {
     ["choices kosong", JSON.stringify({ choices: [] })],
     ["konten kosong", JSON.stringify({ choices: [{ message: { content: "" } }] })],
     ["teks raksasa", JSON.stringify({ choices: [{ message: { content: "a".repeat(200_001) } }] })],
+    ["null", "null"],
+    ["angka", "123"],
+    ["string JSON", '"x"'],
   ])("balasan %s → BAD_RESPONSE", async (_n, body) => {
     const f = fakeFetch(new Response(body, { status: 200 }));
     expect(await code(chat(msgs, { fetchImpl: f.impl, env }))).toBe("BAD_RESPONSE");
+  });
+
+  it("badan respons yang menggantung setelah header → TIMEOUT", async () => {
+    const stall = (async (_u: string, init: RequestInit) =>
+      new Response(
+        new ReadableStream({
+          start(c) {
+            init.signal!.addEventListener("abort", () => c.error(new DOMException("x", "AbortError")));
+          },
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    expect(await code(chat(msgs, { fetchImpl: stall, env, timeoutMs: 30 }))).toBe("TIMEOUT");
+  });
+
+  it("badan respons raksasa dihentikan di batas dan dibatalkan", async () => {
+    let cancelled = false;
+    const huge = (async () =>
+      new Response(
+        new ReadableStream({
+          pull(c) { c.enqueue(new TextEncoder().encode("a".repeat(400_000))); },
+          cancel() { cancelled = true; },
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    expect(await code(chat(msgs, { fetchImpl: huge, env }))).toBe("BAD_RESPONSE");
+    expect(cancelled).toBe(true);
   });
 
   it("tanpa base URL/kunci → UNAVAILABLE", async () => {

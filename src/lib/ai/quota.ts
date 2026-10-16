@@ -18,7 +18,7 @@ export type UsageSnapshot = {
 
 export interface UsageStore {
   reserve(userId: string, kind: UsageKind, key: string, now?: Date): Promise<ReserveResult>;
-  finalize(groupId: string): Promise<void>;
+  finalize(groupId: string, now?: Date): Promise<void>;
   release(groupId: string): Promise<void>;
   snapshot(userId: string, now?: Date): Promise<UsageSnapshot>;
 }
@@ -42,8 +42,8 @@ export function createPgUsageStore(pool: Pool): UsageStore {
       return { ok: false, code, resetAt: row.reset_at.toISOString() };
     },
 
-    async finalize(groupId) {
-      await pool.query("select finalize_usage($1)", [groupId]);
+    async finalize(groupId, now = new Date()) {
+      await pool.query("select finalize_usage($1, $2)", [groupId, now]);
     },
 
     async release(groupId) {

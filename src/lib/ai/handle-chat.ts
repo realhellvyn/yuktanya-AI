@@ -25,6 +25,8 @@ export type ChatDeps = {
   chat: typeof gatewayChat;
   recordMetric: (m: ChatMetric) => Promise<void>;
   cache: ChatCache;
+  // Satu panggilan upstream aktif per user (per proses); dibagikan lewat modul route.
+  inflight: Set<string>;
   now?: () => Date;
 };
 
@@ -45,6 +47,23 @@ export async function handleChat(deps: ChatDeps, req: Request): Promise<Response
   const cached = deps.cache.get(cacheKey);
   if (cached && cached.expiresAt > now.getTime()) return json(cached.result, 200);
 
+  if (deps.inflight.has(userId)) return json({ code: "AI_BUSY" }, 429, { "retry-after": "2" });
+  deps.inflight.add(userId);
+  try {
+    return await runChat(deps, userId, key, parsed.data.messages, cacheKey, now);
+  } finally {
+    deps.inflight.delete(userId);
+  }
+}
+
+async function runChat(
+  deps: ChatDeps,
+  userId: string,
+  key: string,
+  clientMessages: ChatMessage[],
+  cacheKey: string,
+  now: Date,
+): Promise<Response> {
   const reservation = await deps.store.reserve(userId, "MESSAGE", key, now);
   if (!reservation.ok) {
     const retryAfter = Math.max(1, Math.ceil((new Date(reservation.resetAt).getTime() - now.getTime()) / 1000));
@@ -54,19 +73,21 @@ export async function handleChat(deps: ChatDeps, req: Request): Promise<Response
   if (reservation.duplicate) return json({ code: "DUPLICATE_REQUEST" }, 409);
 
   const started = Date.now();
-  const messages: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }, ...parsed.data.messages];
+  const messages: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }, ...clientMessages];
+  const metric = (m: Omit<ChatMetric, "userId" | "latencyMs">) =>
+    deps.recordMetric({ ...m, userId, latencyMs: Date.now() - started }).catch(() => undefined);
   try {
     const result = await deps.chat(messages);
-    // Bila finalize gagal, jawaban tetap dikirim; reservasi tetap terhitung sampai kedaluwarsa (TTL).
-    await deps.store.finalize(reservation.groupId).catch(() => undefined);
+    // Finalisasi menolak reservasi yang sudah kedaluwarsa; jawaban tetap dikirim tanpa biaya dalam kasus langka itu.
+    await deps.store.finalize(reservation.groupId, deps.now?.() ?? new Date()).catch(() => undefined);
     deps.cache.set(cacheKey, { result, expiresAt: now.getTime() + CACHE_TTL_MS });
-    await deps.recordMetric({ requestId: result.requestId, userId, status: "SUCCESS", latencyMs: Date.now() - started });
+    await metric({ requestId: result.requestId, status: "SUCCESS" });
     return json(result, 200);
   } catch (err) {
-    await deps.store.release(reservation.groupId);
+    await deps.store.release(reservation.groupId).catch(() => undefined);
     const code = err instanceof GatewayError ? err.code : "INTERNAL";
-    await deps.recordMetric({ requestId: `failed-${key}`, userId, status: "FAILED", latencyMs: Date.now() - started, errorCode: code });
+    await metric({ requestId: `failed-${userId}-${reservation.groupId}`, status: "FAILED", errorCode: code });
     if (err instanceof GatewayError) return json({ code: "AI_UNAVAILABLE", preserved: true }, 502);
-    throw err;
+    return json({ code: "INTERNAL" }, 500);
   }
 }

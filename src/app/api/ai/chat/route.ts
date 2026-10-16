@@ -6,6 +6,7 @@ import { getPool } from "@/lib/db";
 import { getSessionRoles } from "@/lib/supabase/server";
 
 const cache = createChatCache();
+const inflight = new Set<string>();
 
 export async function POST(req: Request) {
   const pool = getPool();
@@ -15,6 +16,7 @@ export async function POST(req: Request) {
       store: createPgUsageStore(pool),
       chat,
       cache,
+      inflight,
       recordMetric: (m) =>
         recordEvent(pool, {
           name: m.status === "SUCCESS" ? "ai_request_succeeded" : "ai_request_failed",

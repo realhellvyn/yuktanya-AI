@@ -30,7 +30,7 @@ describe("UsageStore", () => {
     const u = await createUser(pool);
     const r = await store.reserve(u, "MESSAGE", "k1", NOW);
     expect(r).toMatchObject({ ok: true, duplicate: false });
-    if (r.ok) await store.finalize(r.groupId);
+    if (r.ok) await store.finalize(r.groupId, NOW);
     const s = await store.snapshot(u, NOW);
     expect([s.messagesUsed, s.messagesRemaining]).toEqual([1, 19]);
   });
@@ -38,13 +38,13 @@ describe("UsageStore", () => {
   it("melewati batas mengembalikan kode kuota dan resetAt", async () => {
     const u = await createUser(pool);
     const first = await store.reserve(u, "DOCUMENT", "d1", NOW);
-    if (first.ok) await store.finalize(first.groupId);
+    if (first.ok) await store.finalize(first.groupId, NOW);
     expect(await store.reserve(u, "DOCUMENT", "d2", NOW)).toEqual({
       ok: false, code: "DOCUMENT_DAILY_QUOTA_REACHED", resetAt: "2026-10-16T17:00:00.000Z",
     });
     for (const k of ["a", "b"]) {
       const r = await store.reserve(u, "AI_REVIEW", k, NOW);
-      if (r.ok) await store.finalize(r.groupId);
+      if (r.ok) await store.finalize(r.groupId, NOW);
     }
     expect(await store.reserve(u, "AI_REVIEW", "c", NOW)).toMatchObject({ ok: false, code: "AI_REVIEW_QUOTA_REACHED" });
   });
