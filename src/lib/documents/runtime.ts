@@ -18,8 +18,11 @@ function blobStore(): BlobStore {
   return createFsBlobStore(process.env.DOCUMENT_BLOB_DIR ?? ".data/blobs");
 }
 
+let blobCached: BlobStore | undefined;
+export const getBlobStore = (): BlobStore => (blobCached ??= blobStore());
+
 let cached: DocumentsService | undefined;
-export const documentsService = (): DocumentsService => (cached ??= createPgDocumentsService(getPool(), process.env, { blob: blobStore() }));
+export const documentsService = (): DocumentsService => (cached ??= createPgDocumentsService(getPool(), process.env, { blob: getBlobStore() }));
 
 export function documentsDeps(): DocDeps {
   return {

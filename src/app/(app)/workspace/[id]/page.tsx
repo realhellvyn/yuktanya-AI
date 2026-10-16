@@ -8,12 +8,15 @@ import { documentsService } from "@/lib/documents/runtime";
 import { requireUserId } from "@/lib/documents/session";
 import { TEMPLATES } from "@/lib/documents/templates/registry";
 import { buildSteps, nextMissing, progress, summarize } from "@/lib/documents/wizard";
+import { ASSIST_NOTICES } from "@/lib/vault/messages";
 import { freezeAction, saveStepAction } from "../../documents/actions";
+import { assistAction } from "../../documents/vault-actions";
+import { AssistBox } from "@/components/documents/assist-box";
 
 // Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
 export const dynamic = "force-dynamic";
 
-export default async function WorkspacePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ step?: string; error?: string }> }) {
+export default async function WorkspacePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ step?: string; error?: string; assist?: string }> }) {
   const { id } = await params;
   const q = await searchParams;
   const userId = await requireUserId();
@@ -35,6 +38,8 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
     return (
       <main className="mx-auto max-w-3xl space-y-6 p-6">
         <h1 className="text-3xl font-semibold">Periksa jawaban Anda</h1>
+        {q.assist && ASSIST_NOTICES[q.assist] && <p role="status" className="rounded-lg border border-slate-300 bg-white p-4">{ASSIST_NOTICES[q.assist]}</p>}
+        <AssistBox documentId={id} action={assistAction} />
         {q.error && <p role="alert" className="rounded-lg border border-red-700 bg-white p-4 text-red-800">{q.error}</p>}
         <dl className="space-y-3 rounded-lg border border-slate-300 bg-white p-4">
           {summarize(t, data).map((s, i) => (
@@ -66,7 +71,9 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">{t.title}</h1>
+      {q.assist && ASSIST_NOTICES[q.assist] && <p role="status" className="rounded-lg border border-slate-300 bg-white p-4">{ASSIST_NOTICES[q.assist]}</p>}
       <p role="status">Terisi {bar.done} dari {bar.total} pertanyaan wajib ({bar.percent}%). Jawaban tersimpan setiap kali Anda menekan Lanjut.</p>
+      <AssistBox documentId={id} action={assistAction} />
       <WizardStep
         step={step}
         documentId={id}

@@ -118,6 +118,7 @@ export const downloadHandler = guarded(["exportId"], async (userId, deps, _req, 
       "content-type": f.contentType,
       "content-disposition": `attachment; filename="${f.filename}"`,
       "cache-control": "private, no-store",
+      "x-content-type-options": "nosniff",
     },
   });
 });

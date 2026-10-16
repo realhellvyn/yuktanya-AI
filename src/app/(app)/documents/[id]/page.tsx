@@ -2,9 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DocumentPreview } from "@/components/documents/document-preview";
 import { VersionList } from "@/components/documents/version-list";
+import { VaultPanel } from "@/components/vault/vault-panel";
 import { diffRendered } from "@/lib/documents/diff";
 import { documentsService } from "@/lib/documents/runtime";
 import { requireUserId } from "@/lib/documents/session";
+import { getPool } from "@/lib/db";
+import { hasFeature } from "@/lib/vault/features";
+import { reminderService, shareService } from "@/lib/vault/runtime";
+import { buildPackAction, cancelReminderAction, createShareAction, revokeShareAction, setReminderAction } from "../vault-actions";
 import { cloneAction, exportAction, startNewVersionAction } from "../actions";
 
 // Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
@@ -12,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 const LABEL = { changed: "Diubah", added: "Ditambah", removed: "Dihapus", same: "Sama" } as const;
 
-export default async function DocumentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ version?: string; against?: string; exported?: string; baru?: string; error?: string }> }) {
+export default async function DocumentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ version?: string; against?: string; exported?: string; baru?: string; error?: string; pack?: string; notice?: string }> }) {
   const { id } = await params;
   const q = await searchParams;
   const userId = await requireUserId();
@@ -22,6 +27,13 @@ export default async function DocumentPage({ params, searchParams }: { params: P
   const selectedId = q.version ?? doc.versions.at(-1)?.id;
   const selected = selectedId ? await svc.getVersion(userId, selectedId) : null;
   const against = q.against && selected ? await svc.getVersion(userId, q.against) : null;
+  const pool = getPool();
+  const [fShare, fRem, fEvid] = selected
+    ? await Promise.all([hasFeature(pool, userId, "vault.share"), hasFeature(pool, userId, "vault.reminders"), hasFeature(pool, userId, "vault.evidence_pack")])
+    : [false, false, false];
+  const shares = selected && fShare ? await shareService().list(userId, selected.id) : [];
+  const acks = selected && fShare ? await shareService().acknowledgements(userId, selected.id) : [];
+  const reminderOptions = selected && fRem ? await reminderService().options(userId, selected.id) : [];
   const changes = selected && against ? diffRendered(against.doc, selected.doc).filter((c) => c.change !== "same") : null;
 
   return (
@@ -71,6 +83,17 @@ export default async function DocumentPage({ params, searchParams }: { params: P
               <button type="submit" className="min-h-12 rounded-lg border border-slate-400 bg-white px-5 font-medium">Salin menjadi dokumen baru</button>
             </form>
           </div>
+          <VaultPanel
+            documentId={id}
+            versionId={selected.id}
+            features={{ share: fShare, reminders: fRem, evidence: fEvid }}
+            shares={shares}
+            acks={acks}
+            reminderOptions={reminderOptions}
+            packId={q.pack}
+            notice={q.notice}
+            actions={{ createShare: createShareAction, revokeShare: revokeShareAction, setReminder: setReminderAction, cancelReminder: cancelReminderAction, buildPack: buildPackAction }}
+          />
           {q.exported && <p role="status"><a className="inline-flex min-h-12 items-center text-blue-700 underline" href={`/api/documents/exports/${q.exported}`}>Berkas siap. Tekan di sini untuk mengunduh.</a></p>}
         </section>
       )}
