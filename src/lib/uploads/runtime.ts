@@ -1,5 +1,6 @@
 import "server-only";
 import { createPgUsageStore } from "@/lib/ai/quota";
+import { recordEvent } from "@/lib/analytics/events";
 import { getPool } from "@/lib/db";
 import { getBlobStore } from "@/lib/documents/runtime";
 import { chatTurnDeps } from "@/lib/vault/runtime";
@@ -19,5 +20,6 @@ export function uploadDeps(): UploadDeps {
     },
     blob: getBlobStore(),
     save: (i) => uploadRepo().save(i),
+    record: (e) => recordEvent(getPool(), e),
   };
 }

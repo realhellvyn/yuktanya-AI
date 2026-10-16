@@ -45,3 +45,12 @@ Conflicts were reconciled in AUDIT_REPORT_v8.md; do not implement competing sema
   partner signoff, not a declaration of Indonesian law or legal approval.
 - Paid review becoming ineligible goes to operations resolution, never silent issuance/refund.
 Refunds, re-review rounds, SLA and negative-outcome legal wording require signed policy.
+
+## Uploaded documents (Task 6) — keputusan pengendali, menunggu konfirmasi pemilik/mitra hukum
+- Version hash for an uploaded document = SHA-256 of the frozen extracted canonical text (the exact text AI and
+  reviewers read; used in QR, `/verify` and exports, which carry the note "Kode ini untuk teks hasil pembacaan,
+  bukan berkas asli."). The SHA-256 of the exact original file bytes is stored separately (`document_uploads`)
+  and shown to the owner with a distinct label. Keputusan pengendali, menunggu konfirmasi pemilik/mitra hukum.
+- AI Verified is issued only for uploaded documents, not AI-assisted template documents (those still receive the
+  pre-review report, without an AI Verified record). Enforced in the server handler. Keputusan pengendali, menunggu
+  konfirmasi pemilik/mitra hukum.

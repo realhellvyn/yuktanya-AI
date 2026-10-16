@@ -10,6 +10,8 @@ import { MAX_UPLOAD_BYTES } from "@/lib/uploads/limits";
 import { UPLOAD_MESSAGES, type UploadCode } from "@/lib/uploads/messages";
 import { uploadDeps } from "@/lib/uploads/runtime";
 import { aiReviewDeps } from "@/lib/vault/runtime";
+import { AI_REVIEW_CONSENT_VERSION } from "@/lib/copy";
+import { logUploadIssue } from "@/lib/uploads/log";
 
 export type UploadState = { error?: string; code?: UploadCode; consent?: boolean };
 
@@ -18,7 +20,10 @@ export type UploadState = { error?: string; code?: UploadCode; consent?: boolean
 export async function uploadAction(_prev: UploadState, formData: FormData): Promise<UploadState> {
   await requireUserId();
   const consent = formData.get("consent") === "yes";
-  const fail = (code: UploadCode): UploadState => ({ error: UPLOAD_MESSAGES[code], code, consent });
+  const fail = (code: UploadCode, err?: unknown): UploadState => {
+    if (code === "INTERNAL") logUploadIssue("upload", code, err);
+    return { error: UPLOAD_MESSAGES[code], code, consent };
+  };
   if (!flags.aiPreReview) return fail("FEATURE_DISABLED");
   const file = formData.get("file");
   if (!(file instanceof File) || (file.size === 0 && !file.name)) return fail("NO_FILE");
@@ -28,11 +33,15 @@ export async function uploadAction(_prev: UploadState, formData: FormData): Prom
 
   let result;
   try {
-    result = await handleUpload(uploadDeps(), { filename: file.name, bytes: new Uint8Array(await file.arrayBuffer()), key });
-  } catch {
-    return fail("INTERNAL");
+    result = await handleUpload(uploadDeps(), { filename: file.name, bytes: new Uint8Array(await file.arrayBuffer()), key, consentVersion: AI_REVIEW_CONSENT_VERSION });
+  } catch (e) {
+    return fail("INTERNAL", e);
   }
-  if (!result.ok) return fail(result.code);
+  if (!result.ok) {
+    // Penolakan validasi/kuota dicatat hanya sebagai kode (tanpa isi atau nama berkas).
+    logUploadIssue("upload", result.code);
+    return fail(result.code);
+  }
   const base = `/documents/${result.documentId}?version=${result.versionId}&unggah=1`;
   if (result.duplicate || result.risk.level === "HIGH") redirect(`${base}#analisis-ai`);
 
@@ -45,5 +54,6 @@ export async function uploadAction(_prev: UploadState, formData: FormData): Prom
     }),
     { versionId: result.versionId },
   );
+  if (res.status !== 200) logUploadIssue("ai_review", String((await res.clone().json().catch(() => ({})))?.code ?? res.status));
   redirect(`${base}&ai=${aiReviewStatus(res.status)}#analisis-ai`);
 }

@@ -25,6 +25,8 @@ export type UploadDeps = {
   plan: (userId: string, now: Date) => Promise<{ plan: PlanKey; documentsRemaining: number; resetAt?: string }>;
   blob: BlobStore;
   save: (input: SaveUploadInput) => Promise<SaveUploadResult>;
+  // Pencatat event produk aman (tanpa isi). Opsional agar uji unit tanpa DB tetap sederhana.
+  record?: (e: { name: string; actorUserId: string; entityType: string; entityId: string; dedupeKey: string; metadata: Record<string, string> }) => Promise<void>;
   now?: () => Date;
 };
 export type UploadResult =
@@ -36,7 +38,7 @@ const safeName = (n: string) => n.replace(/^.*[\\/]/, "").replace(/[\u0000-\u001
 
 // Unggah → validasi isi+ekstensi+ukuran → baca teks (terbatas) → triase → simpan berkas asli privat + versi beku.
 // Tidak ada pemanggilan AI di sini; analisis dipicu terpisah setelah persetujuan eksplisit. Flag mati = tidak ada apa pun.
-export async function handleUpload(deps: UploadDeps, input: { filename: string; bytes: Uint8Array; key: string }): Promise<UploadResult> {
+export async function handleUpload(deps: UploadDeps, input: { filename: string; bytes: Uint8Array; key: string; consentVersion?: string }): Promise<UploadResult> {
   if (!(deps.enabled ?? (() => flags.aiPreReview))()) return { ok: false, code: "FEATURE_DISABLED" };
   const userId = await deps.getUserId();
   if (!userId) return { ok: false, code: "AUTH_REQUIRED" };
@@ -73,5 +75,12 @@ export async function handleUpload(deps: UploadDeps, input: { filename: string; 
   }
   // Pengulangan dengan kunci sama: berkas yang baru ditulis tidak dipakai; versi lama yang dikembalikan.
   if (saved.status === "DUPLICATE") await deps.blob.delete(path).catch(() => undefined);
+  // Persetujuan pengguna dicatat sebagai bukti: versi teks persetujuan + waktu, tanpa isi atau nama berkas.
+  if (input.consentVersion && deps.record) {
+    await deps.record({
+      name: "document_upload_consent", actorUserId: userId, entityType: "document", entityId: saved.documentId,
+      dedupeKey: `upload-consent:${userId}:${input.key}`, metadata: { consentVersion: input.consentVersion, kind: detected.kind, at: now.toISOString() },
+    });
+  }
   return { ok: true, documentId: saved.documentId, versionId: saved.versionId, risk, duplicate: saved.status === "DUPLICATE" };
 }

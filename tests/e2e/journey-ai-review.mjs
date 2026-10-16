@@ -104,6 +104,12 @@ export async function journey({ step, base, db, llm, newActor }) {
     if (row?.category !== "UPLOAD" || row.owner_id !== ids.a || row.file_kind !== "DOCX" || row.risk_level !== "NORMAL") throw new Error("baris DB: " + JSON.stringify(row));
     const kinds = (await db.query("select kind from document_verifications v join document_versions dv on dv.id = v.version_id where dv.document_id = $1", [docId])).rows.map((r) => r.kind).join(",");
     if (kinds !== "AI") throw new Error("verifikasi: " + kinds);
+    for (const s2 of ["Kode teks yang diperiksa (dipakai di QR dan halaman verifikasi)", "Kode berkas asli yang Anda unggah"]) if (!t.includes(s2)) throw new Error(`label kode tanpa "${s2}"`);
+    const verify = await p.locator("a[href*='/verify/']").first().getAttribute("href");
+    const pub = await (await actors.b.page.context().browser().newContext()).newPage();
+    await pub.goto(verify);
+    if (!(await pub.innerText("main")).includes("Kode ini untuk teks hasil pembacaan, bukan berkas asli.")) throw new Error("catatan kode teks tidak tampil di halaman verifikasi publik");
+    await pub.context().close();
   });
 
   await step(tag("A: jatah berkurang — analisis AI 1 dari 2, dokumen baru habis (TXT kedua tidak bisa diunggah hari ini)"), async () => {

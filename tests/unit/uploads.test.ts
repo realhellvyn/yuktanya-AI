@@ -11,10 +11,14 @@ import { triageText } from "@/lib/uploads/triage";
 import { titleFromFilename, uploadedDoc, UPLOAD_DOC_LABEL } from "@/lib/uploads/document";
 import { handleUpload, type UploadDeps } from "@/lib/uploads/handler";
 import { UPLOAD_MESSAGES } from "@/lib/uploads/messages";
+import { logUploadIssue } from "@/lib/uploads/log";
 import { parseAiReport } from "@/lib/ai/prereview";
 import { canonicalize, parseCanonical } from "@/lib/documents/render";
 import { AiReviewResult } from "@/components/ai-review/ai-review-result";
-import { AI_PREREVIEW_LABEL, VERIFICATION_TITLES } from "@/lib/copy";
+import { AI_PREREVIEW_LABEL, UPLOAD_HASH_NOTE, VERIFICATION_TITLES } from "@/lib/copy";
+import { exportDocx } from "@/lib/documents/export";
+import { PublicVerification } from "@/components/verification/public-verification";
+import { UploadHashes } from "@/components/ai-review/upload-hashes";
 
 const enc = (s: string) => new TextEncoder().encode(s);
 const LIMITS = UPLOAD_LIMITS.FREE;
@@ -104,6 +108,49 @@ describe("pembacaan teks terisolasi dengan batas", () => {
     const files: Record<string, string> = { "word/document.xml": "<w:p><w:r><w:t>Hai</w:t></w:r></w:p>" };
     for (let i = 0; i < 400; i++) files[`x/${i}.xml`] = "a";
     expect(await extractUploadText("DOCX", await zipOf(files), LIMITS)).toEqual({ ok: false, code: "ZIP_LIMIT" });
+  });
+
+  it("XML DOCX yang bermusuhan diproses linear (< 1 detik): ribuan <w:p> tanpa penutup, tag bertumpuk, spasi panjang", async () => {
+    const hostile = [
+      "<w:p>".repeat(190_000),
+      "<w:p><w:r><w:t>".repeat(60_000),
+      `<w:p><w:r><w:t>a${" ".repeat(900_000)}b</w:t></w:r></w:p>`,
+      "<".repeat(900_000),
+      "<w:t>".repeat(150_000) + "x",
+    ];
+    for (const xml of hostile) {
+      const bytes = await zipOf({ "word/document.xml": xml }, 9);
+      const t0 = performance.now();
+      const r = await extractUploadText("DOCX", bytes, LIMITS);
+      const ms = performance.now() - t0;
+      expect(ms).toBeLessThan(1000);
+      expect(["EMPTY_TEXT", "TOO_LONG", "PARSE_FAILED", "ZIP_LIMIT", "DOCX_TOO_LARGE", undefined]).toContain(r.ok ? undefined : r.code);
+    }
+  });
+
+  it("TXT berisi spasi sangat panjang diproses linear (< 1 detik)", async () => {
+    const t0 = performance.now();
+    const r = await extractUploadText("TXT", enc(`Pasal 1${" ".repeat(4_000_000)}\nisi`), LIMITS);
+    expect(performance.now() - t0).toBeLessThan(1000);
+    expect(r.ok).toBe(true);
+  });
+
+  it("word/document.xml hasil dekompresi > 2 MB ditolak dengan pesan sederhana (DOCX_TOO_LARGE)", async () => {
+    // Teks acak agar rasio kompresi wajar (tidak tertangkap aturan rasio ZIP bom).
+    let seed = 7;
+    const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed; };
+    const words = Array.from({ length: 420_000 }, () => String.fromCharCode(97 + (rnd() % 26), 97 + (rnd() % 26), 97 + (rnd() % 26), 97 + (rnd() % 26))).join(" ");
+    const xml = `<w:p><w:r><w:t>${words}</w:t></w:r></w:p>`;
+    expect(xml.length).toBeGreaterThan(2 * 1024 * 1024);
+    const r = await extractUploadText("DOCX", await zipOf({ "word/document.xml": xml }, 6), LIMITS);
+    expect(r).toEqual({ ok: false, code: "DOCX_TOO_LARGE" });
+    expect(UPLOAD_MESSAGES.DOCX_TOO_LARGE).toMatch(/terlalu besar/);
+  });
+
+  it("DOCX: tab, baris baru, entitas, paragraf kosong mandiri, dan komentar XML ditangani tokenizer", async () => {
+    const xml = '<?xml version="1.0"?><w:document><!-- <w:p><w:t>bukan</w:t></w:p> --><w:body><w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="720"/></w:tabs></w:pPr><w:r><w:t xml:space="preserve">A&amp;B</w:t><w:tab/><w:t>C</w:t><w:br/><w:t>D &#x41;&#66;</w:t></w:r></w:p><w:p/><w:p><w:r><w:t>Kedua</w:t></w:r></w:p></w:body></w:document>';
+    const r = await extractUploadText("DOCX", await zipOf({ "word/document.xml": xml }), LIMITS);
+    expect(r.ok && r.paragraphs).toEqual(["A&B\tC\nD AB", "Kedua"]);
   });
 
   it("PDF berlapis teks terbaca per halaman", async () => {
@@ -217,5 +264,43 @@ describe("keluaran AI divalidasi skema dan ditampilkan sebagai teks", () => {
     expect(h).toContain("&lt;script&gt;");
     expect(h).toContain("Tidak ada.");
     expect(h).not.toMatch(/\bcap\b/i);
+  });
+});
+
+describe("label kode (hash) dokumen unggahan", () => {
+  it("kartu unggahan menampilkan dua kode dengan label berbeda dan satu kalimat bahwa keduanya memang berbeda", () => {
+    const h = renderToStaticMarkup(createElement(UploadHashes, { versionSha256: "a".repeat(64), originalSha256: "b".repeat(64) }));
+    expect(h).toContain(`Kode teks yang diperiksa (dipakai di QR dan halaman verifikasi): ${"a".repeat(64)}`);
+    expect(h).toContain(`Kode berkas asli yang Anda unggah: ${"b".repeat(64)}`);
+    expect(h).toMatch(/memang berbeda/);
+    expect(h).not.toMatch(/Kode berkas asli \(SHA-256\)/);
+  });
+
+  it("halaman verifikasi publik: catatan teks hasil pembacaan hanya untuk dokumen unggahan", () => {
+    const base = { status: "ACTIVE" as const, kind: "AI" as const, issuedAt: "2026-10-16T05:00:00Z", sha256: "c".repeat(64), scopeSummary: null, outcome: "COMPLETED" };
+    expect(UPLOAD_HASH_NOTE).toBe("Kode ini untuk teks hasil pembacaan, bukan berkas asli.");
+    expect(renderToStaticMarkup(createElement(PublicVerification, { result: { ...base, textExtracted: true }, code: "x" }))).toContain(UPLOAD_HASH_NOTE);
+    expect(renderToStaticMarkup(createElement(PublicVerification, { result: { ...base, textExtracted: false }, code: "x" }))).not.toContain(UPLOAD_HASH_NOTE);
+  });
+
+  it("blok verifikasi ekspor dokumen unggahan memuat catatan teks hasil pembacaan", async () => {
+    const doc = uploadedDoc("Sewa", ["Pasal 1 isi."]);
+    const v = { kindTitle: VERIFICATION_TITLES.AI, statement: "s", code: "kode", url: "https://y.example/verify/kode", originalSha256: "d".repeat(64), qrPng: new Uint8Array(), note: UPLOAD_HASH_NOTE };
+    const xml = await (await JSZip.loadAsync(await exportDocx(doc, { ...v, qrPng: await (await import("@/lib/verification/qr")).qrPng(v.url) }))).file("word/document.xml")!.async("string");
+    expect(xml).toContain(UPLOAD_HASH_NOTE);
+  });
+});
+
+describe("log kegagalan unggahan tanpa isi", () => {
+  it("hanya kode dan nama galat yang dicatat; pesan galat (bisa memuat isi) tidak pernah", () => {
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const err = new TypeError("RAHASIA-ISI-DOKUMEN");
+    logUploadIssue("upload", "INTERNAL", err);
+    logUploadIssue("ai_review", "AI_UNAVAILABLE");
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(spy.mock.calls[0][0] as string)).toEqual({ event: "upload_issue", stage: "upload", code: "INTERNAL", error: "TypeError" });
+    expect(JSON.parse(spy.mock.calls[1][0] as string)).toEqual({ event: "upload_issue", stage: "ai_review", code: "AI_UNAVAILABLE" });
+    expect(JSON.stringify(spy.mock.calls)).not.toContain("RAHASIA");
+    spy.mockRestore();
   });
 });

@@ -24,6 +24,7 @@ import { aiReviewAction } from "../ai-review-action";
 import { casesService } from "@/lib/cases/runtime";
 import { AI_REVIEW_CONSENT, SPECIAL_CASE_NOTE } from "@/lib/copy";
 import { AiReviewResult } from "@/components/ai-review/ai-review-result";
+import { UploadHashes } from "@/components/ai-review/upload-hashes";
 import { latestAiReport } from "@/lib/ai/prereview";
 import { AI_REVIEW_STATUS_TEXT, type AiReviewStatus } from "@/lib/ai/review-status";
 import { uploadRepo } from "@/lib/uploads/runtime";
@@ -113,7 +114,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
             <Card className="space-y-2" aria-label="Berkas asli">
               <h2 className="text-lg font-bold text-navy">Berkas asli</h2>
               <p className="break-words">{upload.filename} · {upload.kind} · {(upload.byteSize / 1024).toFixed(1).replace(".", ",")} KB{upload.pages ? ` · ${upload.pages} halaman` : ""}</p>
-              <p className="break-all text-sm text-muted">Kode berkas asli (SHA-256): {upload.originalSha256}</p>
+              <UploadHashes versionSha256={selected.sha256} originalSha256={upload.originalSha256} />
               <p className="text-sm text-muted">Di bawah ini teks hasil pembacaan berkas. Format asli (tabel, gambar, tanda tangan) tidak ikut terbaca.</p>
             </Card>
           )}

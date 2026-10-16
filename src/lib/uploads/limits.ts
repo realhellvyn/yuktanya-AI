@@ -13,5 +13,7 @@ export const MAX_ZIP_ENTRIES = 300;
 export const MAX_ZIP_ENTRY_BYTES = 8 * 1024 * 1024;
 export const MAX_ZIP_TOTAL_BYTES = 20 * 1024 * 1024;
 export const MAX_ZIP_RATIO = 100;
+// word/document.xml setelah dekompresi; di atas ini ditolak dengan pesan sederhana (DOCX_TOO_LARGE).
+export const MAX_DOCX_XML_BYTES = 2 * 1024 * 1024;
 export const ZIP_RATIO_MIN_BYTES = 1024 * 1024;
 export const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt"] as const;

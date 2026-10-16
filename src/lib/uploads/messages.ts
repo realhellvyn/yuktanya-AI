@@ -15,6 +15,7 @@ export const UPLOAD_MESSAGES = {
   TOO_LONG: "Teks dokumen terlalu panjang untuk analisis awal. Pisahkan menjadi beberapa bagian atau ajukan penilaian khusus.",
   EMPTY_TEXT: "Tidak ada teks yang dapat dibaca di berkas ini.",
   ZIP_LIMIT: "Berkas Word ini tidak wajar (terlalu besar setelah dibuka). Simpan ulang dokumen lalu coba lagi.",
+  DOCX_TOO_LARGE: "Isi dokumen Word ini terlalu besar untuk dibaca. Pisahkan menjadi beberapa bagian atau simpan sebagai PDF.",
   TIMEOUT: "Membaca berkas terlalu lama. Coba berkas yang lebih sederhana.",
   DOCUMENT_DAILY_QUOTA_REACHED: "Batas dokumen baru hari ini sudah tercapai. Coba lagi besok setelah pukul 00.00 WIB.",
   INTERNAL: "Terjadi gangguan. Berkas belum tersimpan. Silakan coba lagi.",

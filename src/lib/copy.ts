@@ -3,8 +3,12 @@ export const SLOGAN = "Legal Service Seharga Secangkir Kopi.";
 export const AI_DRAFT_LABEL = "Dibuat dengan bantuan AI. Belum diperiksa oleh profesional hukum.";
 export const AI_PREREVIEW_LABEL = "Analisis awal AI bersifat informasional dan dapat keliru.";
 // Persetujuan eksplisit sebelum teks dokumen dikirim ke gateway AI (docs/SECURITY_AND_LEGAL.md).
+// Naikkan versinya setiap kali teks persetujuan berubah; versi ini dicatat di event persetujuan.
+export const AI_REVIEW_CONSENT_VERSION = "ai-consent-v1";
 export const AI_REVIEW_CONSENT =
   "Saya setuju teks dokumen ini dikirim ke gateway AI FreeLLMAPI milik Yuktanya, yang meneruskannya ke penyedia model AI pihak ketiga, untuk analisis awal.";
+// Dokumen unggahan: kode verifikasi/QR mengikat teks hasil pembacaan berkas, bukan byte berkas asli.
+export const UPLOAD_HASH_NOTE = "Kode ini untuk teks hasil pembacaan, bukan berkas asli.";
 export const SPECIAL_CASE_NOTE = "Biaya dan ruang lingkup ditentukan setelah asesmen profesional.";
 export const CHECKOUT_NOTE =
   "Pembayaran adalah biaya pemeriksaan. Tidak menjamin hasil positif atau penerbitan verifikasi Enhanced.";

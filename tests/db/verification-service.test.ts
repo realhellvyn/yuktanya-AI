@@ -19,7 +19,8 @@ describe("layanan verifikasi", () => {
     expect(await svc.lookup("z".repeat(48))).toEqual({ status: "NOT_FOUND" });
     const ok = await svc.lookup(code);
     expect(ok).toMatchObject({ status: "ACTIVE", kind: "AI", sha256: sha, scopeSummary: null });
-    expect(Object.keys(ok).sort()).toEqual(["issuedAt", "kind", "outcome", "scopeSummary", "sha256", "status"]);
+    expect(Object.keys(ok).sort()).toEqual(["issuedAt", "kind", "outcome", "scopeSummary", "sha256", "status", "textExtracted"]);
+    expect(ok.status === "ACTIVE" && ok.textExtracted).toBe(false);
     const admin = await kit.admin();
     await expect(svc.revoke(u, verificationId, "ERROR", null, NOW)).rejects.toBeInstanceOf(VerificationError);
     await svc.revoke(admin, verificationId, "ERROR", "privat", NOW);

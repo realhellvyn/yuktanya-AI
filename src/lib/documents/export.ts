@@ -20,12 +20,15 @@ export type ExportVerification = {
   url: string;
   originalSha256: string;
   qrPng: Uint8Array;
+  // Catatan tambahan di bawah kode versi (mis. dokumen unggahan: kode untuk teks hasil pembacaan).
+  note?: string;
 };
 const verificationLines = (v: ExportVerification): string[] => [
   ...v.statement.split("\n"),
   `Cek keaslian: ${v.url}`,
   `Kode verifikasi: ${v.code}`,
   `Kode versi asli: ${v.originalSha256}`,
+  ...(v.note ? [v.note] : []),
 ];
 
 const lines = (text: string) => text.split(/\r\n|\r|\n/);

@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import type { Pool } from "pg";
 import { z } from "zod";
-import { AI_PREREVIEW_LABEL, VERIFICATION_STATEMENTS } from "@/lib/copy";
+import { recordEvent } from "@/lib/analytics/events";
+import { AI_PREREVIEW_LABEL, AI_REVIEW_CONSENT_VERSION, VERIFICATION_STATEMENTS } from "@/lib/copy";
 import { ForbiddenError } from "@/lib/documents/handlers";
 import type { RenderedDoc } from "@/lib/documents/render";
 import type { DocumentsService } from "@/lib/documents/service";
@@ -101,6 +102,12 @@ export async function handleAiReview(deps: AiReviewDeps, req: Request, params: {
       return json({ code: reservation.code, resetAt: reservation.resetAt }, 429, { "retry-after": String(retryAfter) });
     }
     if (reservation.duplicate) return json({ code: "DUPLICATE_REQUEST" }, 409);
+    // Persetujuan eksplisit dicatat sebelum teks dikirim ke gateway: versi teks persetujuan + waktu, tanpa isi dokumen.
+    await recordEvent(deps.pool, {
+      name: "ai_review_consent_given", actorUserId: userId, entityType: "document_version", entityId: params.versionId,
+      dedupeKey: `ai-consent:${userId}:${params.versionId}:${key}`,
+      metadata: { consentVersion: AI_REVIEW_CONSENT_VERSION, source: upload.rows.length ? "UPLOAD" : "TEMPLATE", at: now.toISOString() },
+    });
 
     const base: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }, { role: "user", content: docText(version.doc) }];
     try {

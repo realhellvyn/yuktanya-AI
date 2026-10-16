@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import type { BlobStore } from "./blob";
-import { LEGAL_DISCLAIMER, VERIFICATION_TITLES, verificationStatement, type VerificationKind } from "@/lib/copy";
+import { LEGAL_DISCLAIMER, UPLOAD_HASH_NOTE, VERIFICATION_TITLES, verificationStatement, type VerificationKind } from "@/lib/copy";
 import { qrPng, verifyUrl } from "@/lib/verification/qr";
 import { exportDocx, exportPdf, sha256Hex, type ExportVerification } from "./export";
 import { canonicalize, parseCanonical, renderDocument, type RenderedDoc } from "./render";
@@ -96,7 +96,7 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
   const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "dokumen";
 
   // Verifikasi AKTIF terbaru untuk versi ini (bila ada) ikut dicantumkan; versi yang dicabut atau diedit tidak membawa blok aktif.
-  async function activeVerification(versionId: string): Promise<ExportVerification | undefined> {
+  async function activeVerification(versionId: string, upload = false): Promise<ExportVerification | undefined> {
     const { rows } = await pool.query(
       `select kind, outcome, code, sha256 from document_verifications where version_id = $1 and status = 'ACTIVE'
         order by case kind when 'LEGAL_ENHANCED' then 0 when 'LEGAL' then 1 else 2 end, issued_at desc limit 1`,
@@ -107,7 +107,7 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
     const url = verifyUrl(r.code);
     return {
       kindTitle: VERIFICATION_TITLES[r.kind as VerificationKind], statement: r.kind === "AI" ? verificationStatement(r.kind, r.outcome) : `${verificationStatement(r.kind, r.outcome)}\n${LEGAL_DISCLAIMER}`,
-      code: r.code, url, originalSha256: r.sha256, qrPng: await qrPng(url),
+      code: r.code, url, originalSha256: r.sha256, qrPng: await qrPng(url), note: upload ? UPLOAD_HASH_NOTE : undefined,
     };
   }
 
@@ -204,7 +204,7 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
       const v = await self.getVersion(userId, versionId);
       if (!v) return null;
       const blob = needBlob();
-      const verification = await activeVerification(versionId);
+      const verification = await activeVerification(versionId, v.doc.category === "UPLOAD");
       const bytes = format === "DOCX" ? await exportDocx(v.doc, verification) : await exportPdf(v.doc, verification);
       const sha256 = sha256Hex(bytes);
       const path = `${userId}/${v.documentId}/${versionId}-${randomUUID()}.${FORMATS[format].ext}`;
