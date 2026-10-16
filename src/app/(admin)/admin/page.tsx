@@ -8,6 +8,7 @@ export default function AdminPage() {
       <ul className="space-y-1">
         <li><Link className="inline-flex min-h-12 items-center underline" href="/admin/payments">Pembayaran</Link></li>
         <li><Link className="inline-flex min-h-12 items-center underline" href="/admin/routing">Perutean review</Link></li>
+        <li><Link className="inline-flex min-h-12 items-center underline" href="/admin/rubric">Persetujuan rubrik Enhanced</Link></li>
         <li><Link className="inline-flex min-h-12 items-center underline" href="/admin/features">Kunci fitur per plan</Link></li>
       </ul>
     </main>

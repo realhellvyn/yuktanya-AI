@@ -83,7 +83,7 @@ describe("safeReturnTo", () => {
 
 describe("guardPath: penagihan, review, dan verifikasi", () => {
   it("permukaan pemilik baru tertutup untuk anonim dan peran profesional/admin", () => {
-    for (const p of ["/membership", "/checkout/x", "/reviews", "/reviews/abc", "/api/orders", "/api/orders/x/pay", "/api/payments/mock/x/settle", "/api/reviews"]) {
+    for (const p of ["/membership", "/checkout/x", "/reviews", "/reviews/abc", "/api/orders", "/api/orders/x/pay", "/api/payments/mock/x/settle", "/api/reviews", "/api/deep/eligibility", "/api/deep/x"]) {
       expect(redirectOf(guardPath(p, null))).toBe(`/login?returnTo=${encodeURIComponent(p)}`);
       expect(guardPath(p, ["user"])).toEqual({ allow: true });
       expect(redirectOf(guardPath(p, ["reviewer"]))).toBe("/partner");

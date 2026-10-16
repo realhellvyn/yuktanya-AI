@@ -5,7 +5,7 @@ export type GuardResult = { allow: true } | { allow: false; redirect: string };
 // Permukaan pemilik dokumen: hanya akun pemilik biasa (peran profesional/admin memakai permukaannya sendiri).
 const OWNER = [
   "/dashboard", "/workspace", "/documents", "/vault", "/membership", "/checkout", "/reviews",
-  "/api/documents", "/api/orders", "/api/payments/mock", "/api/reviews",
+  "/api/documents", "/api/orders", "/api/payments/mock", "/api/reviews", "/api/deep",
 ] as const;
 const PROTECTED = [...OWNER, "/partner", "/admin", "/api/ai", "/api/admin", "/api/partner"] as const;
 

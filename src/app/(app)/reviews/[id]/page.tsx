@@ -1,7 +1,12 @@
 import { notFound } from "next/navigation";
 import { ReviewTimeline } from "@/components/reviews/review-timeline";
 import { ResultPanel } from "@/components/reviews/result-panel";
+import { DeepOffer } from "@/components/deep/deep-offer";
+import { DeepResult } from "@/components/deep/deep-result";
+import { deepService } from "@/lib/deep/runtime";
+import { flags } from "@/lib/flags";
 import { getPool } from "@/lib/db";
+import { requestDeepAction } from "../../checkout/actions";
 import { requireUserId } from "@/lib/documents/session";
 import { reviewService } from "@/lib/reviews/runtime";
 import { qrPng, verifyUrl } from "@/lib/verification/qr";
@@ -9,7 +14,8 @@ import { qrPng, verifyUrl } from "@/lib/verification/qr";
 export const dynamic = "force-dynamic";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default async function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ReviewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ notice?: string }> }) {
+  const q = await searchParams;
   const { id } = await params;
   const userId = await requireUserId();
   if (!UUID.test(id)) notFound();
@@ -24,11 +30,19 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
   } else if (review.verification) {
     url = verifyUrl(review.verification.code);
   }
+  const deepRef = await deepService().forParent(userId, id);
+  const deep = deepRef ? await deepService().getForOwner(userId, deepRef.deepId) : null;
+  let deepUrl: string | undefined;
+  if (deep?.verification) deepUrl = verifyUrl(deep.verification.code);
+  const elig = flags.deepReviewPurchase && !deep && review.status === "COMPLETED" && review.outcome === "WITH_NOTES" ? await deepService().eligibility(userId, id) : null;
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">{review.title} — versi {review.versionNo}</h1>
       <ReviewTimeline status={review.status} />
       <ResultPanel review={review} verifyUrl={url} qrDataUrl={qr} isLatestVersion={review.versionNo === latest} />
+      {q.notice && <p role="alert" className="font-semibold text-red-800">Pemeriksaan mendalam belum dapat dipesan ({q.notice}).</p>}
+      {deep && <DeepResult deep={deep} verifyUrl={deepUrl} />}
+      {elig && <DeepOffer eligible={elig.eligible} reason={elig.reason} quote={elig.quote} action={requestDeepAction} parentRequestId={id} standardPaidIdr={undefined} />}
     </main>
   );
 }

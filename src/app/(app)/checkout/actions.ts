@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { BillingError } from "@/lib/billing/service";
 import { billingService } from "@/lib/billing/runtime";
 import { requireUserId } from "@/lib/documents/session";
+import { flags } from "@/lib/flags";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "");
 
@@ -48,4 +49,18 @@ export async function mockSettleAction(formData: FormData): Promise<void> {
   const orderId = str(formData, "orderId");
   await billingService().mockSettle(userId, str(formData, "paymentId"));
   redirect(`/checkout/${orderId}`);
+}
+
+// Deep Review hanya dari pemeriksaan standar yang memenuhi syarat; kelayakan dan harga diputuskan di database.
+export async function requestDeepAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+  const parent = str(formData, "parentRequestId");
+  if (!flags.deepReviewPurchase) redirect(`/reviews/${parent}`);
+  try {
+    const o = await billingService().createOrder(userId, "DEEP_REVIEW", parent, randomUUID());
+    redirect(`/checkout/${o.orderId}`);
+  } catch (e) {
+    if (e instanceof BillingError) redirect(`/reviews/${parent}?notice=${e.code === "NOT_ELIGIBLE" ? e.reason : e.code}`);
+    throw e;
+  }
 }

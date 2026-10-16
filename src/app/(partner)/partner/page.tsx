@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { getSessionRoles } from "@/lib/supabase/server";
+import { deepService } from "@/lib/deep/runtime";
 import { reviewService } from "@/lib/reviews/runtime";
 import { assignAction, reassignAction } from "./actions";
+import { assignDeepAction } from "./deep-actions";
 
 export const dynamic = "force-dynamic";
 const ERR: Record<string, string> = {
@@ -21,6 +23,9 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
   const isReviewer = s.roles.includes("reviewer");
   const isCoordinator = s.roles.includes("partner_admin");
   const queue = isReviewer ? await svc.queue(s.userId) : [];
+  const dq = deepService();
+  const deepQueue = isReviewer ? await dq.queue(s.userId) : [];
+  const deepCoord = isCoordinator ? { requests: await dq.unassigned(s.userId), inflight: await dq.inflight(s.userId) } : null;
   const coord = isCoordinator ? { requests: await svc.unassigned(s.userId), reviewers: await svc.reviewers(s.userId), inflight: await svc.inflight(s.userId) } : null;
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
@@ -67,6 +72,34 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
               ))}
             </ul>
           )}
+        </section>
+      )}
+      {deepQueue.length > 0 && (
+        <section aria-labelledby="deepq-h" className="space-y-3">
+          <h2 id="deepq-h" className="text-2xl font-semibold">Pemeriksaan mendalam saya</h2>
+          <ul className="space-y-3">
+            {deepQueue.map((r) => (
+              <li key={r.deepId} className="rounded-lg border border-slate-300 bg-white p-4">
+                <Link className="inline-flex min-h-12 items-center text-lg font-semibold underline" href={`/partner/deep/${r.deepId}`}>{CATEGORY[r.category] ?? r.category}</Link>
+                <p>Status: {r.status === "IN_REVIEW" ? "Sedang diperiksa" : "Ditugaskan"} · Usia {age(r.createdAt)}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {deepCoord && (deepCoord.requests.length > 0 || deepCoord.inflight.length > 0) && coord && (
+        <section aria-labelledby="deepc-h" className="space-y-3">
+          <h2 id="deepc-h" className="text-2xl font-semibold">Pemeriksaan mendalam: penugasan</h2>
+          {[...deepCoord.requests.map((r) => ({ id: r.deepId, mode: "assign", note: "Belum ditugaskan", ok: true, cat: r.category })), ...deepCoord.inflight.map((r) => ({ id: r.deepId, mode: "reassign", note: r.reviewerAuthorized ? `Dikerjakan ${r.reviewerId.slice(0, 8)}` : `Dikerjakan ${r.reviewerId.slice(0, 8)} (otorisasi tidak aktif)`, ok: r.reviewerAuthorized, cat: r.category }))].map((r) => (
+            <form key={r.id} action={assignDeepAction} className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-300 bg-white p-4">
+              <input type="hidden" name="deepId" value={r.id} /><input type="hidden" name="mode" value={r.mode} />
+              <p className={`w-full font-semibold ${r.ok ? "" : "text-red-800"}`}>{CATEGORY[r.cat] ?? r.cat} · {r.note}</p>
+              <label className="block"><span className="font-medium">{r.mode === "assign" ? "Tugaskan kepada" : "Pindahkan ke"}</span>
+                <select name="reviewerId" className="mt-1 block min-h-12 rounded-lg border border-slate-400 px-3">{coord.reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>Reviewer {rv.reviewerId.slice(0, 8)} ({rv.active} aktif)</option>)}</select>
+              </label>
+              <button type="submit" className="min-h-12 rounded-lg bg-blue-600 px-5 font-semibold text-white">Simpan</button>
+            </form>
+          ))}
         </section>
       )}
       {coord && coord.inflight.length > 0 && (
