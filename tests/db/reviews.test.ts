@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { asUser, createUser, getPool } from "./helpers";
+import { createPgReviewService } from "@/lib/reviews/service";
 import { at, makeKit, NOW } from "./phase3-helpers";
 
 const pool = getPool();
@@ -34,6 +35,16 @@ describe("permintaan review", () => {
     expect(b.settled).toBe("SETTLED");
     expect(r.firm_id).toBeNull();
     expect(r.status).toBe("QUEUED");
+  });
+});
+
+describe("daftar reviewer untuk koordinator", () => {
+  it("memuat email reviewer agar koordinator tidak memilih kode acak", async () => {
+    const f = await kit.firm({ isDefault: true });
+    const { reviewer } = await f.addReviewer();
+    const list = await createPgReviewService(pool).reviewers(f.coordinator);
+    const email = (await pool.query("select email from auth.users where id = $1", [reviewer])).rows[0].email;
+    expect(list.find((x) => x.reviewerId === reviewer)?.email).toBe(email);
   });
 });
 

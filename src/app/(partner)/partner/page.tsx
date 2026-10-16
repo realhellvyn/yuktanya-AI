@@ -62,7 +62,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
                       <label className="block">
                         <span className="font-medium">Tugaskan kepada</span>
                         <select name="reviewerId" className="mt-1 block min-h-12 rounded-lg border border-slate-400 px-3">
-                          {coord.reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>Reviewer {rv.reviewerId.slice(0, 8)} ({rv.active} aktif)</option>)}
+                          {coord.reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>{rv.email} ({rv.active} aktif)</option>)}
                         </select>
                       </label>
                       <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Tugaskan</button>
@@ -95,7 +95,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
               <input type="hidden" name="deepId" value={r.id} /><input type="hidden" name="mode" value={r.mode} />
               <p className={`w-full font-semibold ${r.ok ? "" : "text-danger"}`}>{CATEGORY[r.cat] ?? r.cat} · {r.note}</p>
               <label className="block"><span className="font-medium">{r.mode === "assign" ? "Tugaskan kepada" : "Pindahkan ke"}</span>
-                <select name="reviewerId" className="mt-1 block min-h-12 rounded-lg border border-slate-400 px-3">{coord.reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>Reviewer {rv.reviewerId.slice(0, 8)} ({rv.active} aktif)</option>)}</select>
+                <select name="reviewerId" className="mt-1 block min-h-12 rounded-lg border border-slate-400 px-3">{coord.reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>{rv.email} ({rv.active} aktif)</option>)}</select>
               </label>
               <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Simpan</button>
             </form>
@@ -115,7 +115,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
                   <label className="block">
                     <span className="font-medium">Pindahkan ke</span>
                     <select name="reviewerId" className="mt-1 block min-h-12 rounded-lg border border-slate-400 px-3">
-                      {coord.reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>Reviewer {rv.reviewerId.slice(0, 8)} ({rv.active} aktif)</option>)}
+                      {coord.reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>{rv.email} ({rv.active} aktif)</option>)}
                     </select>
                   </label>
                   <button type="submit" className="min-h-12 rounded-lg border border-slate-400 bg-white px-5 font-medium">Pindahkan</button>

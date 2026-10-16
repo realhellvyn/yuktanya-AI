@@ -52,7 +52,7 @@ export interface ReviewService {
   deleteNote(reviewerId: string, requestId: string, revision: number, noteNo: number, now?: Date): Promise<number>;
   publish(reviewerId: string, requestId: string, input: PublishInput, now?: Date): Promise<{ status: string; verificationId: string | null; code: string | null }>;
   unassigned(actorId: string): Promise<{ requestId: string; createdAt: string; category: string }[]>;
-  reviewers(actorId: string): Promise<{ reviewerId: string; firmId: string; active: number }[]>;
+  reviewers(actorId: string): Promise<{ reviewerId: string; email: string; firmId: string; active: number }[]>;
   assign(actorId: string, requestId: string, reviewerId: string, now?: Date): Promise<void>;
   reassign(actorId: string, requestId: string, reviewerId: string, now?: Date): Promise<void>;
   inflight(actorId: string, now?: Date): Promise<InflightRow[]>;
@@ -154,11 +154,11 @@ export function createPgReviewService(pool: Pool): ReviewService {
 
     async reviewers(actorId) {
       const { rows } = await pool.query(
-        `select m.user_id, m.firm_id, (select count(*) from review_assignments a where a.reviewer_id = m.user_id and a.status = 'ACTIVE') as active
-           from firm_members m
+        `select m.user_id, m.firm_id, u.email::text as email, (select count(*) from review_assignments a where a.reviewer_id = m.user_id and a.status = 'ACTIVE') as active
+           from firm_members m join auth.users u on u.id = m.user_id
           where m.role = 'reviewer' and (is_platform_admin($1) or exists (select 1 from firm_members c where c.firm_id = m.firm_id and c.user_id = $1 and c.role = 'coordinator'))
           order by m.firm_id, m.user_id`, [actorId]);
-      return rows.map((r) => ({ reviewerId: r.user_id, firmId: r.firm_id, active: Number(r.active) }));
+      return rows.map((r) => ({ reviewerId: r.user_id, email: r.email ?? r.user_id.slice(0, 8), firmId: r.firm_id, active: Number(r.active) }));
     },
 
     async assign(actorId, requestId, reviewerId, now = new Date()) {

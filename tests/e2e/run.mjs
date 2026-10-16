@@ -8,6 +8,7 @@ import { startFakeLlm, startFakeSupabase } from "./fake-supabase.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? "/opt/node22/lib/node_modules/playwright");
+const { Pool } = require("pg");
 const APP = 3100, FAKE = 54999;
 const SHOTS = process.env.SHOTS_DIR ?? path.join(tmpdir(), "yk-shots");
 mkdirSync(SHOTS, { recursive: true });
@@ -26,26 +27,38 @@ const env = {
   DATABASE_URL: process.env.TEST_DATABASE_URL, AI_MOCK_MODE: "false", FREELLM_BASE_URL: "http://127.0.0.1:54998", FREELLM_API_KEY: "uji", ALLOW_UNAPPROVED_TEMPLATES: "true",
   NEXT_PUBLIC_APP_URL: `http://localhost:${APP}`, DOCUMENT_BLOB_DIR: mkdtempSync(path.join(tmpdir(), "yk-blob-")),
   MANUAL_PAYMENT_INSTRUCTIONS: "Transfer ke rekening uji 000-000", NEXT_TELEMETRY_DISABLED: "1",
+  DEEP_REVIEW_PURCHASE: "true", ENHANCED_ISSUANCE: "true",
 };
+const db = new Pool({ connectionString: process.env.TEST_DATABASE_URL, max: 2 });
 const dev = spawn("npx", ["next", "dev", "-p", String(APP)], { env, stdio: ["ignore", "pipe", "pipe"], detached: true });
 let devLog = "";
 dev.stdout.on("data", (d) => (devLog += d)); dev.stderr.on("data", (d) => (devLog += d));
-const stop = async () => { try { process.kill(-dev.pid, "SIGKILL"); } catch {} llm.close(); await fake.close(); };
+const stop = async () => { try { process.kill(-dev.pid, "SIGKILL"); } catch {} llm.close(); await db.end(); await fake.close(); };
 
 try {
   for (let i = 0; i < 90; i++) { try { const r = await fetch(`http://localhost:${APP}/login`); if (r.ok) break; } catch {} await new Promise((r) => setTimeout(r, 1000)); }
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM ?? undefined });
   const viewports = JSON.parse(process.env.VIEWPORTS ?? '[{"name":"desktop","width":1280,"height":800}]');
-  const { journey } = await import(process.env.JOURNEY ?? "./journey.mjs");
-  for (const vp of viewports) {
-    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, acceptDownloads: true });
-    const page = await ctx.newPage();
-    const issues = [];
-    page.on("console", (m) => { if (m.type() === "error") issues.push(`${m.text()}`.slice(0, 9000)); });
-    page.on("pageerror", (e) => issues.push(`pageerror: ${e.message}`.slice(0, 9000)));
-    const shot = (n) => page.screenshot({ path: path.join(SHOTS, `${vp.name}-${n}.png`), fullPage: true, caret: "initial" });
-    await journey({ page, step, shot, base: `http://localhost:${APP}`, vp, issues, llm });
-    await ctx.close();
+  const files = (process.env.JOURNEY ?? "./journey.mjs,./journey-roles.mjs").split(",");
+  for (const file of files) {
+    const mod = await import(file);
+    for (const vp of viewports.filter((v) => !mod.onlyViewport || v.name === mod.onlyViewport)) {
+      const opened = [];
+      // Setiap aktor (pemilik, admin, koordinator, reviewer) punya konteks browser sendiri = sesi terpisah.
+      const newActor = async (name) => {
+        const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, acceptDownloads: true });
+        opened.push(ctx);
+        const page = await ctx.newPage();
+        const issues = [];
+        page.on("console", (m) => { if (m.type() === "error") issues.push(`${m.text()}`.slice(0, 9000)); });
+        page.on("pageerror", (e) => issues.push(`pageerror: ${e.message}`.slice(0, 9000)));
+        const shot = (n) => page.screenshot({ path: path.join(SHOTS, `${vp.name}-${name}-${n}.png`), fullPage: true, caret: "initial" });
+        return { page, shot, issues };
+      };
+      const main = await newActor("main");
+      await mod.journey({ ...main, step, base: `http://localhost:${APP}`, vp, llm, db, newActor });
+      for (const c of opened) await c.close();
+    }
   }
   await browser.close();
 } finally {

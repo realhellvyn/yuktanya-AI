@@ -20,7 +20,7 @@ export default async function RoutingPage({ searchParams }: { searchParams: Prom
   const [dUn, dIn] = await Promise.all([deepService().unassigned(s.userId), deepService().inflight(s.userId)]);
   const select = (
     <select name="reviewerId" className="mt-1 block min-h-12 rounded-lg border border-slate-400 px-3">
-      {reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>Reviewer {rv.reviewerId.slice(0, 8)} ({rv.active} aktif)</option>)}
+      {reviewers.map((rv) => <option key={rv.reviewerId} value={rv.reviewerId}>{rv.email} ({rv.active} aktif)</option>)}
     </select>
   );
   return (
