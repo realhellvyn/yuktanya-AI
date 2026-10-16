@@ -25,6 +25,8 @@ export type ChatDeps = {
   store: UsageStore;
   chat: typeof gatewayChat;
   recordMetric: (m: ChatMetric) => Promise<void>;
+  // Opsional, best-effort: permintaan logis dimulai (setelah kuota dipesan, sebelum gateway).
+  onStart?: (m: { userId: string; logicalId: string }) => Promise<unknown>;
   cache: ChatCache;
   // Satu panggilan upstream aktif per user (per proses); dibagikan lewat modul route.
   inflight: Set<string>;
@@ -79,6 +81,7 @@ async function runChat(
   const messages: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }, ...clientMessages];
   const metric = (m: Omit<ChatMetric, "userId" | "latencyMs">) =>
     deps.recordMetric({ ...m, userId, latencyMs: Date.now() - started }).catch(() => undefined);
+  if (deps.onStart) await deps.onStart({ userId, logicalId: reservation.groupId }).catch(() => undefined);
   try {
     const result = await deps.chat(messages);
     // Finalisasi menolak reservasi yang sudah kedaluwarsa; jawaban tetap dikirim tanpa biaya dalam kasus langka itu.

@@ -248,3 +248,21 @@ describe("handleChatTurn: temuan reviewer", () => {
   });
 });
 
+
+describe("event AI (best-effort, tanpa isi pesan)", () => {
+  const evs = async (u: string) => (await pool.query("select event_name, metadata_safe from product_events where actor_user_id = $1 and event_name like 'ai_request_%' order by event_name", [u])).rows;
+  it("berhasil: started + succeeded; gateway gagal: started + failed dengan kode; keluaran rusak: MALFORMED_OUTPUT", async () => {
+    const u1 = await createUser(pool);
+    await setup(u1, answer({ disclosingParty: "Sinta Dewi" })).call(await newDoc(u1), { message: "Saya Sinta Dewi" });
+    expect((await evs(u1)).map((e) => e.event_name)).toEqual(["ai_request_started", "ai_request_succeeded"]);
+    const u2 = await createUser(pool);
+    await setup(u2, async () => { throw new GatewayError("TIMEOUT"); }).call(await newDoc(u2), { message: "Halo" });
+    const e2 = await evs(u2);
+    expect(e2.map((e) => e.event_name)).toEqual(["ai_request_failed", "ai_request_started"]);
+    expect(e2[0].metadata_safe).toMatchObject({ task: "document_chat", error_code: "TIMEOUT" });
+    const u3 = await createUser(pool);
+    await setup(u3, async () => ({ text: "bukan json", requestId: "r" })).call(await newDoc(u3), { message: "Halo" });
+    expect((await evs(u3)).find((e) => e.event_name === "ai_request_failed")?.metadata_safe).toMatchObject({ error_code: "MALFORMED_OUTPUT" });
+    expect(JSON.stringify([...(await evs(u1)), ...e2])).not.toMatch(/Sinta|Halo/);
+  });
+});

@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import type { Analytics } from "./analytics";
 
 export type Overview = {
   range: { from: string; to: string };
@@ -18,6 +19,7 @@ export type PartnerRow = {
 
 export interface AdminService {
   overview(adminId: string, from: Date, to: Date): Promise<Overview>;
+  analytics(adminId: string, from: Date, to: Date, category: string | null, membership: string | null): Promise<Analytics>;
   partners(adminId: string): Promise<PartnerRow[]>;
   findUser(adminId: string, email: string): Promise<string | null>;
 }
@@ -29,6 +31,10 @@ export function createPgAdminService(pool: Pool): AdminService {
     async overview(adminId, from, to) {
       const { rows } = await pool.query("select admin_overview($1, $2, $3) as o", [adminId, from, to]);
       return rows[0].o as Overview;
+    },
+    async analytics(adminId, from, to, category, membership) {
+      const { rows } = await pool.query("select admin_analytics($1, $2, $3, $4, $5) as a", [adminId, from, to, category, membership]);
+      return rows[0].a as Analytics;
     },
     async partners(adminId) {
       const { rows } = await pool.query("select * from admin_list_partners($1)", [adminId]);

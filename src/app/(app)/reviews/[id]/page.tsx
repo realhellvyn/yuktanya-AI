@@ -4,6 +4,7 @@ import { ReviewTimeline } from "@/components/reviews/review-timeline";
 import { ResultPanel } from "@/components/reviews/result-panel";
 import { DeepOffer } from "@/components/deep/deep-offer";
 import { DeepResult } from "@/components/deep/deep-result";
+import { trackDeepOfferShown } from "@/lib/deep/offer-event";
 import { deepService } from "@/lib/deep/runtime";
 import { flags } from "@/lib/flags";
 import { getPool } from "@/lib/db";
@@ -36,6 +37,7 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
   let deepUrl: string | undefined;
   if (deep?.verification) deepUrl = verifyUrl(deep.verification.code);
   const elig = flags.deepReviewPurchase && !deep && review.status === "COMPLETED" && review.outcome === "WITH_NOTES" ? await deepService().eligibility(userId, id) : null;
+  if (elig?.eligible) await trackDeepOfferShown(userId, id);
   return (
     <main className="max-w-3xl space-y-6">
       <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">{review.title} — versi {review.versionNo}</h1>

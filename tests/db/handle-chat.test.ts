@@ -171,12 +171,12 @@ describe("handleChat: ketahanan", () => {
 });
 
 describe("recordEvent", () => {
-  it("dedupe_key membuat event idempoten dan metadata tersimpan", async () => {
+  it("dedupe_key membuat event idempoten; metadata tersimpan hanya untuk kunci daftar-izin", async () => {
     const key = `ev-${Math.random()}`;
     const e = { name: "ai_request_succeeded", dedupeKey: key, metadata: { latency_ms: 12, ok: true } };
     await recordEvent(pool, e);
     await recordEvent(pool, e);
     const rows = (await pool.query("select event_name, metadata_safe from product_events where dedupe_key = $1", [key])).rows;
-    expect(rows).toEqual([{ event_name: "ai_request_succeeded", metadata_safe: { latency_ms: 12, ok: true } }]);
+    expect(rows).toEqual([{ event_name: "ai_request_succeeded", metadata_safe: { latency_ms: 12 } }]);
   });
 });

@@ -3,6 +3,7 @@ import { DeepOffer } from "@/components/deep/deep-offer";
 import { Card, PageHeading } from "@/components/ui/card";
 import { ButtonLink } from "@/components/ui/button";
 import { deepService } from "@/lib/deep/runtime";
+import { trackDeepOfferShown } from "@/lib/deep/offer-event";
 import { loadDeepOfferPage } from "@/lib/deep/owner-pages";
 import { flags } from "@/lib/flags";
 import { requireUserId } from "@/lib/documents/session";
@@ -22,7 +23,7 @@ export default async function DeepOfferPage({ params, searchParams }: { params: 
   const { id } = await params;
   const q = await searchParams;
   const userId = await requireUserId();
-  const page = await loadDeepOfferPage({ service: deepService(), flag: flags.deepReviewPurchase }, userId, id);
+  const page = await loadDeepOfferPage({ service: deepService(), flag: flags.deepReviewPurchase, track: trackDeepOfferShown }, userId, id);
   if (page.kind === "notFound") notFound();
   if (page.kind === "redirect") redirect(page.to);
   const review = await reviewService().getForOwner(userId, id);

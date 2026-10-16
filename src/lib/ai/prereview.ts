@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Pool } from "pg";
 import { z } from "zod";
-import { recordEvent } from "@/lib/analytics/events";
+import { recordEvent, trackEvent } from "@/lib/analytics/events";
 import { AI_PREREVIEW_LABEL, AI_REVIEW_CONSENT_VERSION, VERIFICATION_STATEMENTS } from "@/lib/copy";
 import { ForbiddenError } from "@/lib/documents/handlers";
 import type { RenderedDoc } from "@/lib/documents/render";
@@ -110,15 +110,25 @@ export async function handleAiReview(deps: AiReviewDeps, req: Request, params: {
     });
 
     const base: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }, { role: "user", content: docText(version.doc) }];
+    // Event analitik best-effort: hanya id logis, durasi, dan kode galat.
+    const started = Date.now();
+    const aiEvent = (name: "ai_request_started" | "ai_request_succeeded" | "ai_request_failed", errorCode?: string) =>
+      trackEvent(deps.pool, {
+        name, actorUserId: userId!, entityType: "ai_request", entityId: reservation.groupId, dedupeKey: `${name}:${reservation.groupId}`,
+        metadata: { task: "ai_review", ...(name === "ai_request_started" ? {} : { latency_ms: Date.now() - started }), ...(errorCode ? { error_code: errorCode } : {}) },
+      });
+    await aiEvent("ai_request_started");
     try {
       const first = await deps.chat(base);
       const parsed = await parseInterviewJson(reportSchema, first.text, async (rawText, error) =>
         (await deps.chat([...base, { role: "assistant", content: rawText }, { role: "user", content: `Keluaran tidak valid (${error}). Balas ulang HANYA dengan objek JSON yang benar.` }])).text,
       );
       if (!parsed.ok) {
+        await aiEvent("ai_request_failed", "MALFORMED_OUTPUT");
         await deps.store.release(reservation.groupId);
         return json({ code: "AI_UNAVAILABLE", preserved: true }, 502);
       }
+      await aiEvent("ai_request_succeeded");
       const logical = logicalId(userId, params.versionId, key);
       const { rows } = await deps.pool.query("select save_ai_review($1, $2, $3, $4, $5, $6, $7, $8) as id", [
         userId, reservation.groupId, logical, params.versionId, version.sha256, JSON.stringify(parsed.data), AI_ANALYZER_POLICY, now,
@@ -133,7 +143,10 @@ export async function handleAiReview(deps: AiReviewDeps, req: Request, params: {
       });
     } catch (e) {
       await deps.store.release(reservation.groupId).catch(() => undefined);
-      if (e instanceof GatewayError) return json({ code: "AI_UNAVAILABLE", preserved: true }, 502);
+      if (e instanceof GatewayError) {
+        await aiEvent("ai_request_failed", e.code);
+        return json({ code: "AI_UNAVAILABLE", preserved: true }, 502);
+      }
       return json({ code: "INTERNAL" }, 500);
     }
   } finally {

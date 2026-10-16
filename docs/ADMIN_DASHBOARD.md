@@ -113,3 +113,9 @@ Use trusted transitions + transactional outbox; dedupe event key. UI offer event
 exposure analytics only, never authority for eligibility, payment or legal approval.
 Payment/revoke/support actions require separate capabilities and audited reason; admin
 analytics never grants professional review or unrestricted confidential-file access.
+
+## Implementation status (v8, Task 7)
+- Catalogue: `src/lib/analytics/catalogue.ts` lists all 28 unique event names named above (19 minimal + 9 additional v8; `legal_enhanced_verification_issued` and `verification_revoked` appear in both lists). The three special-case events are recorded under the names chosen in Task 5: `special_case_submitted` → `special_case_requested`, `quote_sent` → `special_case_quote_sent`, `quote_accepted` → `special_case_quote_accepted`. Two extra events were added for uploads and AI review: `document_uploaded`, `ai_review_completed`. Consent records (`ai_review_consent_given`, `document_upload_consent`) are not analytics and stay strict.
+- Writer: single DB function `record_product_event` (catalogue-checked name, dedupe key, allow-listed scalar metadata via `analytics_safe_metadata`, best-effort: failure never aborts the business transaction). State-transition events come from `analytics_capture` triggers on source tables (migration 33); AI request events and `deep_offer_shown` come from server code via `trackEvent`.
+- Dashboard numbers (`admin_analytics`) are computed from source tables; only AI failures/malformed outputs (which have no other source) come from events. Complaints have no source table yet and display "Belum ada data".
+- Alert thresholds are provisional engineering defaults (review queue 72 hours, AI error rate 20% with at least 5 requests in 24 hours), configurable via `app_settings` keys `ADMIN_REVIEW_OVERDUE_HOURS` and `ADMIN_AI_ERROR_RATE_ALERT`; SLA still requires partner agreement.

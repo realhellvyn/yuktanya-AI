@@ -8,7 +8,7 @@ export const ADMIN_NAV = [
   { href: "/admin/verifications", label: "Pencabutan verifikasi" },
   { href: "/admin/rubric", label: "Persetujuan rubrik Enhanced" },
   { href: "/admin/features", label: "Kunci fitur per plan" },
-  { href: "/admin/analytics", label: "Funnel" },
+  { href: "/admin/analytics", label: "Analitik dan tren" },
   { href: "/admin/ai-usage", label: "Pemakaian AI" },
   { href: "/admin/reviews", label: "Operasi review" },
   { href: "/admin/revenue", label: "Pendapatan" },

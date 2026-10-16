@@ -10,13 +10,20 @@ export type OfferPage =
   | { kind: "offer"; eligibility: Eligibility };
 
 // Flag mati, bukan pemilik, atau id tidak dikenal: semuanya notFound yang identik.
-export async function loadDeepOfferPage(deps: { service: DeepService; flag: boolean }, userId: string, reviewId: string): Promise<OfferPage> {
+// track (opsional, best-effort): mencatat bahwa penawaran benar-benar tampil ke pemilik yang layak. Bukan dasar kelayakan atau pembayaran.
+export async function loadDeepOfferPage(
+  deps: { service: DeepService; flag: boolean; track?: (userId: string, reviewId: string) => Promise<unknown> },
+  userId: string,
+  reviewId: string,
+): Promise<OfferPage> {
   if (!deps.flag || !UUID.test(reviewId)) return { kind: "notFound" };
   const eligibility = await deps.service.eligibility(userId, reviewId);
   if (eligibility.reason === "NOT_FOUND") return { kind: "notFound" };
   const existing = await deps.service.forParent(userId, reviewId);
   if (existing) return { kind: "redirect", to: `/deep-reviews/${existing.deepId}` };
-  return eligibility.eligible && eligibility.quote ? { kind: "offer", eligibility } : { kind: "ineligible", eligibility };
+  if (!(eligibility.eligible && eligibility.quote)) return { kind: "ineligible", eligibility };
+  if (deps.track) await deps.track(userId, reviewId).catch(() => undefined);
+  return { kind: "offer", eligibility };
 }
 
 export type StatusPage = { kind: "notFound" } | { kind: "ok"; deep: OwnerDeep; assigned: boolean };

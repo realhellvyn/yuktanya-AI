@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { trackEvent } from "@/lib/analytics/events";
 import { findTurnByKey, listMessages, saveAssistantReply, saveUserMessage } from "@/lib/documents/conversation";
 import { ForbiddenError } from "@/lib/documents/handlers";
 import { StaleRevisionError, type DocumentsService } from "@/lib/documents/service";
@@ -112,12 +113,21 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
     const prior: ChatMessage[] = earlier.slice(-HISTORY).map((m) => ({ role: m.role, content: m.content }));
     const messages: ChatMessage[] = [{ role: "system", content: systemPrompt(template, doc.draft.data) }, ...prior, { role: "user", content: text }];
 
+    // Event analitik best-effort per permintaan logis (grup reservasi): tanpa isi pesan.
+    const started = Date.now();
+    const aiEvent = (name: "ai_request_started" | "ai_request_succeeded" | "ai_request_failed", errorCode?: string) =>
+      trackEvent(deps.pool, {
+        name, actorUserId: userId!, entityType: "ai_request", entityId: reservation.groupId, dedupeKey: `${name}:${reservation.groupId}`,
+        metadata: { task: "document_chat", ...(name === "ai_request_started" ? {} : { latency_ms: Date.now() - started }), ...(errorCode ? { error_code: errorCode } : {}) },
+      });
+    await aiEvent("ai_request_started");
     try {
       const first = await deps.chat(messages);
       const result = await parseInterviewJson(reply, first.text, async (rawText, error) =>
         (await deps.chat([...messages, { role: "assistant", content: rawText }, { role: "user", content: `Keluaran tidak valid (${error}). Balas ulang HANYA dengan objek JSON yang benar.` }])).text,
       );
       if (!result.ok) {
+        await aiEvent("ai_request_failed", "MALFORMED_OUTPUT");
         await deps.store.release(reservation.groupId);
         await saveAssistantReply(deps.pool, userId, params.id, SAFE_FALLBACK, readUpTo);
         const missing = missingRequired(template, doc.draft.data);
@@ -159,6 +169,7 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
 
       if (applied.length > 0 || cleared.length > 0) await deps.service.saveDraft(userId, params.id, final, doc.draft.revision);
       await deps.store.finalize(reservation.groupId, deps.now?.() ?? new Date()).catch(() => undefined);
+      await aiEvent("ai_request_succeeded");
 
       // Nilai yang diusulkan model tapi tidak dicatat: sampaikan jujur, jangan biarkan balasan AI mengaku sudah mencatat.
       const unnoted = template.fields.filter((f) => raw[f.key] != null && String(raw[f.key]).trim() !== "" && String(final[f.key] ?? "") !== String(raw[f.key]) && !cleared.includes(f.key));
@@ -174,7 +185,10 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
     } catch (e) {
       await deps.store.release(reservation.groupId).catch(() => undefined);
       if (e instanceof StaleRevisionError) return json({ code: "STALE_REVISION" }, 409);
-      if (e instanceof GatewayError) return json({ code: "AI_UNAVAILABLE", preserved: true }, 502);
+      if (e instanceof GatewayError) {
+        await aiEvent("ai_request_failed", e.code);
+        return json({ code: "AI_UNAVAILABLE", preserved: true }, 502);
+      }
       return json({ code: "INTERNAL" }, 500);
     }
   } finally {

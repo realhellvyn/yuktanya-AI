@@ -23,6 +23,7 @@ every change; TEST_STRATEGY.md controls selection. Assert backend state, not jus
 | E15 quota | Gateway failure, retry, parallel calls, WIB midnight, upgrade/expiry midday | Dual counters released/deduped; no overspend; correct ceilings/reset; existing docs accessible |
 | E16 deep/billing | Quote expires/membership changes; new version or parent revoked before settlement | Expired quote requires explicit new quote; accepted valid price honored; invalid paid flow held for reconciliation |
 | E17 admin | Seed standard/deep orders, failures/refunds, delayed completions | Verified-payment-only revenue split; unique funnel counts and fixed cohort denominator; honest no-data |
+| E17b admin analytics (`journey-admin-analytics.mjs`) | Seed synthetic documents on fixed WIB days via DB (Free vs Member, NDA vs PKS, 23.59/00.00 WIB edges); admin changes type/membership filters and custom range; reversed range; 375px; non-admin | Trend charts render; numbers change with filters/range; Jakarta day boundaries; plain error keeps typed dates; no overflow/touch targets ≥43.5px; no document titles; non-admin denied |
 | E18 UI | Keyboard/mobile/200% zoom, notes comprehension, negative Enhanced outcome | Readable price/status/action; no color-only state; payment understood as review fee, not cap purchase |
 
 Release smoke selects E01–E06, E08–E14 and affected exception paths. Full matrix before major

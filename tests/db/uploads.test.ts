@@ -272,6 +272,6 @@ describe("persetujuan unggahan tercatat", () => {
     expect(ev[0].metadata_safe).toEqual({ consentVersion: AI_REVIEW_CONSENT_VERSION, kind: "TXT", at: NOW.toISOString() });
     const u2 = await createUser(pool);
     await handleUpload(uploadDeps(u2, { record: (e) => recordEvent(pool, e) }), { filename: "a.txt", bytes: enc(TXT), key: key() });
-    expect((await pool.query("select count(*)::int as n from product_events where actor_user_id = $1", [u2])).rows[0].n).toBe(0);
+    expect((await pool.query("select count(*)::int as n from product_events where actor_user_id = $1 and event_name = 'document_upload_consent'", [u2])).rows[0].n).toBe(0);
   });
 });
