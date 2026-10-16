@@ -27,6 +27,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
   const deepQueue = isReviewer ? await dq.queue(s.userId) : [];
   const deepCoord = isCoordinator ? { requests: await dq.unassigned(s.userId), inflight: await dq.inflight(s.userId) } : null;
   const coord = isCoordinator ? { requests: await svc.unassigned(s.userId), reviewers: await svc.reviewers(s.userId), inflight: await svc.inflight(s.userId) } : null;
+  const nameOf = (id: string) => coord?.reviewers.find((x) => x.reviewerId === id)?.email ?? id.slice(0, 8);
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">Dashboard Mitra Hukum</h1>
@@ -90,7 +91,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
       {deepCoord && (deepCoord.requests.length > 0 || deepCoord.inflight.length > 0) && coord && (
         <section aria-labelledby="deepc-h" className="space-y-3">
           <h2 id="deepc-h" className="text-2xl font-semibold">Pemeriksaan mendalam: penugasan</h2>
-          {[...deepCoord.requests.map((r) => ({ id: r.deepId, mode: "assign", note: "Belum ditugaskan", ok: true, cat: r.category })), ...deepCoord.inflight.map((r) => ({ id: r.deepId, mode: "reassign", note: r.reviewerAuthorized ? `Dikerjakan ${r.reviewerId.slice(0, 8)}` : `Dikerjakan ${r.reviewerId.slice(0, 8)} (otorisasi tidak aktif)`, ok: r.reviewerAuthorized, cat: r.category }))].map((r) => (
+          {[...deepCoord.requests.map((r) => ({ id: r.deepId, mode: "assign", note: "Belum ditugaskan", ok: true, cat: r.category })), ...deepCoord.inflight.map((r) => ({ id: r.deepId, mode: "reassign", note: r.reviewerAuthorized ? `Dikerjakan ${nameOf(r.reviewerId)}` : `Dikerjakan ${nameOf(r.reviewerId)} (otorisasi tidak aktif)`, ok: r.reviewerAuthorized, cat: r.category }))].map((r) => (
             <form key={r.id} action={assignDeepAction} className="flex flex-wrap items-end gap-3 rounded-lg border border-line bg-white p-4">
               <input type="hidden" name="deepId" value={r.id} /><input type="hidden" name="mode" value={r.mode} />
               <p className={`w-full font-semibold ${r.ok ? "" : "text-danger"}`}>{CATEGORY[r.cat] ?? r.cat} · {r.note}</p>
@@ -108,7 +109,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
           <ul className="space-y-3">
             {coord.inflight.map((r) => (
               <li key={r.requestId} className="space-y-2 rounded-lg border border-line bg-white p-4">
-                <p className="font-semibold">{CATEGORY[r.category] ?? r.category} · Usia {age(r.createdAt)} · Reviewer {r.reviewerId.slice(0, 8)}</p>
+                <p className="font-semibold">{CATEGORY[r.category] ?? r.category} · Usia {age(r.createdAt)} · Reviewer {nameOf(r.reviewerId)}</p>
                 {!r.reviewerAuthorized && <p role="alert" className="font-semibold text-danger">Otorisasi reviewer ini tidak aktif. Pindahkan penugasan.</p>}
                 <form action={reassignAction} className="flex flex-wrap items-end gap-3">
                   <input type="hidden" name="requestId" value={r.requestId} />

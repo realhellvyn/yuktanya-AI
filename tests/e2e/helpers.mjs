@@ -35,3 +35,9 @@ export async function createNdaVersion(page, base, { disclosing = "Sinta Dewi", 
   await page.waitForSelector("text=Perjanjian Kerahasiaan");
   return page.url();
 }
+
+// Kirim form lalu tunggu aksi server selesai dan halaman tenang (hindari balapan dengan revisi di input tersembunyi).
+export async function submit(page, clickable) {
+  await Promise.all([page.waitForResponse((r) => r.request().method() === "POST", { timeout: 20000 }), clickable.click()]);
+  await page.waitForLoadState("networkidle");
+}

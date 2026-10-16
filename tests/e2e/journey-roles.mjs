@@ -1,5 +1,5 @@
 // Perjalanan lintas peran (E01/E02 di SCENARIOS): admin -> koordinator -> reviewer -> pemilik, dengan sesi browser terpisah.
-import { createNdaVersion, login, register } from "./helpers.mjs";
+import { createNdaVersion, register, submit } from "./helpers.mjs";
 
 export const onlyViewport = "desktop";
 
@@ -7,7 +7,7 @@ export async function journey({ step, base, vp, db, newActor }) {
   const n = Date.now();
   const mail = (who) => `${who}+${n}@example.com`;
   const adminA = await newActor("admin"), coordA = await newActor("koordinator"), revA = await newActor("reviewer"), ownerA = await newActor("pemilik");
-  let docUrl = "", requestId = "", code = "";
+  let code = "", enhancedCode = "";
   const tag = (s) => `[${vp.name}] ${s}`;
 
   await step(tag("empat akun terdaftar; admin diberi peran lewat DB (bukan lewat UI)"), async () => {
@@ -52,7 +52,7 @@ export async function journey({ step, base, vp, db, newActor }) {
   });
 
   await step(tag("pemilik membuat NDA lewat percakapan dan meminta pemeriksaan pengacara (Rp50.000)"), async () => {
-    docUrl = await createNdaVersion(ownerA.page, base);
+    await createNdaVersion(ownerA.page, base);
     await ownerA.page.click("button:has-text('Minta pemeriksaan pengacara')");
     await ownerA.page.waitForURL(/\/checkout\//, { timeout: 30000 });
     const t = await ownerA.page.innerText("body");
@@ -91,7 +91,6 @@ export async function journey({ step, base, vp, db, newActor }) {
     const p = revA.page;
     await p.goto(base + "/partner");
     await p.click("ul a:has-text('Perjanjian Kerahasiaan')");
-    requestId = p.url().split("/").pop().split("?")[0];
     await p.fill("textarea[name=scope]", "Kepatutan klausul kerahasiaan dan jangka waktu");
     await p.click("button:has-text('Simpan draf')");
     await p.waitForSelector("text=Tersimpan.", { timeout: 15000 });
@@ -124,14 +123,73 @@ export async function journey({ step, base, vp, db, newActor }) {
     await pub.close();
   });
 
+
+  await step(tag("admin mencatat persetujuan rubrik; pemilik melihat tawaran Deep Review Rp200.000 dan memesan"), async () => {
+    await adminA.page.goto(base + "/admin/rubric");
+    await adminA.page.fill("input[name=signoffRef]", "SIGNOFF-UJI-E2E");
+    await submit(adminA.page, adminA.page.locator("button:has-text('Catat persetujuan')"));
+    await ownerA.page.goto(base + "/reviews");
+    await ownerA.page.click("a[href^='/reviews/']");
+    await ownerA.page.waitForSelector("text=Pemeriksaan mendalam (opsional)");
+    const offer = await ownerA.page.innerText("body");
+    if (!/200\.000/.test(offer) || !/tidak menjamin/i.test(offer)) throw new Error("tawaran tidak lengkap: " + offer.slice(0, 400));
+    await ownerA.shot("06-tawaran-deep");
+    await ownerA.page.click("button:has-text('Lanjut ke pembayaran')");
+    await ownerA.page.waitForURL(/\/checkout\//);
+    await ownerA.page.click("button:has-text('Bayar dengan transfer bank')");
+    await ownerA.page.waitForSelector("text=Tulis kode berikut");
+  });
+
+  await step(tag("admin konfirmasi bayar; koordinator menugaskan; reviewer mengisi checklist M1-M7 dan menyetujui Enhanced"), async () => {
+    const a = adminA.page;
+    await a.goto(base + "/admin/payments");
+    await a.locator("section[aria-labelledby=menunggu-h] form input[name=bankRef]").first().fill("BANK-UJI-DEEP");
+    await submit(a, a.locator("section[aria-labelledby=menunggu-h] form button:has-text('Konfirmasi pembayaran')").first());
+    const c = coordA.page;
+    await c.goto(base + "/partner");
+    await submit(c, c.locator("section[aria-labelledby=deepc-h] form button:has-text('Simpan')").first());
+    const r = revA.page;
+    await r.goto(base + "/partner");
+    await r.click("section[aria-labelledby=deepq-h] a");
+    await r.waitForSelector("text=Pekerjaan tambahan");
+    await r.fill("textarea[name=extraWork]", "Memeriksa ulang klausul kerahasiaan dan kecukupan definisi terhadap catatan standar.");
+    await submit(r, r.locator("button:has-text('Simpan')").first());
+    await r.selectOption("form:has(input[name=noteNo]) select[name=disposition]", "RESOLVED");
+    await r.fill("form:has(input[name=noteNo]) input[name=evidence]", "Klausul 1 telah diperluas");
+    await submit(r, r.locator("button:has-text('Simpan tindak lanjut')").first());
+    for (const item of ["M1", "M2", "M3", "M4", "M5", "M6", "M7"]) {
+      const f = r.locator(`form:has(input[name=item][value=${item}])`);
+      await f.locator("select[name=result]").selectOption("PASS");
+      await f.locator("textarea[name=reasoning]").fill(`Butir ${item} terpenuhi`);
+      await f.locator("input[name=evidenceRef]").fill(`Bukti ${item}`);
+      await submit(r, f.locator("button"));
+    }
+    await revA.shot("07-deep");
+    await r.selectOption("select[name=decision]", "APPROVE");
+    await r.check("input[name=attest]");
+    await submit(r, r.locator("button:has-text('Simpan keputusan')"));
+    const q = await db.query("select code, status from document_verifications where kind = 'LEGAL_ENHANCED' order by issued_at desc limit 1");
+    if (!q.rows[0] || q.rows[0].status !== "ACTIVE") throw new Error("Enhanced tidak terbit: " + JSON.stringify(q.rows) + " | " + r.url() + " | " + JSON.stringify((await db.query("select status from deep_reviews order by created_at desc limit 1").catch((e) => ({ rows: [String(e.message)] }))).rows));
+    enhancedCode = q.rows[0].code;
+  });
+
+  await step(tag("pemilik melihat Enhanced; pencabutan verifikasi induk menangguhkan Enhanced"), async () => {
+    const pub = await (await ownerA.page.context().browser().newContext()).newPage();
+    await pub.goto(base + "/verify/" + enhancedCode);
+    if (!(await pub.innerText("body")).includes("Aktif")) throw new Error("Enhanced tidak aktif");
+    await pub.close();
+  });
+
   await step(tag("admin mencabut; publik langsung Dicabut"), async () => {
     const p = adminA.page;
-    await p.goto(base + "/admin/verifications");
+    await p.goto(base + "/admin/verifications?q=" + code);
     await p.fill("input[name=note]", "Pencabutan uji E2E");
     await Promise.all([p.waitForLoadState("networkidle"), p.click("button:has-text('Cabut verifikasi')")]);
     const pub = await (await adminA.page.context().browser().newContext()).newPage();
     await pub.goto(base + "/verify/" + code);
     if (!(await pub.innerText("body")).includes("Dicabut")) throw new Error("tidak Dicabut");
+    await pub.goto(base + "/verify/" + enhancedCode);
+    if (!/Ditangguhkan|Dicabut/.test(await pub.innerText("body"))) throw new Error("Enhanced tetap aktif padahal induk dicabut");
     await pub.close();
   });
 }
