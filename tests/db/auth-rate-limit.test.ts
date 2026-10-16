@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { createPgAuthLimiter, type AuthLimits } from "@/lib/auth/rate-limit";
+import { authLimitKey, createPgAuthLimiter, type AuthLimits } from "@/lib/auth/rate-limit";
 import { getPool } from "./helpers";
 
 // Audit C12: pembatas percobaan auth berbasis Postgres (lintas instance), tanpa email/IP mentah tersimpan.
@@ -26,7 +26,21 @@ describe("auth_attempt_allowed", () => {
     expect(await lim.allow("login", ip, `b-${uniq()}@example.test`, NOW)).toBe(true); // percobaan ke-4 di IP ini
     expect(await lim.allow("login", ip, `c-${uniq()}@example.test`, NOW)).toBe(true); // ke-5
     expect(await lim.allow("login", ip, `d-${uniq()}@example.test`, NOW)).toBe(false); // batas IP 5
-    expect(await lim.allow("login", ip, a, t(901))).toBe(true);
+    // Jendela dihitung dengan jam database: mundurkan awal jendela (IP+email dan IP) 901 detik, maka kunci pulih.
+    await pool.query("update auth_attempts set window_start = window_start - interval '901 seconds' where key_hash = any($1)", [[authLimitKey("ip_email", ip, a), authLimitKey("ip", ip, a)]]);
+    expect(await lim.allow("login", ip, a, NOW)).toBe(true);
+  });
+
+  it("jam server aplikasi yang melenceng (p_now) tidak dapat mengatur ulang jendela (Task 13 M3)", async () => {
+    const lim = createPgAuthLimiter(pool, LIMITS);
+    const ip = `ip-${uniq()}`;
+    const e = `skew-${uniq()}@example.test`;
+    for (let i = 0; i < 3; i++) expect(await lim.allow("login", ip, e, NOW)).toBe(true);
+    expect(await lim.allow("login", ip, e, NOW)).toBe(false);
+    expect(await lim.allow("login", ip, e, t(86_400))).toBe(false); // jam aplikasi maju sehari
+    expect(await lim.allow("login", ip, e, t(-86_400))).toBe(false); // jam aplikasi mundur sehari
+    const row = (await pool.query("select window_start, now() - window_start < interval '1 minute' as fresh from auth_attempts where key_hash = $1", [authLimitKey("ip_email", ip, e)])).rows[0];
+    expect(row.fresh).toBe(true);
   });
 
   it("batas per email untuk aksi pengirim email berlaku walau IP berganti; aksi terpisah", async () => {

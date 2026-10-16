@@ -122,10 +122,15 @@ describe("runRetention", () => {
     let left = 3;
     const pool = { query: async (_sql: string, args: unknown[]) => { calls.push(args); left--; return { rows: [{ r: { ai_attempts: 10, ack_challenges: 1, more: left > 0 } }] }; } };
     const r = await runRetention(pool, new Date("2026-10-16T00:00:00Z"), { batch: 10, maxRounds: 5 });
-    expect(r).toEqual({ ai_attempts: 30, ack_challenges: 3, rounds: 3, more: false });
+    // Database sebelum migrasi 38 tidak mengembalikan auth_attempts: dihitung 0.
+    expect(r).toEqual({ ai_attempts: 30, ack_challenges: 3, auth_attempts: 0, rounds: 3, more: false });
     left = 100;
     const r2 = await runRetention(pool, new Date(), { batch: 10, maxRounds: 2 });
     expect(r2).toMatchObject({ rounds: 2, more: true });
+  });
+  it("menjumlahkan auth_attempts yang dibersihkan (migrasi 38)", async () => {
+    const pool = { query: async () => ({ rows: [{ r: { ai_attempts: 0, ack_challenges: 0, auth_attempts: 7, more: false } }] }) };
+    expect(await runRetention(pool, new Date())).toEqual({ ai_attempts: 0, ack_challenges: 0, auth_attempts: 7, rounds: 1, more: false });
   });
 });
 

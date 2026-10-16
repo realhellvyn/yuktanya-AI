@@ -12,6 +12,7 @@ Sumber kebenaran: `supabase/migrations/20261016000034_data_rights.sql` (fungsi `
   |---|---|---|
   | `ai_attempts` | `occurred_at` > 30 hari lalu | jendela pembatas laju terpanjang 24 jam |
   | `ack_challenges` | `expires_at` > 7 hari lalu | kode berlaku 10 menit; penguncian dihitung 24 jam; memuat email pihak ketiga |
+  | `auth_attempts` | `window_start` > 2 hari lalu (migrasi 38) | jendela pembatas laju auth terpanjang 1 jam; hanya hash kunci, tanpa email/IP mentah |
 - Sengaja **tidak** dihapus otomatis: `payment_events` (dedupe webhook), `outbox_events` (kunci dedupe mencegah kirim ganda), `ai_usage_reservations` (kuota & metrik), `product_events`/`audit_events` (tanpa isi dokumen; audit append-only), tautan bagikan kedaluwarsa (riwayat milik pengguna).
 - Menjalankan manual: `curl -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/jobs/retention` atau SQL `select run_retention(now(), 5000);` (ulangi sampai `more = false`).
 

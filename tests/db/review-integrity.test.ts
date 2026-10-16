@@ -226,6 +226,19 @@ describe("Minor B", () => {
     expect(ev).toHaveLength(1);
     expect(ev[0].metadata_safe).toMatchObject({ reason: "PARENT_NOT_ACTIVE", stage: "SETTLEMENT" });
   });
+
+  it("penolakan kelayakan Deep saat rekonsiliasi admin tercatat dengan aktor admin, bukan pemilik (Task 14)", async () => {
+    const c = await kit.completedStandard({ severity: "MATERIAL" });
+    const o = await kit.order(c.owner, "DEEP_REVIEW", c.req);
+    const p = await kit.pay(c.owner, o.order_id);
+    await pool.query("select revoke_verification($1, $2, 'ERROR', 'uji', $3)", [c.f.admin, c.verificationId, NOW]);
+    expect(await kit.settle("mock", p.ref, o.amount_idr)).toBe("RECONCILIATION_REQUIRED");
+    const { createPgBillingService } = await import("@/lib/billing/service");
+    const svc = createPgBillingService(pool, []);
+    await expect(svc.resolveReconciliation(c.f.admin, o.order_id, "ACTIVATE", "Coba aktifkan", NOW)).rejects.toMatchObject({ code: "NOT_ELIGIBLE" });
+    const ev = (await pool.query("select actor_id, metadata_safe from audit_events where event_type = 'deep_eligibility_rejected' and entity_id = $1 and metadata_safe ->> 'stage' = 'RECONCILIATION'", [c.req])).rows;
+    expect(ev).toEqual([{ actor_id: c.f.admin, metadata_safe: { reason: "PARENT_NOT_ACTIVE", stage: "RECONCILIATION" } }]);
+  });
 });
 
 describe("bawaan Task 11 (penagihan)", () => {

@@ -1,8 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { billingService } from "@/lib/billing/runtime";
-import { BillingError } from "@/lib/billing/service";
+import { adminPaymentErrorCode } from "@/lib/billing/admin-messages";
 import { getSessionRoles } from "@/lib/supabase/server";
 
 export async function confirmManualAction(formData: FormData): Promise<void> {
@@ -18,7 +18,10 @@ export async function confirmManualAction(formData: FormData): Promise<void> {
     const r = await billingService().confirmManual(s.userId, String(formData.get("paymentId") ?? ""), bankRef, amount, receivedAt);
     redirect(`/admin/payments?r=${r}`);
   } catch (e) {
-    if (e instanceof BillingError) redirect(`/admin/payments?e=${e.code}`);
+    unstable_rethrow(e);
+    // Kode saja di alamat; halaman memetakannya ke kalimat tetap. Galat tak terduga dilempar ulang (halaman galat).
+    const code = adminPaymentErrorCode(e);
+    if (code) redirect(`/admin/payments?e=${code}`);
     throw e;
   }
 }
@@ -32,7 +35,10 @@ export async function resolveReconciliationAction(formData: FormData): Promise<v
     const r = await billingService().resolveReconciliation(s.userId, String(formData.get("orderId") ?? ""), action as "CLOSE", String(formData.get("note") ?? ""));
     redirect(`/admin/payments?r=${r}`);
   } catch (e) {
-    if (e instanceof BillingError) redirect(`/admin/payments?e=${e.code}`);
+    unstable_rethrow(e);
+    // Kode saja di alamat; halaman memetakannya ke kalimat tetap. Galat tak terduga dilempar ulang (halaman galat).
+    const code = adminPaymentErrorCode(e);
+    if (code) redirect(`/admin/payments?e=${code}`);
     throw e;
   }
 }

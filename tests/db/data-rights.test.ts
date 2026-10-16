@@ -64,6 +64,19 @@ describe("run_retention", () => {
     expect(await count("select count(*)::int as n from ai_attempts where user_id = $1", [u])).toBe(1);
   });
 
+  it("membersihkan baris auth_attempts yang jendelanya lebih tua dari 2 hari; baris baru tetap (Task 13 M4)", async () => {
+    const h = () => hash(`auth-${Math.random()}`);
+    const [old1, old2, fresh] = [h(), h(), h()];
+    for (const [k, when] of [[old1, ago(3)], [old2, ago(10)], [fresh, ago(1)]] as const) {
+      await pool.query("insert into auth_attempts (scope, key_hash, window_start, hits) values ('login:ip', $1, $2, 4)", [k, when]);
+    }
+    const r = (await pool.query("select run_retention($1, 5000) as r", [NOW])).rows[0].r;
+    expect(r.auth_attempts).toBeGreaterThanOrEqual(2);
+    expect(r.more).toBe(false);
+    expect(await count("select count(*)::int as n from auth_attempts where key_hash = any($1)", [[old1, old2]])).toBe(0);
+    expect(await count("select count(*)::int as n from auth_attempts where key_hash = $1", [fresh])).toBe(1);
+  });
+
   it("dibatasi per batch: sisa ditandai more=true dan habis pada putaran berikutnya", async () => {
     await pool.query("select run_retention($1, 100000)", [NOW]);
     const u = await createUser(pool);

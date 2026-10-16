@@ -60,9 +60,9 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
     return m;
   }
   // Kegagalan pencatatan audit tidak boleh mengubah jawaban ke pengguna; tetap dilaporkan ke log server.
-  async function recordDeepRejection(userId: string, parent: string, reason: string, stage: "ORDER" | "RECONCILIATION", now: Date) {
+  async function recordDeepRejection(actorId: string, parent: string, reason: string, stage: "ORDER" | "RECONCILIATION", now: Date) {
     try {
-      await pool.query("select record_deep_eligibility_rejection($1, $2, $3, $4, $5)", [userId, parent, reason, stage, now]);
+      await pool.query("select record_deep_eligibility_rejection($1, $2, $3, $4, $5)", [actorId, parent, reason, stage, now]);
     } catch (err) {
       console.error("audit penolakan kelayakan Deep gagal", err instanceof Error ? err.message : err);
     }
@@ -138,7 +138,8 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
           const o = (await pool.query("select user_id, ref_id from orders where id = $1 and kind = 'DEEP_REVIEW'", [orderId])).rows[0];
           if (o?.ref_id) {
             const why = (await pool.query("select reason from deep_eligibility($1, $2, $3, $4)", [o.user_id, o.ref_id, now, orderId])).rows[0]?.reason;
-            await recordDeepRejection(o.user_id, o.ref_id, typeof why === "string" ? why : "UNKNOWN", "RECONCILIATION", now);
+            // Aktor audit = admin yang memutuskan rekonsiliasi (pemilik order tidak melakukan apa pun di tahap ini).
+            await recordDeepRejection(adminId, o.ref_id, typeof why === "string" ? why : "UNKNOWN", "RECONCILIATION", now);
           }
           throw new BillingError("NOT_ELIGIBLE", "PARENT_CHANGED");
         }

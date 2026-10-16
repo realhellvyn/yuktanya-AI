@@ -2,24 +2,13 @@ import { PageHeading } from "@/components/ui/card";
 import { fieldClass, labelText } from "@/components/ui/field";
 import { buttonClass } from "@/components/ui/button";
 import { billingService } from "@/lib/billing/runtime";
-import { formatIdr, PRICING } from "@/lib/pricing/catalog";
+import { formatIdr } from "@/lib/pricing/catalog";
+import { adminPaymentErrorText, adminPaymentResultText } from "@/lib/billing/admin-messages";
 import { paymentReference } from "@/lib/reviews/paths";
 import { confirmManualAction, resolveReconciliationAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pembayaran | Admin Yuktanya" };
-const RESULT: Record<string, string> = {
-  SETTLED: "Pembayaran dikonfirmasi dan pesanan diaktifkan.", DUPLICATE: "Pembayaran ini sudah pernah dikonfirmasi.",
-  AMOUNT_MISMATCH: "Jumlah tidak sama dengan pesanan. Pesanan ditandai untuk rekonsiliasi.", RECONCILIATION_REQUIRED: "Pesanan kedaluwarsa atau sudah dibayar. Ditandai untuk rekonsiliasi.",
-  NOT_FOUND: "Pembayaran tidak ditemukan.",
-  ACTIVATED: "Pesanan diaktifkan setelah rekonsiliasi.", REFUND_RECORDED: "Pengembalian dana dicatat. Lakukan transfer pengembalian di luar sistem.", CLOSED: "Pesanan ditutup.",
-};
-const ERROR: Record<string, string> = {
-  DISCOUNT_TAKEN: `Harga pemeriksaan pertama ${formatIdr(PRICING.standard.memberFirst)} untuk periode ini sudah dipakai pesanan lain, jadi pesanan ini tidak dapat diaktifkan. Catat pengembalian dana.`,
-  NOT_RECONCILIATION: "Pesanan ini sudah tidak perlu direkonsiliasi.", AMOUNT_MISMATCH: "Jumlah yang diterima tidak sama dengan pesanan. Pesanan tidak dapat diaktifkan.",
-  CONFLICT: "Dokumen versi ini sudah memiliki pesanan pemeriksaan lain yang aktif.", NOT_ELIGIBLE: "Pemeriksaan standar induk sudah berubah, jadi pesanan tidak dapat diaktifkan.",
-  NOTE_REQUIRED: "Catatan wajib diisi, minimal 5 karakter.",
-};
 const KIND: Record<string, string> = { MEMBERSHIP_MONTHLY: "Membership 1 periode", MEMBERSHIP_ANNUAL: "Membership 1 tahun", BUNDLE: "Paket kredit", STANDARD_REVIEW: "Pemeriksaan Standar", DEEP_REVIEW: "Deep Review" };
 
 export default async function AdminPaymentsPage({ searchParams }: { searchParams: Promise<{ r?: string; e?: string }> }) {
@@ -29,8 +18,8 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
   return (
     <main className="max-w-5xl space-y-6">
       <PageHeading title="Pembayaran" />
-      {q.r && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">{RESULT[q.r] ?? q.r}</p>}
-      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{ERROR[q.e] ?? `Konfirmasi gagal (${q.e}). Periksa data lalu ulangi.`}</p>}
+      {adminPaymentResultText(q.r) && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">{adminPaymentResultText(q.r)}</p>}
+      {adminPaymentErrorText(q.e) && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{adminPaymentErrorText(q.e)}</p>}
       <section aria-labelledby="menunggu-h" className="space-y-3">
         <h2 id="menunggu-h" className="text-xl font-bold text-navy md:text-2xl">Menunggu konfirmasi transfer</h2>
         {pending.length === 0 ? <p>Tidak ada transfer yang menunggu.</p> : pending.map((p) => (

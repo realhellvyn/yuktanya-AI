@@ -15,7 +15,7 @@ export default async function RevenuePage({ searchParams }: { searchParams: Prom
     <main className="max-w-5xl space-y-6">
       <PageHeading title="Pendapatan" />
       <RangeNav path="/admin/revenue" range={range} />
-      <p>Angka berikut adalah uang yang dikumpulkan dari pembayaran yang sudah terverifikasi, bukan laba. Biaya mitra, biaya AI, dan pajak belum dicatat sehingga margin tidak ditampilkan. Membership ditampilkan sebagai pendapatan membership bulanan karena perpanjangan dilakukan manual.</p>
+      <p>&ldquo;Dikumpulkan&rdquo; adalah uang dari pembayaran yang sudah terverifikasi, bukan laba. &ldquo;Sedang ditahan&rdquo; adalah uang yang sudah masuk dan menunggu keputusan rekonsiliasi, termasuk uang yang diterima tetapi belum terverifikasi (pembayaran ganda atau terlambat); pembayaran yang pernah terverifikasi sebelum ditahan juga tetap terhitung di &ldquo;Dikumpulkan&rdquo;. Biaya mitra, biaya AI, dan pajak belum dicatat sehingga margin tidak ditampilkan. Membership ditampilkan sebagai pendapatan membership bulanan karena perpanjangan dilakukan manual.</p>
       {r === null && <p role="status">Belum ada pembayaran terverifikasi pada rentang ini.</p>}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <KpiCard label="Dikumpulkan" value={fmtIdr(r?.collected)} />
