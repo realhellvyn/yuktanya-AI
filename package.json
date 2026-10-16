@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "rm -rf .next/types && next typegen && tsc --noEmit",
     "test:unit": "vitest run tests/unit",
     "test:db": "bash scripts/db/with-test-db.sh vitest run tests/db",
     "check": "npm run lint && npm run typecheck && npm run test:unit && npm run test:db"
