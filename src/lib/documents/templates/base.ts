@@ -20,19 +20,37 @@ export function templateHash(t: HashSource): string {
 
 export const normalizeName = (s: unknown): string => String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
 
-// Awalan nama pengadilan yang sudah ada di klausul "Pengadilan Negeri {{disputeCity}}".
-export const COURT_PREFIXES = ["Pengadilan Negeri", "PN", "Pengadilan", "Kota"];
+// Kolom kota pengadilan: klausul sudah menulis "Pengadilan Negeri {{disputeCity}}".
+// - Dibuang hanya frasa utuh "Pengadilan Negeri", "PN"/"PN.", dan "Kota" di depan nama kota.
+// - "Pengadilan" saja tidak dibuang: "Pengadilan Agama/Tinggi/Niaga/…" adalah pengadilan lain dan ditolak validasi.
+// - Nama PN yang memang diawali "Kota" dibiarkan utuh (daftar konservatif: Kota Agung, Kota Baru, Kota Bumi, Kota Mobagu,
+//   serta Kota Waringin dan Kota Pinang yang juga nama wilayah). "Kabupaten"/"Kab." tidak disentuh.
+export const COURT_CITY = {
+  prefixes: ["Pengadilan Negeri", "PN", "Kota"],
+  keepWhole: ["Kota Agung", "Kota Baru", "Kota Bumi", "Kota Mobagu", "Kota Waringin", "Kota Pinang"],
+  rejectStarts: ["Pengadilan", "Mahkamah"],
+} satisfies Pick<FieldSpec, "prefixes" | "keepWhole" | "rejectStarts">;
 
 const escRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const startsWithWords = (s: string, words: string) => new RegExp(`^${escRe(words).replace(/ /g, "\\s+")}(?![\\p{L}\\p{N}])`, "iu").test(s);
 
-// Membuang awalan (berulang, tanpa membedakan huruf besar; "PN." juga) lalu, bila sisanya huruf kecil semua,
-// menulis tiap kata berhuruf besar di awal ("pn semarang" → "Semarang"). Nilai yang hanya berisi awalan dibiarkan.
-export function normalizeFieldValue(f: FieldSpec, v: string | number): string | number {
-  if (typeof v !== "string" || !f.prefixes?.length) return v;
-  let s = v.replace(/\s+/g, " ").trim();
-  if (s === "" || f.prefixes.some((p) => p.toLowerCase() === s.toLowerCase())) return v;
+// Membuang awalan berulang (tanpa membedakan huruf besar) lalu, bila sisanya huruf kecil semua, menulis tiap kata
+// berhuruf besar di awal ("pn semarang" → "Semarang"). Nilai yang hanya berisi awalan, nama yang harus utuh, atau
+// nilai yang menyebut pengadilan lain tidak diubah (yang terakhir ditolak validasi).
+function stripPrefixes(f: FieldSpec, value: string): string {
+  let s = value.replace(/\s+/g, " ").trim();
+  if (!f.prefixes?.length || s === "" || f.prefixes.some((p) => p.toLowerCase() === s.toLowerCase())) return s;
   const heads = [...f.prefixes].sort((a, b) => b.length - a.length).map((p) => new RegExp(`^${escRe(p).replace(/ /g, "\\s+")}\\.?\\s+`, "i"));
-  for (let re = heads.find((h) => h.test(s)); re; re = heads.find((h) => h.test(s))) s = s.replace(re, "").trim();
+  const next = () => ((f.keepWhole ?? []).some((w) => startsWithWords(s, w)) ? undefined : heads.find((h) => h.test(s)));
+  for (let re = next(); re; re = next()) s = s.replace(re, "").trim();
+  return s;
+}
+
+const namesOtherCourt = (f: FieldSpec, value: string) => (f.rejectStarts ?? []).some((w) => startsWithWords(stripPrefixes(f, value), w));
+
+export function normalizeFieldValue(f: FieldSpec, v: string | number): string | number {
+  if (typeof v !== "string" || !f.prefixes?.length || v.trim() === "" || namesOtherCourt(f, v)) return v;
+  const s = stripPrefixes(f, v);
   return s === s.toLowerCase() ? s.replace(/(^|[\s-])(\p{Ll})/gu, (_m, a: string, c: string) => a + c.toUpperCase()) : s;
 }
 
@@ -53,6 +71,8 @@ function checkField(f: FieldSpec, v: unknown): string | null {
   switch (f.kind) {
     case "text":
       if (typeof v === "string" && CTRL_SINGLE.test(v)) return BAD_CHARS;
+      if (typeof v === "string" && namesOtherCourt(f, v))
+        return `Tulis nama kota tempat Pengadilan Negeri saja, tanpa nama pengadilan lain.${f.example ? ` ${f.example}.` : ""}`;
       return typeof v === "string" && v.trim().length <= 200 ? null : "Isi dengan teks singkat (maksimal 200 karakter)";
     case "longtext":
       if (typeof v === "string" && CTRL_MULTI.test(v)) return BAD_CHARS;

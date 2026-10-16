@@ -40,6 +40,21 @@ Migrasi 01–28 sudah diterapkan ke proyek staging lewat alat MCP, yang otomatis
 - Untuk produksi, terapkan berkas asli dengan Supabase CLI (`supabase db push`) pada proyek yang bersih, bukan varian ini.
 - Migrasi 33 (`20261016000033_analytics_events.sql`, katalog event analitik + `admin_analytics`) ditulis **tanpa `DROP` dan `delete from`** (hanya `create function`, `create or replace special_case_event` dengan tanda tangan sama, `create trigger analytics_capture` pada tabel sumber, `revoke`/`grant`), sehingga dapat diterapkan apa adanya lewat MCP tanpa varian staging. Urutan wajib: 29 → 30 → 31 → 32 → 33 (33 membutuhkan tabel `special_cases` dari 30 dan `document_uploads` dari 32). Trigger hanya menulis event untuk transisi **setelah** migrasi diterapkan; tidak ada backfill (angka dashboard tetap dari tabel sumber, jadi riwayat tidak hilang).
 - **Persetujuan template di staging bersifat sintetis.** Pada 16 Okt 2026 tiga baris `document_templates` (`pks`, `utang-piutang`, `nda`, versi 1) dimasukkan sebagai `APPROVED` dengan `approved_by` = akun pemilik proyek, hanya agar alur dokumen dapat diuji dengan data sintetis. Ini **bukan** persetujuan mitra hukum. Hapus baris itu (atau tandai `RETIRED`) sebelum pilot nyata dan ganti dengan persetujuan mitra atas hash template saat itu.
+- **Setiap perubahan `RENDER_VERSION` (`src/lib/documents/version.ts`) atau isi template (judul, kategori, `fields` termasuk label/contoh/`prefixes`/`keepWhole`/`rejectStarts`, `clauses`) mengubah `content_hash`** (`templateHashInput` di `src/lib/documents/templates/base.ts`). Di produksi `is_template_approved` hanya cocok dengan hash yang persis sama, jadi tanpa pencatatan ulang **pembuatan dokumen ditolak** (`TEMPLATE_NOT_APPROVED`) sejak deploy itu dipromosikan. Persetujuan harus dicatat ulang setiap kali hash berubah.
+- **Prosedur staging (hanya data sintetis)**, dijalankan pemilik proyek:
+  1. Pada commit yang persis akan di-deploy, jalankan `npm run templates:hashes` (skrip `scripts/templates/print-hashes.mjs`; mencetak `kategori  template_id  versi  content_hash` dari `TEMPLATES[c].contentHash()` untuk NDA, PKS, UTANG_PIUTANG). Jangan menyalin hash dari dokumen ini atau dari commit lain.
+  2. Catat hash lama baris `document_templates` ke tabel audit di bawah (tanggal, commit, hash lama → hash baru).
+  3. Segera setelah deploy dipromosikan, perbarui tiga baris berdasarkan kunci tabel `(template_id, version)`: `update public.document_templates set content_hash = '<hash dari langkah 1>', approved_at = now(), approved_by = '<id akun pemilik proyek>' where template_id = '<id>' and version = <versi>;` (status tetap `APPROVED`; ini tetap persetujuan **sintetis** pemilik proyek, bukan mitra hukum).
+  4. Periksa: `select template_id, version, content_hash, approval_status from public.document_templates order by template_id;` harus sama dengan keluaran langkah 1, lalu buat satu draf sintetis di staging.
+- **Pilot nyata** membutuhkan persetujuan mitra hukum atas hash template yang berlaku saat itu (hasil `npm run templates:hashes` pada commit pilot), bukan baris sintetis di atas.
+
+Audit hash template (versi 1 semua; diisi setiap kali hash berubah):
+
+| Commit | Perubahan | nda | pks | utang-piutang |
+|---|---|---|---|---|
+| 5462582 dan sebelumnya (hash yang disetujui sintetis di staging 16 Okt 2026) | asli | `715a8e53d0549e9e8286a8852a640e3cd8cc9820b32e44d958d4c17069ccfaed` | `c1d88b25608447a8113a55e27642b5f31c326861eccb4e519f10baa41a87fc1d` | `198147fbf532d31f3e73a46a9013e7a8536bf0b7613900151d3dc4024a0e51ab` |
+| 16f0273 (Task 16, tidak untuk deploy) | `prefixes` kota pengadilan, `RENDER_VERSION` 3 | `409cfbeaaaf252f98447841cc69383cf192b584a385381c47d1e9e8d5ce79c84` | `883b5f1e7ef5470684115de5c6f90ff7a72b01a4cdf406a0c782db0d841c4cbc` | `50350351bc98c908bffef37378e8dace00e1e3648d830cf649dbfa43ee74f527` |
+| commit perbaikan Task 16 dan sesudahnya | `keepWhole`, `rejectStarts` | jalankan `npm run templates:hashes` | | |
 
 ## Langkah manual staging (pemilik proyek, lewat SQL editor dashboard Supabase)
 Alat MCP membatalkan `DROP` dan `delete from`, jadi langkah ini dijalankan manusia. Semua data staging sintetis. Jalankan berurutan; setelah tiap langkah jalankan pemeriksaannya.

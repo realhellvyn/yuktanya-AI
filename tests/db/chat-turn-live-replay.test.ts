@@ -192,3 +192,20 @@ describe("kota pengadilan lewat formulir (saveDraft)", () => {
     }
   });
 });
+
+describe("kota pengadilan: pengadilan selain Pengadilan Negeri (review Task 16)", () => {
+  it("usulan 'Pengadilan Agama Semarang' tidak tersimpan dan balasan menjelaskan isian yang diminta", async () => {
+    const u = await createUser(pool);
+    const id = (await docs.create(u, "UTANG_PIUTANG", key())).documentId;
+    const chat = vi.fn(async () => ({ text: JSON.stringify({ reply: "Baik.", fields: { disputeCity: "Pengadilan Agama Semarang" } }), requestId: "r" }));
+    const deps: ChatTurnDeps = { getUserId: async () => u, service: docs, store, pool, chat: chat as unknown as ChatTurnDeps["chat"], inflight: new Set(), now: () => NOW };
+    const res = await handleChatTurn(deps, new Request("http://t/x", { method: "POST", headers: { "content-type": "application/json", "idempotency-key": key() }, body: JSON.stringify({ message: "kalau ribut di Pengadilan Agama Semarang" }) }), { id });
+    const b = await res.json();
+    expect(b.applied).toEqual([]);
+    expect((await docs.get(u, id))!.draft.data.disputeCity).toBeUndefined();
+    expect(b.reply).toContain("Belum tercatat: Kota pengadilan bila terjadi sengketa");
+    expect(b.reply).toContain("Pengadilan Negeri");
+    expect(b.reply).toContain("Contoh: Surabaya");
+    expect((await store.snapshot(u, NOW)).messagesUsed).toBe(1);
+  });
+});

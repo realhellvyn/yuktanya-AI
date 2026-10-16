@@ -15,6 +15,10 @@ export type FieldSpec = {
   // Awalan yang sudah ditulis klausul tepat di depan nilai ini (mis. "Pengadilan Negeri {{disputeCity}}"). Bila pengguna
   // ikut menulisnya ("PN Semarang"), awalan dibuang agar tercetak sekali; yang disimpan hanya nama kotanya.
   prefixes?: string[];
+  // Nama yang kebetulan diawali salah satu awalan dan harus utuh (mis. "Kota Agung" adalah nama PN, bukan "Kota" + "Agung").
+  keepWhole?: string[];
+  // Nilai yang (setelah awalan dibuang) diawali kata ini ditolak validasi, mis. "Pengadilan Agama …" bukan Pengadilan Negeri.
+  rejectStarts?: string[];
 };
 
 // Klausul dirender hanya bila field `whenKey` (jika ada) terisi. Teks memuat {{key}}.

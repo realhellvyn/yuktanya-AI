@@ -133,7 +133,7 @@ describe("kota pengadilan: awalan yang sudah ditulis klausul dibuang, nama kota 
   const all: [string, Template, Data][] = Object.entries(valid).map(([n, v]) => [n, v.t, v.data]);
 
   it.each(all)("%s: 'PN Semarang', 'Pengadilan Negeri Semarang', 'pn semarang', 'Kota Semarang' → 'Semarang'", (_n, t, data) => {
-    for (const raw of ["PN Semarang", "Pengadilan Negeri Semarang", "pn semarang", "Kota Semarang", "PN. Semarang", "Pengadilan Negeri Kota Semarang", "pengadilan semarang", "  Semarang  ", "semarang"]) {
+    for (const raw of ["PN Semarang", "Pengadilan Negeri Semarang", "pn semarang", "Kota Semarang", "PN. Semarang", "Pengadilan Negeri Kota Semarang", "  Semarang  ", "semarang", "PENGADILAN NEGERI Semarang"]) {
       expect(t.normalize({ disputeCity: raw }).disputeCity).toBe("Semarang");
       const r = t.validate({ ...data, disputeCity: raw });
       expect(r.ok).toBe(true);
@@ -167,7 +167,43 @@ describe("kota pengadilan: awalan yang sudah ditulis klausul dibuang, nama kota 
     for (const c of t.clauses) {
       for (const m of c.text.matchAll(/Pengadilan Negeri \{\{(\w+)\}\}/g)) {
         const f = t.fields.find((x) => x.key === m[1])!;
-        expect(f.prefixes).toEqual(expect.arrayContaining(["Pengadilan Negeri", "PN", "Pengadilan", "Kota"]));
+        expect(f.prefixes).toEqual(expect.arrayContaining(["Pengadilan Negeri", "PN", "Kota"]));
+        // "Pengadilan" saja tidak boleh dibuang: "Pengadilan Agama X" bukan Pengadilan Negeri.
+        expect(f.prefixes).not.toContain("Pengadilan");
+      }
+    }
+  });
+});
+
+// Temuan review Task 16: awalan "Kota"/"Pengadilan" yang dibuang sembarangan mengubah nama yang benar.
+describe("kota pengadilan: nama yang benar tidak diubah, pengadilan lain ditolak", () => {
+  const all: [string, Template, Data][] = Object.entries(valid).map(([n, v]) => [n, v.t, v.data]);
+
+  it.each(all)("%s: nama PN yang memang diawali 'Kota' tetap utuh (Kota Agung, Kota Baru, Kota Bumi)", (_n, t, data) => {
+    for (const [raw, want] of [["Kota Agung", "Kota Agung"], ["Pengadilan Negeri Kota Agung", "Kota Agung"], ["PN Kota Baru", "Kota Baru"], ["Kota Bumi", "Kota Bumi"], ["kota agung", "Kota Agung"], ["Kota Mobagu", "Kota Mobagu"]]) {
+      expect(t.normalize({ disputeCity: raw }).disputeCity, raw).toBe(want);
+      const r = t.validate({ ...data, disputeCity: raw });
+      expect(r.ok, raw).toBe(true);
+    }
+  });
+
+  it.each(all)("%s: 'Kabupaten'/'Kab.' tidak disentuh", (_n, t, data) => {
+    for (const raw of ["Kabupaten Semarang", "Kab. Semarang", "PN Kabupaten Semarang"]) {
+      const want = raw.replace(/^PN /, "");
+      expect(t.normalize({ disputeCity: raw }).disputeCity).toBe(want);
+      expect(t.validate({ ...data, disputeCity: raw }).ok).toBe(true);
+    }
+  });
+
+  it.each(all)("%s: pengadilan selain Pengadilan Negeri tidak dinormalisasi dan ditolak dengan pesan jelas", (_n, t, data) => {
+    const f = t.fields.find((x) => x.key === "disputeCity")!;
+    for (const raw of ["Pengadilan Agama Semarang", "Pengadilan Tinggi Semarang", "Pengadilan Niaga Semarang", "Pengadilan Tata Usaha Negara Semarang", "Pengadilan Militer Semarang", "Pengadilan Semarang", "pengadilan agama semarang", "PN Pengadilan Tinggi Semarang"]) {
+      expect(t.normalize({ disputeCity: raw }).disputeCity, raw).toBe(raw);
+      const r = t.validate({ ...data, disputeCity: raw });
+      expect(r.ok, raw).toBe(false);
+      if (!r.ok) {
+        expect(r.errors.disputeCity).toContain("Pengadilan Negeri");
+        expect(r.errors.disputeCity).toContain(f.example!);
       }
     }
   });

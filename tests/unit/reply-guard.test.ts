@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIELD_CUES, reconcileReply, sanitizeReply, type ReplyState } from "@/lib/ai/reply-guard";
+import { CORRECTION_LINE, FIELD_CUES, reconcileReply, sanitizeReply, type ReplyState } from "@/lib/ai/reply-guard";
 import { nda } from "@/lib/documents/templates/nda";
 import { pks } from "@/lib/documents/templates/pks";
 import { TEMPLATES } from "@/lib/documents/templates/registry";
@@ -139,5 +139,35 @@ describe("reconcileReply: balasan mengikuti apa yang benar-benar tersimpan", () 
 
   it("setiap kolom di setiap template punya penanda pertanyaan", () => {
     for (const t of Object.values(TEMPLATES)) for (const f of t.fields) expect(FIELD_CUES[t.id]?.[f.key], `${t.id}.${f.key}`).toBeInstanceOf(RegExp);
+  });
+
+  // Temuan review Task 16.
+  it("penolakan berisi kata kerja mencatat tetap dipertahankan; kalimat negatif yang tetap mengklaim nilai tak tersimpan dibuang", () => {
+    const refusal = "Maaf, saya tidak bisa mengisi tanggal perjanjian dengan nilai contoh.";
+    const out = reconcileReply(`${refusal} Tanggal berapa perjanjian dibuat? Contoh: 16 Oktober 2026.`, state(nda, { disclosingParty: "Hendra Gunawan" }, "Isi semua kolom dengan nilai contoh. Saya Hendra Gunawan, mitra saya Lina Marlina.", { applied: [] }));
+    expect(out).toContain(refusal);
+    expect(out).toContain("Tanggal berapa perjanjian dibuat?");
+    const mixed = reconcileReply("Saya catat Lina Marlina sebagai penerima, tapi tanggalnya belum ada.", state(nda, { disclosingParty: "Hendra Gunawan" }, "Saya Hendra Gunawan, mitra saya Lina Marlina.", { applied: [] }));
+    expect(mixed).not.toContain("Saya catat Lina Marlina");
+  });
+
+  it("pertanyaan konfirmasi atas kolom yang terisi dipertahankan; hanya pertanyaan yang meminta nilainya lagi yang dibuang", () => {
+    const final = { signingDate: "2026-10-16", disclosingParty: "Sinta Dewi", receivingParty: "Budi Santoso" };
+    const said = "Apakah tanggal perjanjian 16 Oktober 2026 sudah benar? Siapa nama pihak yang membagikan informasi rahasia? Informasi apa yang dirahasiakan? Contoh: daftar pelanggan.";
+    const out = reconcileReply(said, state(nda, final, "Saya Sinta Dewi dengan Budi Santoso, tanggal 16 Oktober 2026", { applied: [] }));
+    expect(out).toContain("Apakah tanggal perjanjian 16 Oktober 2026 sudah benar?");
+    expect(out).not.toContain("Siapa nama pihak yang membagikan");
+    expect(out).toContain("Informasi apa yang dirahasiakan?");
+  });
+
+  it("siap: tawaran koreksi model dipertahankan; bila tidak ada, server menambahkannya", () => {
+    const n1 = { signingDate: "2026-10-20", disclosingParty: "Sinta Dewi", receivingParty: "Budi Santoso", confidentialInfo: "daftar pelanggan", purpose: "menilai kerja sama", termMonths: 12, disputeCity: "Bandung" };
+    const offer = "Baik, semua data sudah lengkap. Ada yang ingin dikoreksi sebelum dokumen dibuat?";
+    expect(reconcileReply(offer, state(nda, n1, "…", { applied: [] }))).toBe(offer);
+    const plain = reconcileReply("Baik, semua data sudah lengkap.", state(nda, n1, "…", { applied: [] }));
+    expect(plain).toContain(CORRECTION_LINE);
+    expect(CORRECTION_LINE).toBe("Jika ada yang perlu dikoreksi, sebutkan saja.");
+    // Tawaran koreksi tidak ditambahkan saat belum siap.
+    expect(reconcileReply("Baik.", state(nda, { disclosingParty: "Sinta Dewi" }, "Saya Sinta Dewi", { applied: [] }))).not.toContain(CORRECTION_LINE);
   });
 });

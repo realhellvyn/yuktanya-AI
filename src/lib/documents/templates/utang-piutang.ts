@@ -1,6 +1,6 @@
 // SINTETIS: teks klausul adalah placeholder netral, menunggu persetujuan mitra hukum. Bukan nasihat hukum.
 // Bunga dan jaminan sengaja tidak ada: kasus tersebut perlu penilaian khusus (lihat PRODUCT_SPEC.md).
-import { COURT_PREFIXES, defineTemplate, normalizeName } from "./base";
+import { COURT_CITY, defineTemplate, normalizeName } from "./base";
 
 export const utangPiutang = defineTemplate({
   id: "utang-piutang",
@@ -13,7 +13,7 @@ export const utangPiutang = defineTemplate({
     { key: "signingDate", label: "Tanggal surat dibuat", example: "Contoh: 16 Oktober 2026", help: "Tanggal pinjaman disepakati.", kind: "date", required: true },
     { key: "principalIdr", label: "Jumlah pinjaman (rupiah)", example: "Contoh: Rp5.000.000", help: "Tulis angka saja, tanpa desimal.", kind: "idr", required: true },
     { key: "dueDate", label: "Tanggal pinjaman harus lunas", example: "Contoh: 16 Januari 2027", help: "Harus setelah tanggal surat dibuat.", kind: "date", required: true },
-    { key: "disputeCity", label: "Kota pengadilan bila terjadi sengketa", example: "Contoh: Surabaya", help: "Dipakai bila musyawarah tidak berhasil.", kind: "text", required: true, prefixes: COURT_PREFIXES },
+    { key: "disputeCity", label: "Kota pengadilan bila terjadi sengketa", example: "Contoh: Surabaya", help: "Dipakai bila musyawarah tidak berhasil.", kind: "text", required: true, ...COURT_CITY },
     { key: "repaymentNote", label: "Catatan cara pembayaran", example: "Boleh dikosongkan", help: "Hanya tampil di dokumen bila diisi.", kind: "longtext", required: false },
   ],
   clauses: [

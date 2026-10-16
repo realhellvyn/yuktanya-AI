@@ -152,6 +152,8 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
       };
       let checked = template.validate(build(applied, cleared));
       const firstErrors = checked.ok ? {} : checked.errors;
+      // Pesan validasi kolom yang ditolak (mis. "Pengadilan Agama …" bukan Pengadilan Negeri) ikut disampaikan ke pengguna.
+      const fieldIssues = [...new Set(applied.filter((k) => firstErrors[k] && firstErrors[k] !== "Wajib diisi").map((k) => firstErrors[k]))];
       applied = applied.filter((k) => !firstErrors[k] || firstErrors[k] === "Wajib diisi");
       checked = template.validate(build(applied, cleared));
       const errs = checked.ok ? {} : checked.errors;
@@ -173,7 +175,7 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
       const unnoted = template.fields.filter((f) => raw[f.key] != null && String(raw[f.key]).trim() !== "" && !cleared.includes(f.key) && !sameAsFinal(template, f, raw[f.key], final[f.key]));
       const note =
         unnoted.length > 0 || issues.length > 0
-          ? `Belum tercatat: ${unnoted.map((f) => f.label).join(", ") || "perubahan terakhir"}.${issues.length ? ` ${issues.join(" ")}` : " Tulis nilainya lengkap di pesan, sesuai contoh pada pertanyaan."}`
+          ? `Belum tercatat: ${unnoted.map((f) => f.label).join(", ") || "perubahan terakhir"}.${issues.length || fieldIssues.length ? ` ${[...fieldIssues, ...issues].join(" ")}` : " Tulis nilainya lengkap di pesan, sesuai contoh pada pertanyaan."}`
           : "";
       const missing = missingRequired(template, final);
       const said = (result.data.reply ?? "").trim().slice(0, 600);

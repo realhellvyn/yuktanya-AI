@@ -70,7 +70,7 @@ Pengguna terdaftar memilih PKS, Utang Piutang, atau NDA (atau "Saya belum tahu" 
 
 Variabel lingkungan: `DOCUMENT_BLOB_DIR` (berkas ekspor lokal, default `.data/blobs`), `ALLOW_UNAPPROVED_TEMPLATES=true` (hanya di luar produksi; ketiga template berstatus DRAFT sintetis menunggu persetujuan mitra hukum), `SUPABASE_STORAGE_BUCKET` (produksi; adapter belum diverifikasi).
 Di produksi template hanya dipakai bila baris `document_templates` berstatus `APPROVED` dengan `content_hash` yang sama dengan kode.
-Kota pengadilan disimpan sebagai nama kota saja ("PN Semarang", "Pengadilan Negeri Semarang", "Kota Semarang" → "Semarang") karena klausul sudah menulis "Pengadilan Negeri"; aturan ini ikut hash template (`RENDER_VERSION` 3).
+Kota pengadilan disimpan sebagai nama kota saja ("PN Semarang", "Pengadilan Negeri Semarang", "Kota Semarang" → "Semarang") karena klausul sudah menulis "Pengadilan Negeri"; nama PN yang memang diawali "Kota" (mis. Kota Agung) tetap utuh, dan nama pengadilan lain ("Pengadilan Agama …") ditolak dengan pesan jelas. Aturan ini ikut hash template (`RENDER_VERSION` 3): catat ulang persetujuan dengan `npm run templates:hashes` (lihat `docs/RELEASE_CHECKLIST.md`).
 Balasan AI percakapan dokumen dicocokkan dengan draf tersimpan di server (`src/lib/ai/reply-guard.ts`): klaim "saya catat …" atas nilai yang tidak tersimpan, pertanyaan untuk kolom yang sudah terisi, dan "dokumen siap" padahal belum diganti kalimat dari keadaan server; nama kolom internal dan format tanggal mesin tidak pernah tampil. Skenario evaluasi AI untuk uji langsung berikutnya: `tests/fixtures/ai-eval-scenarios.json`.
 
 ## Vault aktif (Fase 2b)

@@ -92,6 +92,11 @@ export type ReplyState = {
 
 const READY = /siap dibuat|(sudah|telah) siap|dokumen (anda )?siap|(sudah|telah) lengkap|semua (kolom|data)[^.!?]*(terisi|lengkap)/i;
 const CLAIM = /\b(catat|mencatat|dicatat|tercatat|simpan|menyimpan|disimpan|tersimpan|perbarui|memperbarui|diperbarui|ubah|mengubah|diubah|ganti|mengganti|diganti|menangkap|ditangkap|mengerti|isi|mengisi|diisi|terisi|masukkan|memasukkan|dimasukkan)\b/i;
+// Penolakan/negasi ("saya tidak bisa mengisi …") bukan klaim mencatat; hanya nilai yang disebut yang diperiksa.
+const NEGATION = /\b(tidak|tak|belum|bukan|gagal)\b/i;
+// Pertanyaan konfirmasi atau tawaran koreksi tidak meminta nilai baru, jadi tidak dibuang walau kolomnya sudah terisi.
+const CONFIRM = /sudah (benar|sesuai|tepat)|\b(benar|sesuai|tepat)\s*\?|apakah [^?]*\b(benar|sesuai|tepat)\b|\b(ingin|perlu|mau)\s+(di)?(koreksi|ubah|ganti|perbaiki)|\bkoreksi\b|\bperbaikan\b/i;
+const CORRECTION = /koreksi|\bubah|\bganti|perbaik/i;
 const EXAMPLE_START = /^\(?\s*(contoh|misalnya|misal)\b/i;
 const ABBREV_END = /(?:^|\s)(rp|no|pn|bpk|pak|bu|dll|dst|mis|yth|sdr|tgl)\.$/i;
 const NUMBERING = /^\d{1,2}[.)]\s*/;
@@ -182,6 +187,7 @@ function shown(f: FieldSpec, v: string | number): string {
 }
 
 export const READY_LINE = "Semua kolom wajib sudah terisi. Periksa ringkasan, lalu buat dokumen.";
+export const CORRECTION_LINE = "Jika ada yang perlu dikoreksi, sebutkan saja.";
 
 export function reconcileReply(said: string, s: ReplyState): string {
   const t = s.template;
@@ -204,7 +210,9 @@ export function reconcileReply(said: string, s: ReplyState): string {
     if (clean !== u.text) changed = true;
     if (!clean) continue;
     const sep = /\n/.test(u.sep) ? "\n" : " ";
-    if (clean.includes("?")) {
+    if (clean.includes("?") && CONFIRM.test(clean)) {
+      // konfirmasi/tawaran koreksi: dipertahankan
+    } else if (clean.includes("?")) {
       const core = clean.replace(/\((?:[^()]*\b(?:contoh|misalnya|misal)\b[^()]*)\)/gi, " ").replace(/\b(contoh|misalnya|misal)\b[\s\S]*$/i, " ");
       const fields = mentioned(t, core);
       const stale = fields.length > 0 && fields.every((f) => !blankVal(s.final[f.key]));
@@ -214,13 +222,19 @@ export function reconcileReply(said: string, s: ReplyState): string {
         continue;
       }
       for (const f of fields) if (f.required && blankVal(s.final[f.key])) asked.add(f.key);
+    } else if (READY.test(clean) && NEGATION.test(clean)) {
+      // "dokumen belum siap": benar hanya bila memang belum siap.
+      if (s.ready) {
+        drop(false);
+        continue;
+      }
     } else if (READY.test(clean)) {
       if (!s.ready || (CLAIM.test(clean) && !claimConsistent(t, clean, s))) {
         drop(false);
         continue;
       }
       readySaid = true;
-    } else if (CLAIM.test(clean) && (hasKey || !claimConsistent(t, clean, s))) {
+    } else if (CLAIM.test(clean) && (hasKey || !claimConsistent(t, clean, s, !NEGATION.test(clean)))) {
       drop(true);
       continue;
     }
@@ -245,6 +259,7 @@ export function reconcileReply(said: string, s: ReplyState): string {
     for (const f of missing.slice(0, 2)) ask.push(`${f.label}? ${f.example ?? ""}`.trim());
   }
   const tail = s.ready && !readySaid ? [READY_LINE] : [];
+  if (s.ready && !kept.some((k) => k && CORRECTION.test(k.text))) tail.push(CORRECTION_LINE);
   if (!changed && !confirmation && ask.length === 0 && tail.length === 0) return said.trim();
   let body = "";
   for (const k of kept) {
