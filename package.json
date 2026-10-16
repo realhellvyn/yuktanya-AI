@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "typecheck": "rm -rf .next/types && next typegen && tsc --noEmit",
     "test:unit": "vitest run tests/unit",
-    "test:db": "bash scripts/db/with-test-db.sh vitest run tests/db",
+    "test:db": "bash scripts/db/with-test-db.sh vitest run --no-file-parallelism tests/db",
     "check": "npm run lint && npm run typecheck && npm run test:unit && npm run test:db"
   },
   "dependencies": {

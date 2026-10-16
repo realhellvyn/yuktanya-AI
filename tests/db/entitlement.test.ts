@@ -56,17 +56,17 @@ describe("resolve_entitlement", () => {
     }
   });
 
-  it("kunci fitur Vault belum dipetakan secara default, lalu mengikuti pemetaan", async () => {
+  it("kunci fitur mengikuti pemetaan: usulan awal hanya untuk Member, dan baris tambahan ikut muncul", async () => {
     const u = await createUser(pool);
     await addMembership(u, "ACTIVE", "2026-10-01T00:00:00Z", "2026-11-01T00:00:00Z");
-    expect((await resolve(u, NOW)).features).toEqual([]);
-    await pool.query("insert into feature_plan_map(feature_key, plan) values ('vault.share', 'MEMBER')");
+    expect((await resolve(u, NOW)).features).toEqual(["vault.evidence_pack", "vault.reminders", "vault.share"]);
+    await pool.query("insert into feature_plan_map(feature_key, plan) values ('x.sementara', 'MEMBER')");
     try {
-      expect((await resolve(u, NOW)).features).toEqual(["vault.share"]);
+      expect((await resolve(u, NOW)).features).toContain("x.sementara");
       const free = await createUser(pool);
       expect((await resolve(free, NOW)).features).toEqual([]);
     } finally {
-      await pool.query("delete from feature_plan_map where feature_key = 'vault.share'");
+      await pool.query("delete from feature_plan_map where feature_key = 'x.sementara'");
     }
   });
 });
@@ -77,7 +77,7 @@ describe("akses klien ditutup", () => {
     for (const sql of [
       "insert into memberships(user_id, status, period_start, period_end) values (auth.uid(), 'ACTIVE', now(), now() + interval '30 days')",
       "insert into product_grants(product_key, grant_key, int_value) values ('PLAN_FREE', 'x', 1)",
-      "insert into feature_plan_map(feature_key, plan) values ('vault.share', 'FREE')",
+      "insert into feature_plan_map(feature_key, plan) values ('vault.lain', 'FREE')",
       "select * from resolve_entitlement(auth.uid(), now())",
     ]) {
       await expect(asUser(pool, u, (c) => c.query(sql))).rejects.toMatchObject({ code: "42501" });
