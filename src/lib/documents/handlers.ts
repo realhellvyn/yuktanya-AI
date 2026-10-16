@@ -45,7 +45,11 @@ function guarded(ids: string[], run: (userId: string, deps: DocDeps, req: Reques
       if (e instanceof NotFoundError) return notFound();
       if (e instanceof StaleRevisionError) return json({ code: "STALE_REVISION" }, 409);
       if (e instanceof TemplateNotApprovedError) return json({ code: "TEMPLATE_NOT_APPROVED" }, 409);
-      if (e instanceof IntegrityError) return json({ code: "INTEGRITY_ERROR" }, 500);
+      if (e instanceof IntegrityError) {
+        // Dicatat agar kegagalan integritas berkas tidak hilang diam-diam (tanpa isi dokumen).
+        console.error("documents.integrity", e.message);
+        return json({ code: "INTEGRITY_ERROR" }, 500);
+      }
       if (e instanceof UnsupportedCharactersError) return json({ code: "PDF_UNSUPPORTED_CHARACTERS", characters: e.characters }, 422);
       if (e instanceof Error && e.message.includes("TOO_MANY_DRAFTS")) return json({ code: "TOO_MANY_DRAFTS" }, 429);
       throw e;
