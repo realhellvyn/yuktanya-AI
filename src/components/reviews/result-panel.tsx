@@ -12,7 +12,7 @@ const OUTCOME_TITLE: Record<string, string> = {
 const link = "inline-flex min-h-12 items-center font-semibold text-brand-dark underline";
 const day = (iso: string) => new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeZone: "Asia/Jakarta" }).format(new Date(iso));
 
-export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = true }: { review: OwnerReview; verifyUrl?: string; qrDataUrl?: string; isLatestVersion?: boolean }) {
+export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = true, now = new Date() }: { review: OwnerReview; verifyUrl?: string; qrDataUrl?: string; isLatestVersion?: boolean; now?: Date }) {
   if (review.status === "CANCELLED") {
     return (
       <section aria-labelledby="hasil-h" className="space-y-3 rounded-lg border border-line bg-white p-4">
@@ -28,6 +28,8 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
   const v = review.verification;
   const badge = v && (review.outcome === "WITH_NOTES" || review.outcome === "WITHIN_SCOPE");
   const declined = review.status === "DECLINED";
+  // Kredit masih AVAILABLE di database tetapi sudah lewat expires_at: jangan dibaca seolah masih berlaku.
+  const creditLapsed = !!review.credit && new Date(review.credit.expiresAt).getTime() <= now.getTime();
   const versionHref = `/documents/${review.documentId}?version=${review.versionId}`;
   return (
     <section aria-labelledby="hasil-h" className="space-y-4">
@@ -42,8 +44,11 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
       {declined && (
         <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-4">
           <p className="font-semibold">Pemeriksa tidak dapat memeriksa dokumen ini, jadi tidak ada hasil pemeriksaan dan tidak ada Legal Verified.</p>
-          {review.credit?.status === "AVAILABLE" && (
+          {review.credit?.status === "AVAILABLE" && !creditLapsed && (
             <p>Pesanan Anda dibatalkan dan pembayarannya diganti 1 kredit pemeriksaan standar, berlaku sampai {day(review.credit.expiresAt)}. Kredit ini otomatis dipakai saat Anda meminta pemeriksaan pengacara berikutnya, jadi Anda tidak membayar lagi untuk pemeriksaan itu.</p>
+          )}
+          {review.credit?.status === "AVAILABLE" && creditLapsed && (
+            <p>Pesanan Anda dibatalkan dan pembayarannya diganti 1 kredit pemeriksaan standar. Kredit itu sudah kedaluwarsa pada {day(review.credit.expiresAt)}, jadi tidak bisa dipakai lagi.</p>
           )}
           {review.credit && review.credit.status !== "AVAILABLE" && (
             <p>Pesanan Anda dibatalkan dan pembayarannya diganti 1 kredit pemeriksaan standar. Kredit itu sudah terpakai atau sudah tidak berlaku.</p>

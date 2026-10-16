@@ -70,7 +70,8 @@ export async function journey({ page, step, shot, base, vp, issues, llm }) {
     const before = llm.control.chooser ?? 0;
     await page.goto(base + "/workspace/new");
     await Promise.all([page.waitForURL("**/workspace/pilih"), page.click("a:has-text('Bantu saya memilih')")]);
-    if ((await page.title()) !== "Bantu Memilih Dokumen | Yuktanya") throw new Error("judul " + (await page.title()));
+    // Judul dialirkan setelah navigasi (dev server: kompilasi pertama); tunggu, jangan membaca seketika.
+    await page.waitForFunction(() => document.title === "Bantu Memilih Dokumen | Yuktanya", null, { timeout: 15000 }).catch(async () => { throw new Error("judul " + (await page.title())); });
     await layoutOk();
     const send = async (text, expect) => {
       const n = await page.locator("ol li").count();
@@ -92,6 +93,23 @@ export async function journey({ page, step, shot, base, vp, issues, llm }) {
     await page.goto(base + "/dashboard");
     const q = (await page.locator("li:has-text('Sisa pesan AI')").innerText()).replace(/\s+/g, " ");
     if (!/18 dari 20/.test(q)) throw new Error("dua pesan pemilih harus memakai 2 jatah: " + q);
+  });
+
+  await step(tag("Saya belum tahu: keperluan rumit (cerai) diarahkan ke rute Kasus Khusus, bukan ke dokumen katalog"), async () => {
+    const before = llm.control.chooser ?? 0;
+    await page.goto(base + "/workspace/pilih");
+    await page.fill("textarea[name=message]", "Saya sedang digugat cerai dan bingung harus buat dokumen apa.");
+    await page.click("button:has-text('Kirim')");
+    await page.waitForSelector("[data-testid=saran-kasus-khusus]", { timeout: 60000 });
+    if (await page.locator("[data-testid=saran-dokumen]").count()) throw new Error("dokumen katalog ditawarkan untuk kasus khusus");
+    if ((llm.control.chooser ?? 0) - before !== 1) throw new Error("panggilan LLM pemilih: " + ((llm.control.chooser ?? 0) - before));
+    await layoutOk();
+    await shot("ux-pilih-kasus-khusus");
+    await Promise.all([page.waitForURL("**/cases/new", { timeout: 30000 }), page.click("[data-testid=saran-kasus-khusus] a:has-text('Ajukan penilaian khusus')")]);
+    await page.waitForSelector("h1");
+    const line = page.locator("main p", { hasText: /^Biaya dan ruang lingkup ditentukan setelah asesmen profesional\.$/ });
+    if ((await line.count()) < 1) throw new Error("/cases/new tanpa kalimat wajib kasus khusus: " + (await page.innerText("main")).slice(0, 300));
+    await layoutOk();
   });
 
   let docUrl = "";

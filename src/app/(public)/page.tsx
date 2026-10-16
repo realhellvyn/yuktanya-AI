@@ -37,7 +37,7 @@ export default function Home() {
                 <ButtonLink href="/register">Daftar Gratis</ButtonLink>
                 <ButtonLink href="#cara-kerja" variant="secondary">Lihat Cara Kerja</ButtonLink>
               </div>
-              <p className="text-sm text-muted">{AI_DRAFT_LABEL}</p>
+              <p className="text-base text-muted">{AI_DRAFT_LABEL}</p>
             </div>
             <Card aria-hidden="true" className="hidden space-y-3 lg:block">
               <p className="text-sm font-semibold text-muted">Contoh tampilan (bukan dokumen sungguhan)</p>

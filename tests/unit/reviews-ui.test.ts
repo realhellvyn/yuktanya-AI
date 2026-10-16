@@ -78,13 +78,28 @@ describe("ResultPanel", () => {
     expect(h).toContain("belum tersedia sebagai berkas");
   });
   it("DECLINED: menjelaskan kredit pemeriksaan sesuai database dan langkah berikutnya", () => {
-    const h = renderToStaticMarkup(ResultPanel({ review: review({ status: "DECLINED", outcome: "DECLINED", notes: [], verification: null, credit: { status: "AVAILABLE", expiresAt: "2027-01-14T05:00:00.000Z" } }) }));
+    const h = renderToStaticMarkup(ResultPanel({ review: review({ status: "DECLINED", outcome: "DECLINED", notes: [], verification: null, credit: { status: "AVAILABLE", expiresAt: "2027-01-14T05:00:00.000Z" } }), now: new Date("2026-10-16T05:00:00.000Z") }));
     expect(h).toContain("1 kredit pemeriksaan");
     expect(h).toContain("14 Januari 2027");
     expect(h).toContain("tidak membayar lagi");
     expect(h).not.toMatch(/dikembalikan ke rekening|refund/i);
     const used = renderToStaticMarkup(ResultPanel({ review: review({ status: "DECLINED", outcome: "DECLINED", notes: [], verification: null, credit: { status: "CONSUMED", expiresAt: "2027-01-14T05:00:00.000Z" } }) }));
     expect(used).toContain("sudah terpakai");
+  });
+  it("DECLINED: kredit masih AVAILABLE tetapi lewat expires_at dibaca kedaluwarsa, bukan 'berlaku sampai ... otomatis dipakai'", () => {
+    const base = { status: "DECLINED" as const, outcome: "DECLINED" as const, notes: [], verification: null };
+    const lapsed = renderToStaticMarkup(ResultPanel({ review: review({ ...base, credit: { status: "AVAILABLE", expiresAt: "2026-10-01T05:00:00.000Z" } }), now: new Date("2026-10-16T05:00:00.000Z") }));
+    expect(lapsed).toContain("sudah kedaluwarsa");
+    expect(lapsed).toContain("1 Oktober 2026");
+    expect(lapsed).not.toContain("berlaku sampai");
+    expect(lapsed).not.toContain("otomatis dipakai");
+    expect(lapsed).not.toContain("tidak membayar lagi");
+    const live = renderToStaticMarkup(ResultPanel({ review: review({ ...base, credit: { status: "AVAILABLE", expiresAt: "2026-10-31T05:00:00.000Z" } }), now: new Date("2026-10-16T05:00:00.000Z") }));
+    expect(live).toContain("berlaku sampai 31 Oktober 2026");
+    expect(live).toContain("otomatis dipakai");
+    expect(live).not.toContain("kedaluwarsa");
+    const exact = renderToStaticMarkup(ResultPanel({ review: review({ ...base, credit: { status: "AVAILABLE", expiresAt: "2026-10-16T05:00:00.000Z" } }), now: new Date("2026-10-16T05:00:00.000Z") }));
+    expect(exact).toContain("sudah kedaluwarsa");
   });
   it("INCONCLUSIVE: menjelaskan tanpa menjanjikan pengembalian dana", () => {
     const h = renderToStaticMarkup(ResultPanel({ review: review({ outcome: "INCONCLUSIVE", notes: [], verification: null }) }));

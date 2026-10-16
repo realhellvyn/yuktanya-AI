@@ -55,6 +55,30 @@ describe("chooseTemplateTurn", () => {
     expect(await t2.call("tes")).toMatchObject({ ok: true, choice: null });
   });
 
+  it("choice null: catatan katalog + rute Kasus Khusus SELALU ditambahkan, juga bila balasan model menyebut dokumen di luar katalog", async () => {
+    const u = await createUser(pool);
+    const t = setup(u, answer({ reply: "Kami bisa membuatkan Surat Kuasa untuk Anda, ceritakan lebih lanjut.", choice: null }));
+    const r = await t.call("Saya mau memberi kuasa ke adik saya.");
+    expect(r).toMatchObject({ ok: true, choice: null });
+    if (r.ok) {
+      expect(r.reply).toContain("Surat Kuasa");
+      expect(r.reply).toContain("hanya menyediakan");
+      for (const tpl of Object.values(TEMPLATES)) expect(r.reply).toContain(tpl.title);
+      expect(r.reply).toContain("Kasus Khusus");
+    }
+    // Pertanyaan lanjutan biasa (tanpa dokumen apa pun) juga membawa catatan yang sama.
+    const t2 = setup(u, answer({ reply: "Untuk keperluan apa dan dengan siapa?", choice: null }));
+    const r2 = await t2.call("Saya butuh dokumen.");
+    if (r2.ok) { expect(r2.reply).toContain("hanya menyediakan"); expect(r2.reply).toContain("Kasus Khusus"); }
+    // Pilihan sah (katalog atau KASUS_KHUSUS) tidak diberi catatan.
+    const t3 = setup(u, answer({ reply: "NDA cocok.", choice: "NDA" }));
+    const r3 = await t3.call("Saya mau menjaga rahasia resep.");
+    if (r3.ok) expect(r3.reply).not.toContain("hanya menyediakan");
+    const t4 = setup(u, answer({ reply: "Perlu penilaian khusus.", choice: "KASUS_KHUSUS" }));
+    const r4 = await t4.call("Saya digugat cerai.");
+    if (r4.ok) expect(r4.reply).not.toContain("hanya menyediakan");
+  });
+
   it("tidak ada yang cocok → KASUS_KHUSUS menjadi rute penilaian khusus", async () => {
     const u = await createUser(pool);
     const t = setup(u, answer({ reply: "Ini perlu penilaian khusus.", choice: "KASUS_KHUSUS" }));

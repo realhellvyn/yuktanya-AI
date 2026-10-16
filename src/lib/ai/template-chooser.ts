@@ -111,8 +111,9 @@ export async function chooseTemplateTurn(deps: ChooserDeps, raw: { message: unkn
       const choice: ChooserChoice | null =
         proposed && Object.hasOwn(TEMPLATES, proposed) ? (proposed as Category) : proposed === SPECIAL ? "SPECIAL_CASE" : null;
       const said = (result.data.reply ?? "").trim().slice(0, 600);
-      // Model mengusulkan dokumen di luar katalog: tidak dipilih, dan pengguna diberi tahu apa yang tersedia.
-      const note = proposed && !choice ? `Yuktanya saat ini hanya menyediakan: ${available()}. Bila keperluan Anda tidak termasuk, ajukan penilaian khusus.` : "";
+      // Tanpa pilihan sah, catatan katalog SELALU ditambahkan: balasan bebas model yang menyebut dokumen di luar katalog
+      // (juga saat choice null) tidak boleh terbaca seperti tawaran. Pilihan sah (katalog / Kasus Khusus) tidak diberi catatan.
+      const note = choice ? "" : `Yuktanya saat ini hanya menyediakan: ${available()}. Bila keperluan Anda tidak termasuk, ajukan penilaian khusus lewat Kasus Khusus.`;
       const out = [said || "Ceritakan sedikit lagi: dokumen ini untuk keperluan apa, dan dengan siapa?", note].filter(Boolean).join("\n\n");
       return { ok: true, reply: out, choice };
     } catch (e) {

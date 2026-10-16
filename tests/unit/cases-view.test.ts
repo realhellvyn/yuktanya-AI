@@ -14,6 +14,15 @@ describe("tampilan kasus khusus", () => {
     expect(caseErrorText(undefined)).toBeNull();
     expect(caseErrorText("ANEH")).toBe("Terjadi kendala. Coba lagi.");
   });
+  it("kode dari alamat (?e=) tidak pernah membaca properti bawaan objek (halaman /cases/[id], /partner/cases/[id], /admin/cases)", () => {
+    for (const hostile of ["__proto__", "constructor", "toString", "hasOwnProperty", "valueOf"]) {
+      expect(caseErrorText(hostile)).toBe("Terjadi kendala. Coba lagi.");
+    }
+    expect(caseErrorText("NOT_FOUND")).toBe("Kasus atau dokumen tidak ditemukan.");
+    expect(caseErrorText("SPECIAL_CASE_OPEN")).toBe(CASE_ERROR_TEXT.SPECIAL_CASE_OPEN);
+    expect(caseErrorText("")).toBeNull();
+    expect(typeof caseErrorText("__proto__")).toBe("string");
+  });
   it("tahapan mengikuti status", () => {
     expect(caseTimeline("SUBMITTED").map((s) => s.state)).toEqual(["done", "current", "todo", "todo"]);
     expect(caseTimeline("QUOTED").map((s) => s.state)).toEqual(["done", "done", "done", "current"]);

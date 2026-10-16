@@ -1,6 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }) }));
 import NotFound from "@/app/not-found";
 import ErrorPage from "@/app/error";
 import GlobalError from "@/app/global-error";

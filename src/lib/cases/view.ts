@@ -1,4 +1,5 @@
 // Teks dan logika tampilan Kasus Hukum Khusus (murni, dapat diuji unit). Bahasa Indonesia sederhana.
+import { fixedText } from "@/lib/query-text";
 import type { CaseErrorCode, CaseStatus } from "./service";
 
 export const CASE_STATUS_LABEL: Record<CaseStatus, string> = {
@@ -29,8 +30,9 @@ export const CASE_ERROR_TEXT: Record<CaseErrorCode | "SPECIAL_CASE_OPEN", string
   INVALID_FIRM: "Firma tidak ditemukan.",
   SPECIAL_CASE_OPEN: "Dokumen ini memerlukan penilaian khusus. Review Standar tidak tersedia selama penilaian khusus berjalan.",
 };
-export const caseErrorText = (code: string | undefined | null): string | null =>
-  code ? (CASE_ERROR_TEXT as Record<string, string>)[code] ?? "Terjadi kendala. Coba lagi." : null;
+// Kode bisa datang dari alamat (?e=): hanya properti milik sendiri yang dibaca ("__proto__", "toString" -> kalimat umum).
+export const caseErrorText = (code: unknown): string | null =>
+  code ? fixedText(CASE_ERROR_TEXT, code) ?? "Terjadi kendala. Coba lagi." : null;
 
 export type Step = { label: string; state: "done" | "current" | "todo" };
 // Tahapan untuk pemilik: Diajukan → Dinilai firma → Penawaran → Keputusan Anda.
