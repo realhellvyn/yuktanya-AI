@@ -50,6 +50,7 @@ export interface DocumentsService {
   list(userId: string): Promise<DocSummary[]>;
   get(userId: string, documentId: string): Promise<DocDetail | null>;
   getVersion(userId: string, versionId: string): Promise<VersionDetail | null>;
+  clone(userId: string, versionId: string, key: string): Promise<{ documentId: string } | null>;
   exportVersion(userId: string, versionId: string, format: ExportFormat): Promise<{ exportId: string; sha256: string; byteSize: number } | null>;
   downloadExport(userId: string, exportId: string): Promise<{ bytes: Uint8Array; filename: string; contentType: string } | null>;
 }
@@ -163,6 +164,16 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
       const r = rows[0];
       if (!r) return null;
       return { ...toVersion(r), documentId: r.document_id, canonicalText: r.canonical_text, doc: parseCanonical(r.canonical_text), structuredData: r.structured_data };
+    },
+
+    async clone(userId, versionId, key) {
+      try {
+        const { rows } = await pool.query("select clone_document($1, $2, $3) as id", [userId, versionId, key]);
+        return { documentId: rows[0].id };
+      } catch (e) {
+        if (isNotFound(e)) return null;
+        throw e;
+      }
     },
 
     async exportVersion(userId, versionId, format) {

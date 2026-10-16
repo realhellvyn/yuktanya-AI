@@ -121,3 +121,15 @@ export async function startNewVersionAction(formData: FormData): Promise<void> {
   }
   redirect(`/workspace/${documentId}?step=ringkasan`);
 }
+
+export async function cloneAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+  const c = await documentsService().clone(userId, str(formData, "versionId"), randomUUID()).catch((e: unknown) => {
+    if (e instanceof Error && e.message.includes("TOO_MANY_DRAFTS")) {
+      redirect(`/workspace/new?error=${encodeURIComponent("Anda punya terlalu banyak draf yang belum selesai. Selesaikan salah satunya dulu.")}`);
+    }
+    throw e;
+  });
+  if (!c) notFound();
+  redirect(`/workspace/${c.documentId}?step=ringkasan`);
+}

@@ -105,3 +105,10 @@ export const downloadHandler = guarded(["exportId"], async (userId, deps, _req, 
     },
   });
 });
+
+export const cloneHandler = guarded(["versionId"], async (userId, deps, req, p) => {
+  const key = idemKey(req);
+  if (!key) return invalid();
+  const r = await deps.service.clone(userId, p.versionId, key);
+  return r ? json(r, 201) : notFound();
+});

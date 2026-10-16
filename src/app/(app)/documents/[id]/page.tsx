@@ -5,7 +5,7 @@ import { VersionList } from "@/components/documents/version-list";
 import { diffRendered } from "@/lib/documents/diff";
 import { documentsService } from "@/lib/documents/runtime";
 import { requireUserId } from "@/lib/documents/session";
-import { exportAction, startNewVersionAction } from "../actions";
+import { cloneAction, exportAction, startNewVersionAction } from "../actions";
 
 // Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
 export const dynamic = "force-dynamic";
@@ -60,6 +60,10 @@ export default async function DocumentPage({ params, searchParams }: { params: P
               <input type="hidden" name="documentId" value={id} />
               <input type="hidden" name="versionId" value={selected.id} />
               <button type="submit" className="min-h-12 rounded-lg bg-blue-600 px-5 font-semibold text-white">Buat versi baru dari versi ini</button>
+            </form>
+            <form action={cloneAction}>
+              <input type="hidden" name="versionId" value={selected.id} />
+              <button type="submit" className="min-h-12 rounded-lg border border-slate-400 bg-white px-5 font-medium">Salin menjadi dokumen baru</button>
             </form>
           </div>
           {q.exported && <p role="status"><a className="text-blue-700 underline" href={`/api/documents/exports/${q.exported}`}>Berkas siap. Tekan di sini untuk mengunduh.</a></p>}
