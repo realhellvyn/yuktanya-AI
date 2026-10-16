@@ -20,7 +20,8 @@ export function progress(t: Template, data: Data): { done: number; total: number
   return { done, total: required.length, percent: required.length ? Math.round((done / required.length) * 100) : 100 };
 }
 
-export function summarize(t: Template, data: Data): { label: string; value: string }[] {
+export function summarize(t: Template, input: Data): { label: string; value: string }[] {
+  const data = t.normalize(input);
   return t.fields.map((f) => {
     const v = data[f.key];
     if (blank(v)) return { label: f.label, value: f.required ? "(belum diisi)" : "(tidak diisi)" };

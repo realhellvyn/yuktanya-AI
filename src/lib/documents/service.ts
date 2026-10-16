@@ -122,9 +122,12 @@ export function createPgDocumentsService(pool: Pool, env: Env = process.env as E
       const doc = await ownedTemplate(userId, documentId);
       if (!doc) throw new NotFoundError();
       // Hanya field skema dengan nilai string/angka yang disimpan; sisanya dibuang.
-      const known = new Set(TEMPLATES[doc.category].fields.map((f) => f.key));
-      const clean: Data = {};
-      for (const [k, v] of Object.entries(data)) if (known.has(k) && (typeof v === "string" || typeof v === "number")) clean[k] = v;
+      const t = TEMPLATES[doc.category];
+      const known = new Set(t.fields.map((f) => f.key));
+      const picked: Data = {};
+      for (const [k, v] of Object.entries(data)) if (known.has(k) && (typeof v === "string" || typeof v === "number")) picked[k] = v;
+      // Bentuk baku yang disimpan (mis. "Pengadilan Negeri Semarang" → "Semarang"), sama untuk formulir dan percakapan.
+      const clean = t.normalize(picked);
       try {
         const { rows } = await pool.query("select save_draft($1, $2, $3, $4) as rev", [userId, documentId, JSON.stringify(clean), revision]);
         return { revision: rows[0].rev };

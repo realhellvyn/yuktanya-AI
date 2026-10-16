@@ -4,6 +4,7 @@ import { pks } from "@/lib/documents/templates/pks";
 import { utangPiutang } from "@/lib/documents/templates/utang-piutang";
 import { templateHash, templateHashInput } from "@/lib/documents/templates/base";
 import type { Data, Template } from "@/lib/documents/types";
+import { renderDocument, renderPartial } from "@/lib/documents/render";
 
 const valid: Record<string, { t: Template; data: Data }> = {
   NDA: {
@@ -122,6 +123,52 @@ describe("aturan lintas field", () => {
     if (r.ok) {
       expect(r.data.disclosingParty).toBe("Sinta Dewi");
       expect(r.data).not.toHaveProperty("injected");
+    }
+  });
+});
+
+// Temuan uji langsung 2026-10-16 (N6): "Pengadilan Negeri Semarang" tersimpan apa adanya → klausul
+// "…melalui Pengadilan Negeri Pengadilan Negeri Semarang." pada dokumen yang dinyatakan siap.
+describe("kota pengadilan: awalan yang sudah ditulis klausul dibuang, nama kota disimpan", () => {
+  const all: [string, Template, Data][] = Object.entries(valid).map(([n, v]) => [n, v.t, v.data]);
+
+  it.each(all)("%s: 'PN Semarang', 'Pengadilan Negeri Semarang', 'pn semarang', 'Kota Semarang' → 'Semarang'", (_n, t, data) => {
+    for (const raw of ["PN Semarang", "Pengadilan Negeri Semarang", "pn semarang", "Kota Semarang", "PN. Semarang", "Pengadilan Negeri Kota Semarang", "pengadilan semarang", "  Semarang  ", "semarang"]) {
+      expect(t.normalize({ disputeCity: raw }).disputeCity).toBe("Semarang");
+      const r = t.validate({ ...data, disputeCity: raw });
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.data.disputeCity).toBe("Semarang");
+    }
+  });
+
+  it.each(all)("%s: nama kota tanpa awalan tetap; nilai yang hanya berisi awalan tidak dikosongkan", (_n, t) => {
+    expect(t.normalize({ disputeCity: "Jakarta Selatan" }).disputeCity).toBe("Jakarta Selatan");
+    expect(t.normalize({ disputeCity: "Pengadilan Negeri Jakarta Selatan" }).disputeCity).toBe("Jakarta Selatan");
+    expect(t.normalize({ disputeCity: "Kotabaru" }).disputeCity).toBe("Kotabaru");
+    expect(t.normalize({ disputeCity: "Pengadilan Negeri" }).disputeCity).toBe("Pengadilan Negeri");
+    // Kolom lain tidak disentuh.
+    const other = t.fields.find((f) => f.kind === "text" && f.key !== "disputeCity")!;
+    expect(t.normalize({ [other.key]: "pn semarang" })[other.key]).toBe("pn semarang");
+  });
+
+  it.each(all)("%s: dokumen dan pratinjau menulis 'Pengadilan Negeri' tepat satu kali", (_n, t, data) => {
+    for (const raw of ["Pengadilan Negeri Semarang", "PN Semarang", "pn semarang", "Kota Semarang", "Semarang"]) {
+      const doc = renderDocument(t, { ...data, disputeCity: raw }, "DRAFT");
+      const dispute = doc.blocks.find((b) => b.id === "dispute")!.text;
+      expect(dispute).toContain("melalui Pengadilan Negeri Semarang.");
+      expect(dispute.match(/Pengadilan Negeri/g)).toHaveLength(1);
+      const partial = renderPartial(t, { ...data, disputeCity: raw }).find((r) => r.id === "dispute")!.text;
+      expect(partial).toContain("melalui Pengadilan Negeri Semarang.");
+      expect(partial.match(/Pengadilan Negeri/g)).toHaveLength(1);
+    }
+  });
+
+  it.each(all)("%s: setiap {{kolom}} yang di klausul didahului 'Pengadilan Negeri' punya daftar awalan", (_n, t) => {
+    for (const c of t.clauses) {
+      for (const m of c.text.matchAll(/Pengadilan Negeri \{\{(\w+)\}\}/g)) {
+        const f = t.fields.find((x) => x.key === m[1])!;
+        expect(f.prefixes).toEqual(expect.arrayContaining(["Pengadilan Negeri", "PN", "Pengadilan", "Kota"]));
+      }
     }
   });
 });

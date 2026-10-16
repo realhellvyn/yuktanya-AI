@@ -12,6 +12,9 @@ export type FieldSpec = {
   kind: FieldKind;
   required: boolean;
   options?: string[];
+  // Awalan yang sudah ditulis klausul tepat di depan nilai ini (mis. "Pengadilan Negeri {{disputeCity}}"). Bila pengguna
+  // ikut menulisnya ("PN Semarang"), awalan dibuang agar tercetak sekali; yang disimpan hanya nama kotanya.
+  prefixes?: string[];
 };
 
 // Klausul dirender hanya bila field `whenKey` (jika ada) terisi. Teks memuat {{key}}.
@@ -31,5 +34,7 @@ export type Template = {
   clauses: ClauseSpec[];
   reminders: ReminderSpec[];
   validate(d: Data): ValidationResult;
+  // Bentuk baku nilai sebelum disimpan/dirender (mis. awalan kolom dibuang). Tidak menambah isi baru.
+  normalize(d: Data): Data;
   contentHash(): string;
 };

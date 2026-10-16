@@ -1,6 +1,6 @@
 // SINTETIS: teks klausul adalah placeholder netral, menunggu persetujuan mitra hukum. Bukan nasihat hukum.
 import { addMonthsIso } from "../format";
-import { defineTemplate, normalizeName } from "./base";
+import { COURT_PREFIXES, defineTemplate, normalizeName } from "./base";
 
 export const nda = defineTemplate({
   id: "nda",
@@ -14,7 +14,7 @@ export const nda = defineTemplate({
     { key: "confidentialInfo", label: "Informasi apa yang dirahasiakan", example: "Contoh: daftar pelanggan dan harga modal", help: "Semakin jelas, semakin mudah dipahami kedua pihak.", kind: "longtext", required: true },
     { key: "purpose", label: "Untuk apa informasi itu boleh dipakai", example: "Contoh: menilai rencana kerja sama", help: "Pihak penerima hanya boleh memakainya untuk tujuan ini.", kind: "longtext", required: true },
     { key: "termMonths", label: "Berapa bulan kerahasiaan berlaku", example: "Contoh: 24", help: "Dihitung sejak tanggal perjanjian.", kind: "integer", required: true },
-    { key: "disputeCity", label: "Kota pengadilan bila terjadi sengketa", example: "Contoh: Jakarta Selatan", help: "Dipakai bila musyawarah tidak berhasil.", kind: "text", required: true },
+    { key: "disputeCity", label: "Kota pengadilan bila terjadi sengketa", example: "Contoh: Jakarta Selatan", help: "Dipakai bila musyawarah tidak berhasil.", kind: "text", required: true, prefixes: COURT_PREFIXES },
     { key: "additionalNotes", label: "Catatan tambahan", example: "Boleh dikosongkan", help: "Hanya tampil di dokumen bila diisi.", kind: "longtext", required: false },
   ],
   clauses: [

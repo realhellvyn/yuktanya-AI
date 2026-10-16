@@ -70,6 +70,8 @@ Pengguna terdaftar memilih PKS, Utang Piutang, atau NDA (atau "Saya belum tahu" 
 
 Variabel lingkungan: `DOCUMENT_BLOB_DIR` (berkas ekspor lokal, default `.data/blobs`), `ALLOW_UNAPPROVED_TEMPLATES=true` (hanya di luar produksi; ketiga template berstatus DRAFT sintetis menunggu persetujuan mitra hukum), `SUPABASE_STORAGE_BUCKET` (produksi; adapter belum diverifikasi).
 Di produksi template hanya dipakai bila baris `document_templates` berstatus `APPROVED` dengan `content_hash` yang sama dengan kode.
+Kota pengadilan disimpan sebagai nama kota saja ("PN Semarang", "Pengadilan Negeri Semarang", "Kota Semarang" → "Semarang") karena klausul sudah menulis "Pengadilan Negeri"; aturan ini ikut hash template (`RENDER_VERSION` 3).
+Balasan AI percakapan dokumen dicocokkan dengan draf tersimpan di server (`src/lib/ai/reply-guard.ts`): klaim "saya catat …" atas nilai yang tidak tersimpan, pertanyaan untuk kolom yang sudah terisi, dan "dokumen siap" padahal belum diganti kalimat dari keadaan server; nama kolom internal dan format tanggal mesin tidak pernah tampil. Skenario evaluasi AI untuk uji langsung berikutnya: `tests/fixtures/ai-eval-scenarios.json`.
 
 ## Vault aktif (Fase 2b)
 Fitur berbagi, pengingat, dan paket bukti dikunci per plan lewat `feature_plan_map` (usulan awal: hanya Member; dapat diubah platform admin di `/admin/features`). Link berbagi memakai token acak yang hanya disimpan sebagai hash; pihak lawan membaca di `/s/[token]` tanpa akun dan dapat memberi konfirmasi baca lewat kode email (bukan tanda tangan elektronik). Email dikirim lewat outbox; pengirim nyata belum dipilih (mock saja), dan penjadwal memanggil `POST /api/jobs/outbox` dengan `CRON_SECRET`.

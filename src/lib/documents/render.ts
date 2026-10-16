@@ -69,7 +69,8 @@ export function parseCanonical(text: string): RenderedDoc {
 export type PartialRow = { id: string; heading?: string; text: string; complete: boolean };
 
 // Pratinjau saat mengisi: hanya klausul yang seluruh isiannya sudah ada. Bukan dokumen resmi; tidak dipakai untuk membuat versi.
-export function renderPartial(t: Template, data: Data): PartialRow[] {
+export function renderPartial(t: Template, input: Data): PartialRow[] {
+  const data = t.normalize(input);
   const byKey = new Map(t.fields.map((f) => [f.key, f]));
   const blank = (v: unknown) => v === undefined || v === null || (typeof v === "string" && v.trim() === "");
   const rows: PartialRow[] = [];

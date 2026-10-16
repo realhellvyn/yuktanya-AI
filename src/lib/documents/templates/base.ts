@@ -4,7 +4,7 @@ import { stableStringify } from "../stable";
 import { RENDER_VERSION } from "../version";
 import type { ClauseSpec, Data, FieldSpec, Template, ValidationResult } from "../types";
 
-type Def = Omit<Template, "validate" | "contentHash"> & { cross?: (d: Data) => Record<string, string> };
+type Def = Omit<Template, "validate" | "normalize" | "contentHash"> & { cross?: (d: Data) => Record<string, string> };
 
 type HashSource = Pick<Template, "id" | "version" | "fields" | "clauses" | "title" | "category">;
 
@@ -19,6 +19,28 @@ export function templateHash(t: HashSource): string {
 }
 
 export const normalizeName = (s: unknown): string => String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+
+// Awalan nama pengadilan yang sudah ada di klausul "Pengadilan Negeri {{disputeCity}}".
+export const COURT_PREFIXES = ["Pengadilan Negeri", "PN", "Pengadilan", "Kota"];
+
+const escRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// Membuang awalan (berulang, tanpa membedakan huruf besar; "PN." juga) lalu, bila sisanya huruf kecil semua,
+// menulis tiap kata berhuruf besar di awal ("pn semarang" → "Semarang"). Nilai yang hanya berisi awalan dibiarkan.
+export function normalizeFieldValue(f: FieldSpec, v: string | number): string | number {
+  if (typeof v !== "string" || !f.prefixes?.length) return v;
+  let s = v.replace(/\s+/g, " ").trim();
+  if (s === "" || f.prefixes.some((p) => p.toLowerCase() === s.toLowerCase())) return v;
+  const heads = [...f.prefixes].sort((a, b) => b.length - a.length).map((p) => new RegExp(`^${escRe(p).replace(/ /g, "\\s+")}\\.?\\s+`, "i"));
+  for (let re = heads.find((h) => h.test(s)); re; re = heads.find((h) => h.test(s))) s = s.replace(re, "").trim();
+  return s === s.toLowerCase() ? s.replace(/(^|[\s-])(\p{Ll})/gu, (_m, a: string, c: string) => a + c.toUpperCase()) : s;
+}
+
+export function normalizeData(fields: FieldSpec[], d: Data): Data {
+  const out: Data = { ...d };
+  for (const f of fields) if (out[f.key] !== undefined) out[f.key] = normalizeFieldValue(f, out[f.key]);
+  return out;
+}
 
 const isBlank = (v: unknown) => v === undefined || v === null || (typeof v === "string" && v.trim() === "");
 
@@ -54,9 +76,10 @@ export function defineTemplate(def: Def): Template {
   const { cross, ...base } = def;
   const t: Template = {
     ...base,
-    validate(d: Data): ValidationResult {
+    validate(input: Data): ValidationResult {
       const errors: Record<string, string> = {};
       const out: Data = {};
+      const d = normalizeData(base.fields, input);
       for (const f of base.fields) {
         const v = d[f.key];
         if (isBlank(v)) {
@@ -70,6 +93,7 @@ export function defineTemplate(def: Def): Template {
       if (cross) for (const [k, m] of Object.entries(cross(out))) if (!errors[k]) errors[k] = m;
       return Object.keys(errors).length ? { ok: false, errors } : { ok: true, data: out };
     },
+    normalize: (d: Data) => normalizeData(base.fields, d),
     contentHash: () => templateHash(base),
   };
   return t;

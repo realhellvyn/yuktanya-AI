@@ -1,5 +1,5 @@
 // SINTETIS: teks klausul adalah placeholder netral, menunggu persetujuan mitra hukum. Bukan nasihat hukum.
-import { defineTemplate, normalizeName } from "./base";
+import { COURT_PREFIXES, defineTemplate, normalizeName } from "./base";
 
 export const pks = defineTemplate({
   id: "pks",
@@ -15,7 +15,7 @@ export const pks = defineTemplate({
     { key: "endDate", label: "Tanggal kerja sama berakhir", example: "Contoh: 1 Februari 2027", help: "Harus setelah tanggal mulai.", kind: "date", required: true },
     { key: "valueIdr", label: "Nilai kerja sama (rupiah)", example: "Contoh: Rp15.000.000", help: "Tulis angka saja, tanpa desimal.", kind: "idr", required: true },
     { key: "paymentDueDays", label: "Pembayaran dilakukan berapa hari setelah tagihan", example: "Contoh: 14", help: "Jumlah hari kalender.", kind: "integer", required: true },
-    { key: "disputeCity", label: "Kota pengadilan bila terjadi sengketa", example: "Contoh: Bandung", help: "Dipakai bila musyawarah tidak berhasil.", kind: "text", required: true },
+    { key: "disputeCity", label: "Kota pengadilan bila terjadi sengketa", example: "Contoh: Bandung", help: "Dipakai bila musyawarah tidak berhasil.", kind: "text", required: true, prefixes: COURT_PREFIXES },
   ],
   clauses: [
     { id: "parties", heading: "Para Pihak", text: "Perjanjian ini dibuat pada {{signingDate}} antara {{partyA}} (\"Pihak Pertama\") dan {{partyB}} (\"Pihak Kedua\")." },
