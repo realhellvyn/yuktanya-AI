@@ -14,16 +14,17 @@ end;
 $$;
 
 create function public.admin_list_partners(p_admin uuid)
-returns table (firm_id uuid, firm_name text, is_default boolean, user_id uuid, role text, authorization_id uuid, valid_from date, valid_to date, revoked_at timestamptz)
+returns table (firm_id uuid, firm_name text, is_default boolean, user_id uuid, email text, role text, authorization_id uuid, valid_from date, valid_to date, revoked_at timestamptz)
 language plpgsql stable security definer set search_path = public as $$
 begin
   if not public.is_platform_admin(p_admin) then
     raise exception 'FORBIDDEN';
   end if;
   return query
-    select f.id, f.name, f.is_default, m.user_id, m.role, a.id, a.valid_from, a.valid_to, a.revoked_at
+    select f.id, f.name, f.is_default, m.user_id, u.email::text, m.role, a.id, a.valid_from, a.valid_to, a.revoked_at
       from public.firms f
       left join public.firm_members m on m.firm_id = f.id
+      left join auth.users u on u.id = m.user_id
       left join public.professional_authorizations a on a.user_id = m.user_id and a.firm_id = m.firm_id
      order by f.created_at, f.id, m.role, m.user_id, a.created_at;
 end;

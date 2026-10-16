@@ -135,7 +135,7 @@ describe("admin_find_user dan admin_list_partners", () => {
     expect((await pool.query("select admin_find_user($1, $2) as id", [f.admin, email.toUpperCase()])).rows[0].id).toBe(r.reviewer);
     expect((await pool.query("select admin_find_user($1, 'tidak@ada.test') as id", [f.admin])).rows[0].id).toBeNull();
     const rows = (await pool.query("select * from admin_list_partners($1)", [f.admin])).rows;
-    expect(rows.some((x) => x.user_id === r.reviewer && x.authorization_id === r.authId && x.revoked_at === null)).toBe(true);
+    expect(rows.some((x) => x.user_id === r.reviewer && x.email === email && x.authorization_id === r.authId && x.revoked_at === null)).toBe(true);
     await expect(pool.query("select * from admin_list_partners($1)", [r.reviewer])).rejects.toThrow(/FORBIDDEN/);
     void at;
   });
