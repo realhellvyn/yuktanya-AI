@@ -1,8 +1,8 @@
-import { timingSafeEqual } from "node:crypto";
 import type { Pool } from "pg";
 import type { BlobStore } from "@/lib/documents/blob";
 import { ForbiddenError } from "@/lib/documents/handlers";
 import { IntegrityError } from "@/lib/documents/service";
+import { cronAuthError } from "@/lib/jobs/cron-auth";
 import { downloadEvidencePack } from "./evidence";
 import { processOutbox, type EmailSender } from "./outbox";
 
@@ -13,9 +13,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export async function outboxJobHandler(deps: { pool: Pool; sender: EmailSender | null; secret?: string }, req: Request): Promise<Response> {
   if (!deps.secret || deps.secret.length < 16) return json({ code: "NOT_CONFIGURED" }, 503);
   if (!deps.sender) return json({ code: "NO_EMAIL_PROVIDER" }, 503);
-  const given = Buffer.from((req.headers.get("authorization") ?? "").replace(/^Bearer /, ""));
-  const expected = Buffer.from(deps.secret);
-  if (given.length !== expected.length || !timingSafeEqual(given, expected)) return json({ code: "UNAUTHORIZED" }, 401);
+  const denied = cronAuthError(deps.secret, req);
+  if (denied) return denied;
   return json(await processOutbox(deps.pool, deps.sender));
 }
 

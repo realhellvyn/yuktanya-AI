@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, PageHeading } from "@/components/ui/card";
+import { buttonClass } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { createPgUsageStore } from "@/lib/ai/quota";
 import { getMembershipState } from "@/lib/billing/membership";
@@ -65,7 +66,19 @@ export default async function SettingsPage() {
         </Card>
       </section>
 
-      {/* Seam Task 8: bagian "Unduh data saya" dan "Hapus akun" ditambahkan di sini setelah aksinya ada (jangan tampilkan tombol palsu). */}
+      <section aria-labelledby="data-anda">
+        <Card className="space-y-4">
+          <h2 id="data-anda" className="text-xl font-bold text-navy">Data Anda</h2>
+          <div className="space-y-2">
+            <p>Unduh salinan data Anda dalam satu berkas (JSON): profil, dokumen dan isinya, percakapan, unggahan, pesanan, dan Kasus Hukum Khusus.</p>
+            <a className={buttonClass("secondary")} href="/settings/export" download data-testid="export-link">Unduh data saya</a>
+          </div>
+          <div className="space-y-2 border-t border-line pt-4">
+            <p>Hapus akun beserta dokumen dan percakapan Anda. Sebelum menghapus, Anda akan melihat apa yang dihapus dan apa yang tetap disimpan.</p>
+            <Link className={link} href="/settings/hapus-akun">Hapus akun</Link>
+          </div>
+        </Card>
+      </section>
     </main>
   );
 }

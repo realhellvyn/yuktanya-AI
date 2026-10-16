@@ -72,6 +72,7 @@ const TOPICS: { id: string; title: string; body: React.ReactNode }[] = [
       <ul className="list-disc space-y-1.5 pl-6">
         <li>Lupa kata sandi: pakai Lupa kata sandi di halaman masuk.</li>
         <li>Email konfirmasi belum datang: periksa folder spam, lalu kirim ulang dari halaman masuk atau daftar.</li>
+        <li>Unduh salinan data Anda atau hapus akun: masuk, lalu buka Pengaturan.</li>
       </ul>
     ),
   },

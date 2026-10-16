@@ -7,7 +7,10 @@ export type SessionRoles = { userId: string; roles: Role[] };
 export async function fetchSessionRoles(supabase: SupabaseClient): Promise<SessionRoles | null> {
   const { data } = await supabase.auth.getUser();
   if (!data.user) return null;
-  const { data: rows } = await supabase.from("user_roles").select("role");
+  const { data: rows, error } = await supabase.from("user_roles").select("role");
+  // Setiap akun hidup punya minimal peran 'user' (trigger pendaftaran). Tanpa peran sama sekali = akun sudah dihapus
+  // (erase_account mencabut semua peran), diperlakukan seperti tidak masuk walau token Auth masih sah.
+  if (!error && Array.isArray(rows) && rows.length === 0) return null;
   return { userId: data.user.id, roles: (rows ?? []).map((r) => r.role as Role) };
 }
 

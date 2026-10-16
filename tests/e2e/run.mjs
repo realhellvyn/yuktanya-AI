@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { startFakeLlm, startFakeSupabase } from "./fake-supabase.mjs";
+import { SERVICE_KEY, startFakeLlm, startFakeSupabase } from "./fake-supabase.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? "/opt/node22/lib/node_modules/playwright");
@@ -23,7 +23,7 @@ const fake = await startFakeSupabase({ databaseUrl: process.env.TEST_DATABASE_UR
 const llm = await startFakeLlm({ port: 54998 });
 const env = {
   ...process.env, PORT: String(APP),
-  NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${FAKE}`, NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon",
+  NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${FAKE}`, NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: SERVICE_KEY,
   DATABASE_URL: process.env.TEST_DATABASE_URL, AI_MOCK_MODE: "false", FREELLM_BASE_URL: "http://127.0.0.1:54998", FREELLM_API_KEY: "uji", ALLOW_UNAPPROVED_TEMPLATES: "true",
   NEXT_PUBLIC_APP_URL: `http://localhost:${APP}`, DOCUMENT_BLOB_DIR: mkdtempSync(path.join(tmpdir(), "yk-blob-")),
   MANUAL_PAYMENT_INSTRUCTIONS: "Transfer ke rekening uji 000-000", NEXT_TELEMETRY_DISABLED: "1",
@@ -39,7 +39,7 @@ try {
   for (let i = 0; i < 90; i++) { try { const r = await fetch(`http://localhost:${APP}/login`); if (r.ok) break; } catch {} await new Promise((r) => setTimeout(r, 1000)); }
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM ?? undefined });
   const viewports = JSON.parse(process.env.VIEWPORTS ?? '[{"name":"desktop","width":1280,"height":800}]');
-  const files = (process.env.JOURNEY ?? "./journey.mjs,./journey-roles.mjs,./journey-public.mjs,./journey-ui-roles.mjs,./journey-cases.mjs,./journey-ai-review.mjs,./journey-admin-analytics.mjs").split(",");
+  const files = (process.env.JOURNEY ?? "./journey.mjs,./journey-roles.mjs,./journey-public.mjs,./journey-ui-roles.mjs,./journey-cases.mjs,./journey-ai-review.mjs,./journey-admin-analytics.mjs,./journey-data-rights.mjs").split(",");
   for (const file of files) {
     const mod = await import(file);
     for (const vp of viewports.filter((v) => !mod.onlyViewport || v.name === mod.onlyViewport)) {

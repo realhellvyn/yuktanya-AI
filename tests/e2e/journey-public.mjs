@@ -95,7 +95,9 @@ export async function journey({ page, step, shot, base, vp, issues, fake, newAct
     const text = await ap.innerText("body");
     if (!(await ap.locator("[data-testid=account-email]").innerText()).includes(user)) throw new Error("email akun tidak tampil");
     for (const m of ["Akun", "Privasi", "Gratis", "Pesan AI: 20 dari 20", "Dokumen baru: 1 dari 1"]) if (!text.includes(m)) throw new Error("penanda hilang: " + m);
-    if (/Hapus akun|Unduh data/.test(text)) throw new Error("tombol palsu muncul sebelum Task 8");
+    // Task 8: kedua aksi kini nyata (diuji ujung-ke-ujung di journey-data-rights.mjs); pastikan menuju rute yang benar.
+    if (!(await ap.locator("a[href='/settings/export']", { hasText: "Unduh data saya" }).count())) throw new Error("tautan Unduh data saya hilang");
+    if (!(await ap.locator("a[href='/settings/hapus-akun']", { hasText: "Hapus akun" }).count())) throw new Error("tautan Hapus akun hilang");
     const over = await ap.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     if (over > 1) throw new Error("meluap " + over + "px");
     await actor.shot("p-settings");

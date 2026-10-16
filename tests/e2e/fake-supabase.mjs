@@ -7,6 +7,7 @@ const { Pool } = require("pg");
 
 const b64 = (o) => Buffer.from(typeof o === "string" ? o : JSON.stringify(o)).toString("base64url");
 const SECRET = "e2e-secret";
+export const SERVICE_KEY = "service-e2e";
 const sign = (payload) => {
   const h = b64({ alg: "HS256", typ: "JWT" }), p = b64(payload);
   return `${h}.${p}.${createHmac("sha256", SECRET).update(`${h}.${p}`).digest("base64url")}`;
@@ -23,6 +24,7 @@ export function startFakeSupabase({ databaseUrl, port }) {
   const users = new Map(); // email -> { id, email, password }
   const outbox = []; // email palsu yang "terkirim": { kind: "recover" | "resend", email }
   const codes = new Map(); // kode PKCE pemulihan -> email
+  const deleted = []; // akun yang dihapus lewat Admin API: { id, email, soft }
   const session = (u, method = "password") => {
     const exp = Math.floor(Date.now() / 1000) + 3600;
     const user = { id: u.id, aud: "authenticated", role: "authenticated", email: u.email, app_metadata: { provider: "email" }, user_metadata: {}, created_at: new Date().toISOString() };
@@ -86,6 +88,18 @@ export function startFakeSupabase({ databaseUrl, port }) {
         return u ? send(res, 200, session(u).user) : send(res, 401, { code: 401, error_code: "bad_jwt", msg: "invalid JWT" });
       }
       if (url.pathname === "/auth/v1/logout") return send(res, 204, {});
+      // Admin API (service role): hapus akun. Meniru soft delete Supabase: login & identitas hilang, baris auth.users tetap
+      // (ID tetap sebagai rujukan anonim untuk pesanan/pembayaran) dengan email dikosongkan.
+      const adminUser = /^\/auth\/v1\/admin\/users\/([0-9a-f-]{36})$/.exec(url.pathname);
+      if (adminUser && req.method === "DELETE") {
+        if ((req.headers.authorization ?? "") !== `Bearer ${SERVICE_KEY}`) return send(res, 401, { code: 401, error_code: "not_admin", msg: "User not allowed" });
+        const u = [...users.values()].find((x) => x.id === adminUser[1]);
+        if (!u) return send(res, 404, { code: 404, error_code: "user_not_found", msg: "User not found" });
+        users.delete(u.email);
+        deleted.push({ id: u.id, email: u.email, soft: Boolean((await body(req)).should_soft_delete) });
+        await pool.query("update auth.users set email = null where id = $1", [u.id]);
+        return send(res, 200, session(u).user);
+      }
       if (url.pathname === "/rest/v1/user_roles") {
         const pl = verify((req.headers.authorization ?? "").replace(/^Bearer /, ""));
         if (!pl) return send(res, 401, { message: "JWT" });
@@ -97,7 +111,7 @@ export function startFakeSupabase({ databaseUrl, port }) {
       send(res, 500, { message: String(e) });
     }
   });
-  return new Promise((r) => server.listen(port, "127.0.0.1", () => r({ server, outbox, close: () => { server.close(); return pool.end(); } })));
+  return new Promise((r) => server.listen(port, "127.0.0.1", () => r({ server, outbox, deleted, close: () => { server.close(); return pool.end(); } })));
 }
 
 // LLM palsu (pengganti FreeLLMAPI): menjawab JSON dari pesan terakhir pengguna lewat aturan sederhana, dan sengaja

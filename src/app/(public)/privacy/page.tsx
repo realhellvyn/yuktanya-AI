@@ -52,7 +52,13 @@ export default function Page() {
           title: "Jangka waktu penyimpanan dan penghapusan",
           body: (
             <>
-              <p>Jangka waktu penyimpanan data belum ditetapkan. Permintaan ekspor dan penghapusan akun belum tersedia di aplikasi dan akan ditambahkan setelah kebijakannya disetujui.</p>
+              <p>Jangka waktu penyimpanan resmi belum ditetapkan. Yang sudah berjalan di sistem saat ini:</p>
+              <ul className={ul}>
+                <li>Catatan percobaan pemakaian AI (untuk membatasi permintaan berlebihan) dihapus otomatis setelah 30 hari.</li>
+                <li>Kode konfirmasi baca yang sudah kedaluwarsa dihapus otomatis setelah 7 hari.</li>
+                <li>Di halaman Pengaturan Anda dapat mengunduh salinan data Anda (berkas JSON) dan menghapus akun.</li>
+                <li>Saat akun dihapus, dokumen, percakapan, berkas, tautan bagikan, dan pengingat Anda dihapus. Catatan pesanan, pembayaran, dan audit tetap disimpan untuk pencocokan keuangan, tanpa terhubung lagi ke email Anda. Kode verifikasi yang sudah terbit tetap bisa dicek, tetapi isi dokumennya dikosongkan.</li>
+              </ul>
               <p>Catatan verifikasi dan audit sengaja tidak dapat diubah agar riwayat tetap dapat dipercaya.</p>
             </>
           ),
