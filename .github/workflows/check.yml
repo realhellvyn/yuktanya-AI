@@ -1,5 +1,6 @@
 name: check
 # Manual only until the Actions quota resets (~1 Nov 2026). See the v8 extension spec §10.
+# Pemilik mengizinkan menjalankan CI secara manual, termasuk E2E dan smoke rilis.
 on: workflow_dispatch
 
 concurrency:
@@ -16,4 +17,64 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Pasang server Postgres (initdb, pg_ctl, psql) untuk tes DB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql postgresql-client
+          sudo systemctl stop postgresql || true
+          ls -d /usr/lib/postgresql/*/bin
       - run: npm run check
+
+  # scripts/db/with-test-db.sh membutuhkan /usr/lib/postgresql/*/bin/{initdb,pg_ctl} dan `psql`.
+  # Runner ubuntu-latest hanya menyediakan klien; paket `postgresql` memasang server + binari tsb.
+  # Paket itu juga menyalakan layanan sistem; kita matikan agar tidak bentrok (klaster uji dibuat sendiri oleh skrip).
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Pasang server Postgres (initdb, pg_ctl, psql)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql postgresql-client
+          sudo systemctl stop postgresql || true
+          ls -d /usr/lib/postgresql/*/bin
+      - name: Smoke rilis (handler + DB, tanpa browser)
+        run: npm run test:smoke
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SHOTS_DIR: ${{ github.workspace }}/e2e-shots
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Pasang server Postgres (initdb, pg_ctl, psql)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql postgresql-client
+          sudo systemctl stop postgresql || true
+          ls -d /usr/lib/postgresql/*/bin
+      - name: Pasang Chromium untuk Playwright
+        run: npx playwright install --with-deps chromium
+      - name: E2E browser (semua perjalanan; desktop dan mobile)
+        env:
+          VIEWPORTS: '[{"name":"desktop","width":1280,"height":800},{"name":"mobile","width":375,"height":812}]'
+        run: bash scripts/e2e/run.sh
+      - name: Unggah tangkapan layar
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-shots
+          path: e2e-shots
+          if-no-files-found: ignore

@@ -1,5 +1,8 @@
 // Smoke rilis (tanpa browser, tanpa jaringan). Dijalankan sekali sebelum pilot/rilis lewat `npm run test:smoke`, bukan bagian `npm run check`.
 // Wajib: E01, E02, E03, E08, E13, E14. Ditambahkan karena wajib sebelum flag Deep/Enhanced dinyalakan: E04, E05, E09, E10, E11.
+// Dicakup di sini (tingkat handler + DB, tanpa browser): E01, E02, E03, E04, E05, E06, E08, E09, E10, E11, E12, E13, E14.
+// Seleksi smoke di tests/e2e/SCENARIOS.md = E01–E06, E08–E14; E07 tidak dicakup di sini (lihat tests/db/billing.test.ts).
+// Sisi browser dari seleksi itu dicakup oleh tests/e2e/journey*.mjs; pemetaan lengkap ada di tests/e2e/SCENARIOS.md.
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { handleChatTurn } from "@/lib/ai/chat-turn";
 import { GatewayError } from "@/lib/ai/gateway";
@@ -134,6 +137,20 @@ describe("E05 deep tanpa syarat", () => {
   });
 });
 
+describe("E06 harga tambahan Deep", () => {
+  it("Free Rp200.000 dan Member aktif Rp150.000 dari server (harga klien diabaikan); harga review standar terpisah", async () => {
+    const free = await kit.completedStandard();
+    const a = await createOrderHandler(billingDeps(free.owner), post({ kind: "DEEP_REVIEW", parentRequestId: free.req, amountIdr: 1 }));
+    expect([a.status, (await a.json()).amountIdr]).toEqual([201, 200000]);
+    const mem = await kit.completedStandard({ member: true });
+    const b = await createOrderHandler(billingDeps(mem.owner), post({ kind: "DEEP_REVIEW", parentRequestId: mem.req }));
+    expect([b.status, (await b.json()).amountIdr]).toEqual([201, 150000]);
+    const standard = (await pool.query("select amount_idr from orders where kind = 'STANDARD_REVIEW' and user_id = $1", [free.owner])).rows[0].amount_idr;
+    expect(standard).toBe(50000);
+    expect(await count("select count(*) from orders where kind = 'MEMBERSHIP_MONTHLY' and user_id = $1", [mem.owner])).toBe(0);
+  });
+});
+
 describe("E08 pembayaran palsu dan callback ganda", () => {
   it("redirect/tangkapan layar tidak mengantrekan pekerjaan; callback ganda terverifikasi menghasilkan tepat satu pembayaran dan satu tugas", async () => {
     await pool.query("update firms set is_default = false");
@@ -192,6 +209,21 @@ describe("E11 otoritas dicabut, penugasan basi, dan admin", () => {
     const r = await decideHandler(deepDeps(d.c.r.reviewer, ["reviewer"]), post(body), { id: d.deep });
     expect([r.status, (await r.json()).code]).toEqual([403, "REVIEWER_NOT_AUTHORIZED"]);
     expect(await count("select count(*) from document_verifications where kind = 'LEGAL_ENHANCED' and request_id = $1", [d.c.req])).toBe(0);
+  });
+});
+
+describe("E12 edit tidak mewarisi lencana", () => {
+  it("versi baru dari dokumen yang sama tidak punya verifikasi; rekaman lama tetap aktif pada hash lama", async () => {
+    const c = await kit.completedStandard();
+    const oldVersion = (await pool.query("select v.id, v.document_id, v.sha256 from review_requests r join document_versions v on v.id = r.version_id where r.id = $1", [c.req])).rows[0];
+    const d = (await kit.docs.get(c.owner, oldVersion.document_id))!;
+    await kit.docs.saveDraft(c.owner, oldVersion.document_id, { ...(d.draft.data as object), purpose: "Diubah setelah ulasan" } as never, d.draft.revision);
+    const r2 = await kit.docs.freeze(c.owner, oldVersion.document_id, `e12-${Math.random().toString(36).slice(2)}-abc`, NOW);
+    if (!r2.ok) throw new Error("freeze gagal");
+    const newHash = (await pool.query("select sha256 from document_versions where id = $1", [r2.versionId])).rows[0].sha256;
+    expect(newHash).not.toBe(oldVersion.sha256);
+    expect((await pool.query("select * from verifications_for_version($1, $2)", [c.owner, r2.versionId])).rows).toHaveLength(0);
+    expect(await lookup(c.code)).toMatchObject({ status: "ACTIVE", kind: "LEGAL", sha256: oldVersion.sha256 });
   });
 });
 

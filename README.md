@@ -63,8 +63,7 @@ npm ci
 npm run check     # lint + typecheck + unit + DB (tanpa jaringan, tanpa data nyata)
 npm run dev
 ```
-CI GitHub hanya manual (`workflow_dispatch`) sampai kuota Actions reset (~1 Nov 2026).
-Ketersediaan Postgres 16 di runner GitHub belum diverifikasi; cek pada run manual pertama.
+CI GitHub hanya manual (`workflow_dispatch`) sampai kuota Actions reset (~1 Nov 2026); lihat "Cara menjalankan tes" di bawah.
 
 ## Alur dokumen (Fase 2)
 Pengguna terdaftar memilih PKS, Utang Piutang, atau NDA, menjawab pertanyaan satu per satu (`/workspace/[id]`), memeriksa ringkasan, lalu membuat versi yang tidak dapat diubah. Setiap versi punya SHA-256 yang dihitung database atas byte kanonik; ekspor DOCX/PDF punya hash sendiri. Kuota dokumen baru dipakai saat versi pertama berhasil dibuat.
@@ -105,3 +104,23 @@ Reviewer berwenang mencatat pekerjaan tambahan, tindak lanjut tiap catatan induk
 
 ## Operasional admin dan smoke rilis (Fase 5)
 Dashboard admin (`/admin`) menampilkan pengguna, AI, funnel kohort, operasi review, pendapatan dikumpulkan (hanya pembayaran terverifikasi, bukan laba), dan insiden, semuanya dihitung di SQL (`admin_overview`) dari tabel sumber dengan rentang WIB; tanpa data ditampilkan "Belum ada data". Admin juga mengelola firma/otorisasi mitra (tidak dapat memberi dirinya sendiri kewenangan profesional), merutekan review, merekonsiliasi pembayaran, dan mencabut verifikasi secara operasional. `npm run test:smoke` menjalankan skenario E01, E02, E03, E04, E05, E08, E09, E10, E11, E13, E14 lewat handler dan database tanpa browser; ini bukan bagian `npm run check`.
+
+## Status rilis (16 Oktober 2026) dan cara menjalankan tes
+Hanya data sintetis; belum ada deploy produksi, pembayaran nyata, atau reviewer nyata. Ini prototipe yang teruji, bukan produk yang disetujui secara hukum.
+
+**Sudah dibangun (sub-proyek A–G pada `docs/superpowers/plans/2026-10-16-v8-completion-BG.md`):** percakapan AI untuk mengisi dokumen (tanpa form isian manual) dan wizard PKS/Utang Piutang/NDA; versi immutable + SHA-256; ekspor DOCX/PDF; vault (berbagi, konfirmasi baca, pengingat, paket bukti); billing dan kuota atomik; Review Standar + Legal Verified + QR + pencabutan; Deep Review dan Enhanced (flag OFF di produksi); halaman publik/akun (`/privacy`, `/terms`, `/verify`, `/settings`, lupa/reset kata sandi); dashboard partner dan admin lengkap; rute pemilik Deep Review; Kasus Hukum Khusus (penawaran terpisah); unggah dokumen + analisis awal AI (flag `AI_PREREVIEW_ENABLED`); analitik admin; ketahanan dan hak data (draf pesan, mode offline, unduh data, hapus akun, retensi terjadwal).
+
+**Diotomatisasi:** `npm run check` (lint, typecheck, unit, DB), E2E browser lokal, smoke rilis, dan pemetaan skenario di `tests/e2e/SCENARIOS.md` (termasuk yang belum atau hanya sebagian diotomatisasi).
+
+| Perintah | Isi | Catatan |
+|---|---|---|
+| `npm run check` | lint + typecheck + unit + tes DB | Butuh Postgres server (`/usr/lib/postgresql/*/bin/initdb`); klaster sementara dibuat otomatis |
+| `bash scripts/e2e/run.sh` | semua perjalanan browser | Butuh Chromium Playwright. Env: `VIEWPORTS` (JSON, mis. `[{"name":"desktop","width":1280,"height":800},{"name":"mobile","width":375,"height":812}]`; default desktop saja), `JOURNEY=./journey-roles.mjs,...`, `SHOTS_DIR`, `PLAYWRIGHT_MODULE`, `CHROMIUM` |
+| `npm run test:smoke` | smoke rilis lewat handler + DB | Daftar skenario ada di header `tests/smoke/release-smoke.test.ts` |
+| GitHub Actions: Actions > check > Run workflow | job `check`, `smoke`, `e2e` | Hanya `workflow_dispatch`; `e2e` mengunggah tangkapan layar bila gagal |
+
+Pada perubahan kecil jalankan hanya yang relevan (lihat `docs/TEST_STRATEGY.md`); jangan ulangi seluruh suite tanpa perubahan baru.
+
+**Blocker produksi yang bukan kode (tidak diselesaikan oleh repo ini):** persetujuan mitra hukum atas template, rubrik/kriteria, dan kebijakan refund; teks hukum Privasi dan Syarat (saat ini ditandai menunggu persetujuan mitra hukum); gateway pembayaran nyata; reviewer dan kredensial profesional nyata; syarat upstream gateway LLM dan privasinya; hosting untuk penggunaan komersial; pemindaian malware dan worker/sandbox untuk pembacaan PDF/DOCX (saat ini dalam proses, di balik flag); keputusan nasib catatan profesional yang sudah terbit saat penghapusan akun; jalur Auth nyata yang belum diuji (soft delete akun lewat Admin API dan pemulihan kata sandi PKCE hanya diuji dengan Auth palsu).
+
+**Migrasi staging:** urutan 29 → 30 → 31 → 32 → 33 → 34. Migrasi 32 dan 34 memuat `DROP`/`delete from` yang dibatalkan alat MCP; gunakan varian di `supabase/staging/` (`20261016000032_document_uploads_nodrop.sql`, `20261016000034_data_rights_nodelete.sql`) atau berkas asli lewat SQL editor. Detail dan pemeriksaan di `docs/RELEASE_CHECKLIST.md`.

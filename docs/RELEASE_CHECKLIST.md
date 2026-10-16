@@ -3,8 +3,9 @@
 Dokumen ini mencatat apa yang sudah dibuktikan kode dan apa yang masih menjadi blocker non-kode. Tidak ada klaim bahwa aplikasi sudah disetujui secara hukum.
 
 ## Pemeriksaan teknis (jalankan sekali sebelum pilot/rilis, bukan setiap perubahan)
-1. `npm run check` (lint, typecheck, unit, DB). 2. `npm run build`. 3. `npm run test:smoke` (E01, E02, E03, E08, E13, E14 ditambah E04, E05, E09, E10, E11). 4. `python3 -I scripts/validate_package.py`. 5. `grep -rniE "\bcap\b" src` hanya boleh menemukan komentar.
-E2E browser, uji aksesibilitas manual (layar 320/375/390/1280, zoom 200%, keyboard), dan uji Supabase/Vercel nyata belum dijalankan; catat hasilnya terpisah saat dijalankan.
+1. `npm run check` (lint, typecheck, unit, DB). 2. `npm run build`. 3. `npm run test:smoke` (E01–E06 dan E08–E14; E07 hanya di tes DB). 4. `bash scripts/e2e/run.sh` dengan `VIEWPORTS` desktop dan mobile (lihat README). 5. `python3 -I scripts/validate_package.py`. 6. `grep -rniE "\bcap\b" src` hanya boleh menemukan komentar.
+CI manual: GitHub Actions > check > Run workflow menjalankan job `check`, `smoke`, dan `e2e` (hanya `workflow_dispatch`). Catat hasil lari nyata (jumlah lulus/gagal, tanggal, commit) terpisah; berkas ini tidak mengklaim hasilnya.
+Belum otomatis dan belum dijalankan: uji aksesibilitas manusia (layar 320/375/390/1280, zoom 200%, keyboard, pemahaman catatan; E18), uji Supabase Auth/Storage nyata, dan deploy Vercel produksi. Pemetaan skenario ke tes ada di `tests/e2e/SCENARIOS.md`.
 
 ## Konfigurasi wajib sebelum pilot
 - Supabase: proyek, bucket privat `documents`, Auth, migrasi `supabase/migrations/*`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`. Adapter Storage Supabase belum diverifikasi.

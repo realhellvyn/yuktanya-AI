@@ -1,6 +1,10 @@
 # E2E implementation catalogue — run selectively
 
-Not executable until application and fixtures exist. Tag implementations `@auth`, `@standard`,
+Status (16 Okt 2026): aplikasi dan fixture sintetis sudah ada. Sebagian besar skenario diotomatisasi
+sebagai perjalanan browser (`tests/e2e/journey*.mjs`, dijalankan `bash scripts/e2e/run.sh`), tes DB/handler
+(`tests/db/*`, bagian `npm run check`) dan smoke rilis (`npm run test:smoke`). Beberapa hanya dicakup sebagian
+atau tidak diotomatisasi; lihat bagian "Pemetaan otomasi" di bawah. Hasil lari nyata dicatat di laporan
+rilis, bukan di berkas ini. Tag implementations `@auth`, `@standard`,
 `@deep`, `@billing`, `@verification`, `@roles`, `@quota`, `@release-smoke`. No auto-run-all on
 every change; TEST_STRATEGY.md controls selection. Assert backend state, not just UI toast.
 
@@ -29,3 +33,36 @@ every change; TEST_STRATEGY.md controls selection. Assert backend state, not jus
 
 Release smoke selects E01–E06, E08–E14 and affected exception paths. Full matrix before major
 release; unit/integration cover detailed permutations without unnecessary browser repetition.
+
+## Pemetaan otomasi (diverifikasi terhadap berkas tes, 16 Okt 2026)
+Sebutan: **J** = `tests/e2e/journey*.mjs` (browser, Postgres sementara + Auth palsu + gateway LLM palsu);
+**DB** = `tests/db/*.test.ts` (Postgres sementara); **S** = `tests/smoke/release-smoke.test.ts`;
+**U** = `tests/unit/*`. Perjalanan selain `journey.mjs` dan `journey-public.mjs` hanya berjalan di desktop
+(`onlyViewport`), kecuali langkah yang memang memakai lebar 375px.
+
+| ID | Status | Dicakup oleh | Yang belum dicakup |
+|---|---|---|---|
+| E01 | Otomatis | S `E01`; DB `handle-chat`, `chat-turn`, `prereview` (anonim 401, gateway tidak dipanggil); J `journey.mjs` ("/dashboard tanpa login dialihkan ke /login"), `journey-public` | Tidak ada langkah browser yang memanggil API AI tanpa sesi |
+| E02 | Otomatis | S `E02`; DB `deep-handlers`, `deep-requests` (lintas firma), `review-handlers`; J `journey-roles` ("pengguna biasa dan akun reviewer saja ditolak di /admin dan /admin/payments"), `journey-ui-roles` ("akun reviewer saja ditolak di /partner/team dan /admin"), `journey-cases` (404/akses peran) | Akses berkas privat lintas pengguna diuji di tingkat DB/handler, bukan lewat unduhan di browser |
+| E03 | Otomatis | S `E03`; DB `reviews`, `publish`, `review-handlers`; J `journey-roles` (standar Rp50.000 sampai terbit) | Jalur browser mencakup hasil WITH_NOTES; WITHIN_SCOPE tanpa catatan hanya di S/DB |
+| E04 | Otomatis | S `E04`; J `journey-roles` ("reviewer ... menerbitkan WITH_NOTES", "pemilik melihat hasil", tawaran Deep Rp200.000) | |
+| E05 | Otomatis | S `E05`; DB `deep-orders` (kelayakan), `deep-handlers`; J `journey-roles` (pemilik lain 404 di `/reviews/[id]/deep`) | Tampilan alasan tidak layak di browser hanya di U `deep-ui` |
+| E06 | Otomatis | S `E06`; DB `deep-orders` ("harga deep"), `billing`; U `deep-ui`, `billing-ui` (standar dihitung terpisah, membership terpisah); J `journey-roles` (checkout Deep Rp200.000) | Browser hanya memesan sebagai Free; harga Member Rp150.000 diuji di S/DB |
+| E07 | Otomatis (DB) | DB `billing` (Rp30.000/Rp35.000, dua order serentak = satu entitlement, kedaluwarsa melepas), `settlement` (AMOUNT_MISMATCH melepas diskon) | Tidak ada perjalanan browser; tidak masuk daftar smoke rilis |
+| E08 | Otomatis | S `E08`; DB `settlement`, `deep-requests`; J `journey-roles` (transfer bank belum lunas, admin konfirmasi, baru masuk antrean) | Screenshot pembayaran palsu hanya diuji sebagai "provider_ref tak dikenal" |
+| E09 | Otomatis | S `E09`; DB `deep-decision`; J `journey-roles` ("checklist M1-M7 dan menyetujui Enhanced", "pemilik melihat Enhanced") | |
+| E10 | Otomatis (S/DB) | S `E10`; DB `deep-decision` (MATERIAL_FAIL, UNKNOWN, tanpa bukti/atestasi, catatan material belum selesai) | Tidak ada perjalanan browser untuk hasil negatif; teks hasil negatif di U `deep-ui` |
+| E11 | Otomatis (S/DB) | S `E11`; DB `deep-decision` ("UNAUTHORIZED_REVIEWER"), `deep-handlers` (admin 403) | Tab/penugasan basi di browser tidak diuji; reauth UI tidak diuji |
+| E12 | Otomatis | S `E12`; DB `verification` ("versi yang diedit tidak mewarisi verifikasi"), `documents`, `exports` (hash ekspor berbeda); J `journey-roles` ("versi baru ... belum diperiksa, tanpa lencana (E12)") | Replay penyelesaian basi: DB `deep-decision` (STALE_REVISION) |
+| E13 | Otomatis | S `E13`; DB `verification`, `verification-service`, `deep-decision`; J `journey-roles` ("admin mencabut; publik langsung Dicabut"), `journey-public`, `journey-data-rights` (/verify tetap Aktif) | Pemindaian QR kamera tidak diuji; hanya halaman tujuan |
+| E14 | Otomatis | S `E14`; DB `quota`, `quota-store`, `entitlement`; J `journey.mjs` ("kuota awal 20 dari 20"), `journey-ai-review` (jatah berkurang) | Batas Free/Member penuh hanya di S/DB |
+| E15 | Sebagian | DB `quota` (konkurensi, release, TTL, batas hari WIB 16:59:59Z/17:00:00Z, upgrade/kedaluwarsa tengah hari), `chat-turn` dan `handle-chat` (gateway gagal melepas kuota, kunci idempoten, AI_BUSY), `prereview`; J `journey.mjs` ("gateway gagal ... Coba lagi berhasil") | Tengah malam WIB nyata tidak disimulasikan di browser (jam diinjeksi di DB); balapan paralel hanya di DB |
+| E16 | Sebagian | DB `deep-orders` (order kedaluwarsa membuka kembali, harga plan saat order, pembayaran terlambat = rekonsiliasi), `deep-requests` (induk dicabut sebelum settlement = RECONCILIATION_REQUIRED), `settlement`, `billing-handlers` (ACTIVATE tidak layak = 409) | "Penawaran/quote kedaluwarsa dengan harga yang diterima tetap dihormati" tidak ada sebagai tes terpisah; tidak ada perjalanan browser |
+| E17 | Otomatis (DB) | DB `admin-metrics` (pendapatan hanya VERIFIED, funnel kohort, "tanpa data" null, refund); J `journey-ui-roles` (halaman admin tampil) | Pemisahan Standard vs Deep di UI tidak diuji di browser |
+| E17b | Otomatis | J `journey-admin-analytics.mjs` (desktop + 375px); DB `admin-metrics` (admin_analytics), `analytics-events` | |
+| E17c | Otomatis | J `journey-data-rights.mjs` (desktop + 375px); DB `data-rights`; U `data-rights` | Penghapusan akun Auth memakai Auth palsu; Auth nyata belum diuji |
+| E18 | Sebagian; sisanya **tidak diotomatisasi** | J memeriksa tanpa scroll horizontal, target sentuh >= 43,5/44px, tanpa error konsol pada halaman utama (mobile 375px); U `deep-ui`, `billing-ui` memeriksa kata "Enhanced"/pernyataan pembayaran dan tanpa kata "cap" | Navigasi keyboard, zoom 200%, pemahaman catatan, dan keterbacaan hasil negatif membutuhkan uji kegunaan manusia (lihat docs/USABILITY_TEST_PLAN.md); status tidak hanya warna belum diaudit otomatis |
+
+Catatan: E2E selalu memakai flag `DEEP_REVIEW_PURCHASE`, `ENHANCED_ISSUANCE`, `AI_PREREVIEW_ENABLED` = true,
+`ALLOW_UNAPPROVED_TEMPLATES=true`, gateway LLM palsu, dan Auth Supabase palsu; ini bukan bukti integrasi
+dengan Supabase Auth, Storage, penyedia pembayaran atau gateway LLM nyata.

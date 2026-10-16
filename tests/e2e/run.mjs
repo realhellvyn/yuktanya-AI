@@ -7,7 +7,12 @@ import { createRequire } from "node:module";
 import { SERVICE_KEY, startFakeLlm, startFakeSupabase } from "./fake-supabase.mjs";
 
 const require = createRequire(import.meta.url);
-const { chromium } = require(process.env.PLAYWRIGHT_MODULE ?? "/opt/node22/lib/node_modules/playwright");
+// Urutan: PLAYWRIGHT_MODULE (jalur eksplisit) -> paket `playwright` di node_modules repo -> jalur global sandbox.
+const loadPlaywright = () => {
+  if (process.env.PLAYWRIGHT_MODULE) return require(process.env.PLAYWRIGHT_MODULE);
+  try { return require("playwright"); } catch { return require("/opt/node22/lib/node_modules/playwright"); }
+};
+const { chromium } = loadPlaywright();
 const { Pool } = require("pg");
 const APP = 3100, FAKE = 54999;
 const SHOTS = process.env.SHOTS_DIR ?? path.join(tmpdir(), "yk-shots");
