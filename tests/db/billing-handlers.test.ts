@@ -135,4 +135,15 @@ describe("handler penagihan", () => {
     expect((await (await resolveReconciliationHandler(late, post({ action: "CLOSE", note: "ditutup oleh admin" }), { id: o2.orderId })).json()).result).toBe("CLOSED");
     expect((await resolveReconciliationHandler(late, post({ action: "CLOSE", note: "ditutup lagi" }), { id: o2.orderId })).status).toBe(409);
   });
+
+  it("ACTIVATE pada order deep yang tidak lagi layak → 409 NOT_ELIGIBLE (bukan 500)", async () => {
+    const c = await kit.completedStandard();
+    const o = await kit.order(c.owner, "DEEP_REVIEW", c.req);
+    const p = await kit.pay(c.owner, o.order_id);
+    await pool.query("select revoke_verification($1, $2, 'ERROR', null, $3)", [c.f.admin, c.verificationId, NOW]);
+    await kit.settle("mock", p.ref, o.amount_idr);
+    const admin = await kit.admin();
+    const r = await resolveReconciliationHandler(deps(c.owner, { getAdminId: async () => admin }), post({ action: "ACTIVATE", note: "coba aktifkan" }), { id: o.order_id });
+    expect([r.status, (await r.json()).code]).toEqual([409, "NOT_ELIGIBLE"]);
+  });
 });

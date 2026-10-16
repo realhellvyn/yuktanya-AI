@@ -11,7 +11,7 @@ import { mockSettleAction, payAction } from "../actions";
 export const dynamic = "force-dynamic";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const NOTICE: Record<string, string> = { PROVIDER_UNAVAILABLE: "Metode pembayaran ini belum tersedia.", ORDER_NOT_PAYABLE: "Pesanan ini sudah tidak dapat dibayar." };
-const LABEL: Record<string, string> = { MEMBERSHIP_MONTHLY: "Membership Yuktanya (1 periode)", MEMBERSHIP_ANNUAL: "Membership Yuktanya (1 tahun)", BUNDLE: "Paket kredit pemeriksaan", STANDARD_REVIEW: "Pemeriksaan Standar oleh pengacara" };
+const LABEL: Record<string, string> = { MEMBERSHIP_MONTHLY: "Membership Yuktanya (1 periode)", MEMBERSHIP_ANNUAL: "Membership Yuktanya (1 tahun)", BUNDLE: "Paket kredit pemeriksaan", STANDARD_REVIEW: "Pemeriksaan Standar oleh pengacara", DEEP_REVIEW: "Pemeriksaan Mendalam oleh pengacara (tambahan)" };
 const btn = "min-h-12 rounded-lg px-5 font-semibold";
 
 export default async function CheckoutPage({ params, searchParams }: { params: Promise<{ orderId: string }>; searchParams: Promise<{ notice?: string }> }) {
@@ -68,6 +68,7 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
         </section>
       )}
       <nav className="flex flex-wrap gap-3">
+        {order.kind === "DEEP_REVIEW" && order.status === "PAID" && <Link className="inline-flex min-h-12 items-center underline" href="/reviews">Lihat Review Saya</Link>}
         {order.kind === "STANDARD_REVIEW" && order.status === "PAID" && <Link className="inline-flex min-h-12 items-center underline" href="/reviews">Lihat Review Saya</Link>}
         {order.kind.startsWith("MEMBERSHIP") && order.status === "PAID" && <Link className="inline-flex min-h-12 items-center underline" href="/dashboard">Kembali ke beranda</Link>}
       </nav>

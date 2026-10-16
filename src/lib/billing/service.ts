@@ -117,6 +117,7 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
         return rows[0].r;
       } catch (e) {
         const m = e instanceof Error ? e.message : "";
+        if (/NOT_ELIGIBLE/.test(m)) throw new BillingError("NOT_ELIGIBLE", "PARENT_CHANGED");
         for (const c of ["NOTE_REQUIRED", "NOT_RECONCILIATION", "AMOUNT_MISMATCH", "CONFLICT", "INVALID_ACTION"] as const) if (m.includes(c)) throw new BillingError(c);
         return mapError(e);
       }

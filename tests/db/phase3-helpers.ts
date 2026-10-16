@@ -51,7 +51,7 @@ export function makeKit(pool: Pool) {
       return { ...o, ...p, settled: r };
     },
     // Review standar selesai WITH_NOTES (satu catatan aktionabel) → siap untuk penawaran Deep Review.
-    async completedStandard(opts: { severity?: "MINOR" | "MATERIAL"; actionable?: boolean; owner?: string; member?: boolean } = {}) {
+    async completedStandard(opts: { severity?: "MINOR" | "MATERIAL"; actionable?: boolean; owner?: string; member?: boolean; extraNote?: boolean; noNotes?: boolean } = {}) {
       await pool.query("update firms set is_default = false");
       const f = await this.firm({ isDefault: true });
       const r = await f.addReviewer();
@@ -64,8 +64,12 @@ export function makeKit(pool: Pool) {
       let rev = (await pool.query("select save_report_draft($1, $2, $3, 'Klausul kerahasiaan', 'Data benar', '', $4) as r", [r.reviewer, req, s.revision, NOW])).rows[0].r as number;
       const sev = opts.severity ?? "MATERIAL";
       const note = { title: "Jangka waktu", finding: "Tidak jelas", severity: sev, actionable: opts.actionable ?? true, recommended_action: "Perjelas", rationale: "Risiko sengketa", escalation: "Konsultasi lanjutan" };
-      rev = (await pool.query("select * from upsert_note($1, $2, $3, $4, $5)", [r.reviewer, req, rev, JSON.stringify(note), NOW])).rows[0].revision as number;
-      const pub = (await pool.query("select * from publish_standard($1, $2, $3, 'WITH_NOTES', false, true, $4)", [r.reviewer, req, rev, NOW])).rows[0] as { verification_id: string; code: string };
+      if (!opts.noNotes) rev = (await pool.query("select * from upsert_note($1, $2, $3, $4, $5)", [r.reviewer, req, rev, JSON.stringify(note), NOW])).rows[0].revision as number;
+      if (opts.extraNote) {
+        const extra = { title: "Klausul sengketa", finding: "Berisiko", severity: "CRITICAL", actionable: false, recommended_action: "Tinjau", rationale: "Risiko besar", escalation: "Konsultasi lanjutan" };
+        rev = (await pool.query("select * from upsert_note($1, $2, $3, $4, $5)", [r.reviewer, req, rev, JSON.stringify(extra), NOW])).rows[0].revision as number;
+      }
+      const pub = (await pool.query("select * from publish_standard($1, $2, $3, $4, $5, true, $6)", [r.reviewer, req, rev, opts.noNotes ? "WITHIN_SCOPE" : "WITH_NOTES", !!opts.noNotes, NOW])).rows[0] as { verification_id: string; code: string };
       return { f, r, owner, v, req, verificationId: pub.verification_id, code: pub.code };
     },
     // Firma bawaan + koordinator + reviewer berotorisasi.

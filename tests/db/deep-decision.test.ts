@@ -14,9 +14,9 @@ async function approveRubric() {
 
 type Setup = Awaited<ReturnType<typeof prepare>>;
 // Deep berbayar, ditugaskan, dan dikerjakan sampai siap diputuskan (dapat dilucuti per langkah lewat opsi).
-async function prepare(o: { skipExtra?: boolean; skipChecklist?: string[]; failItem?: string; unknownItem?: string; noEvidenceItem?: string; disposition?: "RESOLVED" | "UNRESOLVED" | "NONE"; severity?: "MINOR" | "MATERIAL"; rubric?: boolean } = {}) {
+async function prepare(o: { extraNote?: boolean; skipExtra?: boolean; skipChecklist?: string[]; failItem?: string; unknownItem?: string; noEvidenceItem?: string; disposition?: "RESOLVED" | "UNRESOLVED" | "NONE"; severity?: "MINOR" | "MATERIAL"; rubric?: boolean } = {}) {
   if (o.rubric !== false) await approveRubric();
-  const c = await kit.completedStandard({ severity: o.severity ?? "MATERIAL" });
+  const c = await kit.completedStandard({ severity: o.severity ?? "MATERIAL", extraNote: o.extraNote });
   const b = await kit.buy(c.owner, "DEEP_REVIEW", c.req);
   const deep = (await pool.query("select * from deep_requests where order_id = $1", [b.order_id])).rows[0];
   await pool.query("select assign_deep($1, $2, $3, $4)", [c.f.coordinator, deep.id, c.r.reviewer, NOW]);
@@ -99,10 +99,11 @@ describe("penjaga negatif (policy-vectors)", () => {
     const s = await prepare();
     await expect(s.decide("APPROVE", { revision: s.rev - 1 })).rejects.toThrow(/STALE_REVISION/);
   });
-  it("REVOKED_PARENT: induk dicabut sebelum keputusan", async () => {
+  it("induk dicabut sebelum keputusan: pekerjaan ditahan dan penugasan berakhir, sehingga reviewer tidak dapat memutuskan", async () => {
     const s = await prepare();
     await pool.query("select revoke_verification($1, $2, 'ERROR', null, $3)", [s.c.f.admin, s.c.verificationId, NOW]);
-    await expect(s.decide("APPROVE")).rejects.toThrow(/REVOKED_PARENT/);
+    expect((await row(s)).status).toBe("ON_HOLD");
+    await expect(s.decide("APPROVE")).rejects.toThrow(/FORBIDDEN/);
     expect(await s.enhancedCount()).toBe(0);
   });
   it("UNAUTHORIZED_REVIEWER: otorisasi dicabut di tengah jalan; reviewer lain; koordinator; admin; pemilik", async () => {
@@ -117,6 +118,27 @@ describe("penjaga negatif (policy-vectors)", () => {
   it("N_A ditolak untuk M4, M6, M7 (wajib)", async () => {
     const s = await prepare();
     await expect(pool.query("select set_checklist($1, $2, $3, 'M4', 'N_A', 'alasan', '', $4)", [s.rv, s.deep.id, s.rev, NOW])).rejects.toThrow(/MANDATORY_ITEM/);
+  });
+});
+
+describe("penjaga tambahan setelah review", () => {
+  it("catatan MATERIAL/CRITICAL non-aktionabel tanpa disposisi memblokir Enhanced", async () => {
+    const s = await prepare({ extraNote: true });
+    await expect(s.decide("APPROVE")).rejects.toThrow(/DISPOSITION_MISSING/);
+    expect(await s.enhancedCount()).toBe(0);
+  });
+  it("PAYMENT_NOT_VERIFIED: pembayaran tidak lagi VERIFIED saat keputusan", async () => {
+    const s = await prepare();
+    await pool.query("update payments set status = 'DISPUTED' where order_id = $1", [s.deep.order_id]);
+    await expect(s.decide("APPROVE")).rejects.toThrow(/PAYMENT_NOT_VERIFIED/);
+    expect(await s.enhancedCount()).toBe(0);
+  });
+  it("REVOKED_PARENT langsung pada penjaga: verifikasi induk ditangguhkan sementara permintaan tetap IN_REVIEW", async () => {
+    const s = await prepare();
+    await pool.query("update document_verifications set status = 'SUSPENDED' where id = $1", [s.c.verificationId]);
+    expect((await row(s)).status).toBe("IN_REVIEW");
+    await expect(s.decide("APPROVE")).rejects.toThrow(/REVOKED_PARENT/);
+    expect(await s.enhancedCount()).toBe(0);
   });
 });
 

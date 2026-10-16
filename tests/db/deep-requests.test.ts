@@ -112,9 +112,17 @@ describe("penugasan deep", () => {
 
 describe("ketergantungan pada verifikasi induk", () => {
   it("pencabutan induk menahan deep yang belum selesai dan menangguhkan Enhanced turunan; pencabutan Enhanced tidak mencabut induk", async () => {
-    const { c, deep } = await paidDeep();
+    const { c, deep, b } = await paidDeep();
+    const rv = await c.f.addReviewer();
+    await assignDeep(c.f.coordinator, deep.id, rv.reviewer);
     await pool.query("select revoke_verification($1, $2, 'MISLEADING', 'alasan', $3)", [c.f.admin, c.verificationId, NOW]);
     expect((await pool.query("select status from deep_requests where id = $1", [deep.id])).rows[0].status).toBe("ON_HOLD");
+    // Tidak buntu: penugasan berakhir (kapasitas bebas), pembayaran dan order masuk daftar rekonsiliasi, admin dapat mencatat pengembalian.
+    expect((await pool.query("select status from deep_assignments where deep_id = $1", [deep.id])).rows.map((x) => x.status)).toEqual(["ENDED"]);
+    expect((await pool.query("select status from orders where id = $1", [b.order_id])).rows[0].status).toBe("RECONCILIATION_REQUIRED");
+    expect((await pool.query("select status from payments where order_id = $1", [b.order_id])).rows[0].status).toBe("DISPUTED");
+    await expect(pool.query("select admin_resolve_reconciliation($1, $2, 'ACTIVATE', 'coba aktifkan', $3)", [c.f.admin, b.order_id, NOW])).rejects.toThrow(/NOT_ELIGIBLE/);
+    expect((await pool.query("select admin_resolve_reconciliation($1, $2, 'REFUND_RECORDED', 'dikembalikan via bank', $3) as r", [c.f.admin, b.order_id, NOW])).rows[0].r).toBe("REFUND_RECORDED");
     // Enhanced turunan (dibuat langsung untuk menguji kaskade) menjadi SUSPENDED.
     const d = await paidDeep();
     const sha = (await pool.query("select sha256 from document_verifications where id = $1", [d.c.verificationId])).rows[0].sha256;

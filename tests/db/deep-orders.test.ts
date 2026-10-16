@@ -60,6 +60,11 @@ describe("kelayakan (policy vectors)", () => {
     expect((await elig(c.owner, c.req)).reason).toBe("VERSION_MISMATCH");
   });
 
+  it("induk selesai tanpa catatan (WITHIN_SCOPE) → alasan NO_ACTIONABLE_NOTES, bukan 'belum selesai'", async () => {
+    const c = await kit.completedStandard({ noNotes: true });
+    expect((await elig(c.owner, c.req)).reason).toBe("NO_ACTIONABLE_NOTES");
+  });
+
   it("pemilik lain atau induk tak ada → NOT_FOUND", async () => {
     const c = await kit.completedStandard();
     expect((await elig(await createUser(pool), c.req)).reason).toBe("NOT_FOUND");
@@ -84,6 +89,18 @@ describe("order deep", () => {
     await expect(kit.order(c.owner, "DEEP_REVIEW", c.req, at(60))).rejects.toThrow(/DEEP_EXISTS/);
     const b = await kit.order(c.owner, "DEEP_REVIEW", c.req, at(25 * 60));
     expect(b.order_id).not.toBe(a.order_id);
+  });
+
+  it("pembayaran tepat waktu untuk order lama yang sudah diganti order baru tidak melempar: dicatat sebagai rekonsiliasi", async () => {
+    const c = await kit.completedStandard();
+    const a = await kit.order(c.owner, "DEEP_REVIEW", c.req);
+    const pa = await kit.pay(c.owner, a.order_id);
+    const b = await kit.order(c.owner, "DEEP_REVIEW", c.req, at(25 * 60));
+    expect(b.order_id).not.toBe(a.order_id);
+    const r = (await pool.query("select settle_payment('mock', $1, 'ev-late', $2, 0, $3, $4) as r", [pa.ref, a.amount_idr, at(26 * 60), at(60)])).rows[0].r;
+    expect(r).toBe("RECONCILIATION_REQUIRED");
+    expect((await pool.query("select status from orders where id = $1", [a.order_id])).rows[0].status).toBe("RECONCILIATION_REQUIRED");
+    expect((await pool.query("select count(*) from deep_requests where parent_request_id = $1", [c.req])).rows[0].count).toBe("0");
   });
 
   it("harga dari plan saat order: Member yang kedaluwarsa membayar Rp200.000 pada order baru", async () => {
