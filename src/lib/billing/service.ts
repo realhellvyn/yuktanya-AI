@@ -11,12 +11,12 @@ export type OrderView = {
 };
 
 export class BillingError extends Error {
-  constructor(readonly code: "NOT_ELIGIBLE" | "NOTE_REQUIRED" | "NOT_RECONCILIATION" | "AMOUNT_MISMATCH" | "CONFLICT" | "INVALID_ACTION" | "NOT_FOUND" | "ALREADY_REVIEWED" | "PRODUCT_UNAVAILABLE" | "ORDER_NOT_PAYABLE" | "INVALID_KIND" | "FORBIDDEN" | "PROVIDER_UNAVAILABLE", readonly reason?: string) {
+  constructor(readonly code: "NOT_ELIGIBLE" | "NOTE_REQUIRED" | "NOT_RECONCILIATION" | "AMOUNT_MISMATCH" | "CONFLICT" | "INVALID_ACTION" | "NOT_FOUND" | "ALREADY_REVIEWED" | "PRODUCT_UNAVAILABLE" | "ORDER_NOT_PAYABLE" | "INVALID_KIND" | "FORBIDDEN" | "PROVIDER_UNAVAILABLE" | "SPECIAL_CASE_OPEN", readonly reason?: string) {
     super(reason ? `${code}: ${reason}` : code);
     this.name = "BillingError";
   }
 }
-const CODES = ["NOT_FOUND", "ALREADY_REVIEWED", "PRODUCT_UNAVAILABLE", "ORDER_NOT_PAYABLE", "INVALID_KIND", "FORBIDDEN"] as const;
+const CODES = ["SPECIAL_CASE_OPEN", "NOT_FOUND", "ALREADY_REVIEWED", "PRODUCT_UNAVAILABLE", "ORDER_NOT_PAYABLE", "INVALID_KIND", "FORBIDDEN"] as const;
 function mapError(e: unknown): never {
   const m = e instanceof Error ? e.message : "";
   const el = /NOT_ELIGIBLE: ([A-Z_]+)/.exec(m);

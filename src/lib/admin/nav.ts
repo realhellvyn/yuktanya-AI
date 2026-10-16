@@ -4,6 +4,7 @@ export const ADMIN_NAV = [
   { href: "/admin/payments", label: "Pembayaran" },
   { href: "/admin/routing", label: "Perutean review" },
   { href: "/admin/partners", label: "Mitra hukum" },
+  { href: "/admin/cases", label: "Kasus khusus" },
   { href: "/admin/verifications", label: "Pencabutan verifikasi" },
   { href: "/admin/rubric", label: "Persetujuan rubrik Enhanced" },
   { href: "/admin/features", label: "Kunci fitur per plan" },

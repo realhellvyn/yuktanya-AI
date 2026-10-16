@@ -21,6 +21,8 @@ import { buildPackAction, cancelReminderAction, createShareAction, revokeShareAc
 import { cloneAction, exportAction, startNewVersionAction } from "../actions";
 import { requestReviewAction } from "../../checkout/actions";
 import { aiReviewAction } from "../ai-review-action";
+import { casesService } from "@/lib/cases/runtime";
+import { SPECIAL_CASE_NOTE } from "@/lib/copy";
 
 // Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
 export const dynamic = "force-dynamic";
@@ -51,7 +53,9 @@ export default async function DocumentPage({ params, searchParams }: { params: P
     urls[v.id] = verifyUrl(v.code);
     if (v.status === "ACTIVE") qrs[v.id] = `data:image/png;base64,${Buffer.from(await qrPng(urls[v.id])).toString("base64")}`;
   }
-  const quote = selected ? await billingService().preview(userId, "STANDARD_REVIEW", selected.id).catch(() => null) : null;
+  // Kasus khusus terbuka: Review Standar diblokir di database (order dan pratinjau harga); tampilkan arah ke kasusnya.
+  const openCase = await casesService().openForDocument(userId, id);
+  const quote = selected && !openCase ? await billingService().preview(userId, "STANDARD_REVIEW", selected.id).catch(() => null) : null;
   const changes = selected && against ? diffRendered(against.doc, selected.doc).filter((c) => c.change !== "same") : null;
 
   const when = (iso: string) => new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(iso));
@@ -110,6 +114,13 @@ export default async function DocumentPage({ params, searchParams }: { params: P
           <section aria-labelledby="periksa-h" className="space-y-3">
             <h2 id="periksa-h" className="text-2xl font-bold text-navy">Pemeriksaan</h2>
             <VerificationPanel verifications={verifications} qrDataUrls={qrs} urls={urls} />
+            {openCase && (
+              <Card className="space-y-3 border-amber-300 bg-amber-50/60">
+                <p className="text-lg font-semibold text-navy">Dokumen ini memerlukan penilaian khusus</p>
+                <p>Review Standar tidak tersedia selama penilaian khusus berjalan. {SPECIAL_CASE_NOTE}</p>
+                <ButtonLink href={`/cases/${openCase}`} variant="secondary">Lihat status penilaian khusus</ButtonLink>
+              </Card>
+            )}
             {quote && (
               <Card className="space-y-3 border-blue-200 bg-blue-50/60">
                 <form action={requestReviewAction} className="space-y-3">
@@ -117,6 +128,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
                   <p>Pemeriksaan oleh pengacara untuk versi ini: <strong>{formatIdr(quote.amountIdr)}</strong>. Pembayaran adalah biaya pemeriksaan dan tidak menjamin hasil positif.</p>
                   <Button type="submit">Minta pemeriksaan pengacara</Button>
                 </form>
+                <div className="flex flex-wrap items-center gap-x-2 text-muted"><span>Dokumen Anda rumit atau berisiko tinggi?</span><ButtonLink href={`/cases/new?document=${id}`} variant="quiet" className="!px-0">Ajukan penilaian khusus</ButtonLink></div>
               </Card>
             )}
             {flags.aiPreReview && (

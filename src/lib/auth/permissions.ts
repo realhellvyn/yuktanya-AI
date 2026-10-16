@@ -4,7 +4,7 @@ export type GuardResult = { allow: true } | { allow: false; redirect: string };
 
 // Permukaan pemilik dokumen: hanya akun pemilik biasa (peran profesional/admin memakai permukaannya sendiri).
 const OWNER = [
-  "/dashboard", "/workspace", "/documents", "/vault", "/membership", "/settings", "/checkout", "/reviews",
+  "/dashboard", "/workspace", "/documents", "/vault", "/membership", "/settings", "/checkout", "/reviews", "/cases",
   "/api/documents", "/api/orders", "/api/payments/mock", "/api/reviews", "/api/deep",
 ] as const;
 const PROTECTED = [...OWNER, "/partner", "/admin", "/api/ai", "/api/admin", "/api/partner"] as const;
@@ -28,8 +28,8 @@ export function guardPath(pathname: string, roles: Role[] | null): GuardResult {
   if (prefix === "/partner" || prefix === "/api/partner") {
     const ok = roles.includes("reviewer") || roles.includes("partner_admin");
     if (!ok) return { allow: false, redirect: home };
-    // Tim firma hanya untuk koordinator; reviewer saja kembali ke dashboard mitra.
-    if (under(pathname, "/partner/team") && !roles.includes("partner_admin")) return { allow: false, redirect: "/partner" };
+    // Tim firma dan kasus khusus hanya untuk koordinator; reviewer saja kembali ke dashboard mitra.
+    if ((under(pathname, "/partner/team") || under(pathname, "/partner/cases")) && !roles.includes("partner_admin")) return { allow: false, redirect: "/partner" };
     return { allow: true };
   }
   // Permukaan pemilik: hanya akun pemilik biasa; peran profesional/admin tidak memakai identitas pemilik yang sama.

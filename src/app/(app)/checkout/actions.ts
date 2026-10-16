@@ -25,6 +25,7 @@ export async function requestReviewAction(formData: FormData): Promise<void> {
     redirect(o.status === "PAID" ? "/reviews?dibuat=1" : `/checkout/${o.orderId}`);
   } catch (e) {
     if (e instanceof BillingError && e.code === "ALREADY_REVIEWED") redirect("/reviews?notice=sudah");
+    if (e instanceof BillingError && e.code === "SPECIAL_CASE_OPEN") redirect("/cases?notice=khusus");
     if (e instanceof BillingError && e.code === "NOT_FOUND") redirect("/documents");
     throw e;
   }

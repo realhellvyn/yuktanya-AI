@@ -15,6 +15,7 @@ Use Supabase migrations, SQL constraints, indexes, RLS and explicit grants. This
 - `document_verifications(id, review_report_id, document_version_id, verification_code, document_sha256, reviewer_display, scope_summary, issued_at, revoked_at)` — public verification exposes only minimal consented metadata.
 - `legal_cases(id, owner_id, document_version_id, status, intake_json, assigned_firm_id, created_at)` — special case.
 - `legal_case_quotes(id, legal_case_id, price_idr, scope, expires_at, status)` — approved professional proposal.
+  - Implementasi v8 (migrasi 30): satu tabel `special_cases(id, owner_id, document_id?, firm_id, summary, status SUBMITTED|TRIAGED|QUOTED|ACCEPTED|DECLINED|CLOSED, consent_at, quote_amount_idr, quote_scope, quote_expires_at, quote_revision, ...)`; penawaran terakhir disimpan di baris kasus (revisi naik setiap penawaran ulang, riwayat di `audit_events`). Penerimaan tidak membuat order/pembayaran; dokumen dengan kasus terbuka tidak dapat membuat order `STANDARD_REVIEW`.
 - `orders(id, user_id, kind, status, total_idr, currency, idempotency_key, membership_period_id, created_at)` — authoritative pricing snapshot.
 - `payments(id, order_id, provider, provider_ref, status, verified_at)` — no trust in browser redirect.
 - `review_discount_entitlements(id, membership_id, billing_period_start, billing_period_end, order_id, status)` — reservation/consumption ledger for first-review discount.
