@@ -31,7 +31,11 @@ const GREETING = "Halo! Ceritakan keperluan Anda dengan bahasa sehari-hari, misa
 export function TemplateChooser({ options, initialKey, chooseAction, createAction, specialCaseNote }: Props) {
   const [state, formAction] = useActionState(chooseAction, { lines: [], choice: null, notice: null, key: initialKey, draft: "" });
   const end = useRef<HTMLDivElement>(null);
-  useEffect(() => end.current?.scrollIntoView({ block: "end" }), [state.lines.length]);
+  // Badan blok: Chrome 149/150+ mengembalikan Promise dari scrollIntoView; bila dikembalikan, React memanggilnya sebagai
+  // cleanup pada balasan berikutnya ("i is not a function", Task 17).
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "end" });
+  }, [state.lines.length]);
   const suggested = options.find((o) => o.category === state.choice);
   return (
     <section aria-label="Percakapan memilih dokumen" className="space-y-4">

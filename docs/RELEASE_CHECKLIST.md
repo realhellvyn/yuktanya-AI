@@ -3,8 +3,8 @@
 Dokumen ini mencatat apa yang sudah dibuktikan kode dan apa yang masih menjadi blocker non-kode. Tidak ada klaim bahwa aplikasi sudah disetujui secara hukum.
 
 ## Pemeriksaan teknis (jalankan sekali sebelum pilot/rilis, bukan setiap perubahan)
-1. `npm run check` (lint, typecheck, unit, DB). 2. `npm run build`. 3. `npm run test:smoke` (E01–E06 dan E08–E14; E07 hanya di tes DB). 4. `bash scripts/e2e/run.sh` dengan `VIEWPORTS` desktop dan mobile (lihat README). 5. `python3 -I scripts/validate_package.py`. 6. `grep -rniE "\bcap\b" src` hanya boleh menemukan komentar.
-CI manual: GitHub Actions > check > Run workflow menjalankan job `check`, `smoke`, dan `e2e` (hanya `workflow_dispatch`). Catat hasil lari nyata (jumlah lulus/gagal, tanggal, commit) terpisah; berkas ini tidak mengklaim hasilnya.
+1. `npm run check` (lint, typecheck, unit, DB). 2. `npm run build`. 3. `npm run test:smoke` (E01–E06 dan E08–E14; E07 hanya di tes DB). 4. `bash scripts/e2e/run.sh` dengan `VIEWPORTS` desktop dan mobile (lihat README). 4b. **Wajib sebelum setiap rilis/promosi deploy:** `npm run test:e2e:prod` (E17e: `next build` + `next start`, React produksi dan CSP produksi bernonce; pemilih dokumen 2 pesan, Mulai dokumen, 1 giliran percakapan dokumen). E2E biasa memakai `next dev` dan tidak menangkap galat yang hanya muncul di build produksi (Task 17). 5. `python3 -I scripts/validate_package.py`. 6. `grep -rniE "\bcap\b" src` hanya boleh menemukan komentar.
+CI manual: GitHub Actions > check > Run workflow menjalankan job `check`, `smoke`, dan `e2e` (hanya `workflow_dispatch`; job `e2e` juga menjalankan langkah 4b). Catat hasil lari nyata (jumlah lulus/gagal, tanggal, commit) terpisah; berkas ini tidak mengklaim hasilnya.
 Belum otomatis dan belum dijalankan: uji aksesibilitas manusia (layar 320/375/390/1280, zoom 200%, keyboard, pemahaman catatan; E18), uji Supabase Auth/Storage nyata, dan deploy Vercel produksi. Pemetaan skenario ke tes ada di `tests/e2e/SCENARIOS.md`.
 
 ## Konfigurasi wajib sebelum pilot

@@ -73,11 +73,22 @@ export async function journey({ page, step, shot, base, vp, issues, llm }) {
     // Judul dialirkan setelah navigasi (dev server: kompilasi pertama); tunggu, jangan membaca seketika.
     await page.waitForFunction(() => document.title === "Bantu Memilih Dokumen | Yuktanya", null, { timeout: 15000 }).catch(async () => { throw new Error("judul " + (await page.title())); });
     await layoutOk();
+    // Galat render setelah balasan (Task 17: "i is not a function" di build produksi) harus gagal di langkah ini, bukan menunggu batas waktu.
+    const crashed = async (where) => {
+      const bad = issues.filter((m) => /pageerror|is not a function|Minified React error/i.test(m));
+      if (bad.length || (await page.locator("text=Terjadi kendala").count())) throw new Error(`${where}: halaman galat setelah balasan: ${bad.slice(0, 2).join(" || ")}`);
+    };
+    const reply = async (scope, where) => {
+      const sel = `${scope} ol li`;
+      const n = await page.locator(sel).count();
+      await page.click(`${scope} button:has-text('Kirim')`);
+      await page.waitForFunction(([s, k]) => document.querySelectorAll(s).length >= k + 2 || document.body.innerText.includes("Terjadi kendala"), [sel, n], { timeout: 60000 });
+      await page.waitForTimeout(300);
+      await crashed(where);
+    };
     const send = async (text, expect) => {
-      const n = await page.locator("ol li").count();
       await page.fill("textarea[name=message]", text);
-      await page.click("button:has-text('Kirim')");
-      await page.waitForFunction((k) => document.querySelectorAll("ol li").length >= k + 2, n, { timeout: 60000 });
+      await reply("section[aria-label='Percakapan memilih dokumen']", `pemilih "${text.slice(0, 20)}"`);
       await page.waitForSelector(`li:has-text("${expect}")`, { timeout: 10000 });
     };
     await send("Saya mau memberi kuasa ke adik saya untuk mengurus surat.", "hanya menyediakan");
@@ -90,9 +101,13 @@ export async function journey({ page, step, shot, base, vp, issues, llm }) {
     await Promise.all([page.waitForURL(/\/workspace\/[0-9a-f-]{36}$/, { timeout: 30000 }), page.click("button:has-text('Mulai Surat Utang Piutang')")]);
     await page.waitForSelector("textarea[name=message]");
     if (!(await page.locator("h1").innerText()).includes("Utang Piutang")) throw new Error("dokumen yang dibuat bukan Utang Piutang");
+    await crashed("Mulai dokumen");
+    // Satu giliran percakapan dokumen (ChatPanel memakai pola gulir yang sama dengan pemilih).
+    await page.fill("textarea[name=message]", "Saya Sinta Dewi meminjamkan Rp5.000.000 kepada Budi Santoso.");
+    await reply("section[aria-label='Percakapan dengan AI']", "percakapan dokumen");
     await page.goto(base + "/dashboard");
     const q = (await page.locator("li:has-text('Sisa pesan AI')").innerText()).replace(/\s+/g, " ");
-    if (!/18 dari 20/.test(q)) throw new Error("dua pesan pemilih harus memakai 2 jatah: " + q);
+    if (!/17 dari 20/.test(q)) throw new Error("dua pesan pemilih + satu pesan dokumen harus memakai 3 jatah: " + q);
   });
 
   await step(tag("Saya belum tahu: keperluan rumit (cerai) diarahkan ke rute Kasus Khusus, bukan ke dokumen katalog"), async () => {

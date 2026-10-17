@@ -53,7 +53,11 @@ export function ChatPanel({ documentId, lines, greeting, action, sendKey, retryK
   const box = useRef<HTMLTextAreaElement>(null);
   const [offline, setOffline] = useState(false);
   const [restored, setRestored] = useState(false);
-  useEffect(() => end.current?.scrollIntoView({ block: "end" }), [lines.length]);
+  // Badan blok: Chrome 149/150+ mengembalikan Promise dari scrollIntoView; bila dikembalikan, React memanggilnya sebagai
+  // cleanup pada balasan berikutnya ("i is not a function", Task 17).
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "end" });
+  }, [lines.length]);
   const lastUser = [...lines].reverse().find((l) => l.role === "user")?.content;
 
   // Setiap render server baru (sendKey berganti): draf yang sudah tersimpan sebagai pesan dibuang; draf yang belum

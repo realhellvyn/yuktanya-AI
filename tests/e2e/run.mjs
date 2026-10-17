@@ -1,6 +1,7 @@
 // E2E browser lokal: Postgres sementara + Supabase Auth palsu + next dev + Chromium. Dijalankan lewat scripts/e2e/run.sh.
-import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync } from "node:fs";
+// E2E_PROD=1: `next build` lalu `next start` (React produksi, kode termampatkan, CSP produksi bernonce) dengan env yang sama.
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -34,8 +35,29 @@ const env = {
   MANUAL_PAYMENT_INSTRUCTIONS: "Transfer ke rekening uji 000-000", NEXT_TELEMETRY_DISABLED: "1",
   DEEP_REVIEW_PURCHASE: "true", ENHANCED_ISSUANCE: "true", AI_PREREVIEW_ENABLED: "true",
 };
+const PROD = process.env.E2E_PROD === "1";
+// Produksi menolak NEXT_PUBLIC_APP_URL non-https (src/lib/app-url.ts); URL ini hanya untuk tautan email/QR, bukan untuk navigasi uji.
+if (PROD) env.NEXT_PUBLIC_APP_URL = `https://localhost:${APP}`;
+if (PROD) {
+  console.log("E2E_PROD=1: next build (mode produksi)…");
+  // `next build` menulis ulang next-env.d.ts ke tipe produksi; isi yang tercatat di git dikembalikan setelahnya.
+  const nextEnv = existsSync("next-env.d.ts") ? readFileSync("next-env.d.ts", "utf8") : null;
+  const b = spawnSync("npx", ["next", "build"], { env: { ...env, NODE_ENV: "production" }, stdio: "inherit" });
+  if (nextEnv !== null) writeFileSync("next-env.d.ts", nextEnv);
+  if (b.status !== 0) { llm.close(); await fake.close(); console.error("next build gagal"); process.exit(1); }
+}
 const db = new Pool({ connectionString: process.env.TEST_DATABASE_URL, max: 2 });
-const dev = spawn("npx", ["next", "dev", "-p", String(APP)], { env, stdio: ["ignore", "pipe", "pipe"], detached: true });
+if (PROD) {
+  // Produksi selalu mewajibkan template APPROVED dengan hash yang sama (ALLOW_UNAPPROVED_TEMPLATES diabaikan). Hanya di DB uji
+  // sementara: hash dari scripts/templates/print-hashes.mjs dicatat APPROVED agar alur dokumen dapat diuji seperti produksi.
+  const out = spawnSync("node", ["scripts/templates/print-hashes.mjs"], { encoding: "utf8" });
+  if (out.status !== 0) throw new Error("print-hashes gagal: " + out.stderr);
+  for (const line of out.stdout.trim().split("\n")) {
+    const [, id, version, hash] = line.split("\t");
+    await db.query("insert into document_templates (template_id, version, content_hash, approval_status, approved_at) values ($1, $2, $3, 'APPROVED', now()) on conflict do nothing", [id, Number(version), hash]);
+  }
+}
+const dev = spawn("npx", PROD ? ["next", "start", "-p", String(APP)] : ["next", "dev", "-p", String(APP)], { env: PROD ? { ...env, NODE_ENV: "production" } : env, stdio: ["ignore", "pipe", "pipe"], detached: true });
 let devLog = "";
 dev.stdout.on("data", (d) => (devLog += d)); dev.stderr.on("data", (d) => (devLog += d));
 const stop = async () => { try { process.kill(-dev.pid, "SIGKILL"); } catch {} llm.close(); await db.end(); await fake.close(); };
@@ -53,6 +75,23 @@ try {
       const newActor = async (name) => {
         const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, acceptDownloads: true });
         opened.push(ctx);
+        // Chrome terbaru (149/150+): scrollIntoView/scrollTo/scrollBy/scroll MENGEMBALIKAN Promise. Chromium Playwright yang
+        // terpasang (141) masih mengembalikan undefined, jadi perilaku baru ditiru di setiap konteks agar uji melihat browser
+        // pengguna nyata (Task 17: efek `() => el.scrollIntoView()` membuat React memanggil Promise sebagai cleanup).
+        if (process.env.E2E_SCROLL_PROMISE !== "0") {
+          await ctx.addInitScript(() => {
+            const wrap = (obj, name) => {
+              const orig = obj[name];
+              if (typeof orig !== "function") return;
+              obj[name] = function (...args) {
+                const r = orig.apply(this, args);
+                return r instanceof Promise ? r : Promise.resolve(true);
+              };
+            };
+            for (const n of ["scrollIntoView", "scroll", "scrollTo", "scrollBy"]) wrap(Element.prototype, n);
+            for (const n of ["scroll", "scrollTo", "scrollBy"]) wrap(window, n);
+          });
+        }
         const page = await ctx.newPage();
         const issues = [];
         page.on("console", (m) => { if (m.type() === "error") issues.push(`${m.text()}`.slice(0, 9000)); });

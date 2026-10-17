@@ -73,6 +73,9 @@ jobs:
         env:
           VIEWPORTS: '[{"name":"desktop","width":1280,"height":800},{"name":"mobile","width":375,"height":812}]'
         run: bash scripts/e2e/run.sh
+      # E17e (Task 17): build produksi + next start, hanya journey-ux desktop (tambahan beberapa menit).
+      - name: E2E mode produksi (next build + next start, journey-ux desktop)
+        run: npm run test:e2e:prod
       - name: Unggah tangkapan layar
         if: failure()
         uses: actions/upload-artifact@v4
