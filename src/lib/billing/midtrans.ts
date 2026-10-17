@@ -10,6 +10,8 @@ const PRODUCTION = { snap: "https://app.midtrans.com", api: "https://api.midtran
 // CSP form-action (src/lib/security/headers.ts): redirect 303 dari server action (tanpa JS) menuju halaman bayar Snap.
 export { MIDTRANS_FORM_ACTION_ORIGINS };
 const TIMEOUT_MS = 10_000;
+// Sisa waktu pesanan minimal agar pembayaran dapat dimulai (pengguna perlu waktu di halaman Midtrans).
+export const MIN_PAYMENT_MINUTES = 2;
 
 export type MidtransConfig = {
   serverKey: string;
@@ -19,10 +21,10 @@ export type MidtransConfig = {
   // Asal yang boleh menjadi tujuan redirect pengguna (redirect_url dari Snap divalidasi terhadap daftar ini).
   redirectOrigins: string[];
 };
-type Env = { MIDTRANS_SERVER_KEY?: string; MIDTRANS_ENV?: string; MIDTRANS_TEST_BASE_URL?: string; NODE_ENV?: string };
+type Env = { MIDTRANS_SERVER_KEY?: string; MIDTRANS_ENV?: string; MIDTRANS_TEST_BASE_URL?: string; NODE_ENV?: string; VERCEL?: string; VERCEL_ENV?: string };
 
 // Server palsu E2E (tests/e2e): hanya alamat loopback yang diterima, sehingga env ini tidak dapat mengalihkan pembayaran
-// produksi ke host lain.
+// produksi ke host lain. Di Vercel (VERCEL atau VERCEL_ENV ada) env ini selalu diabaikan.
 function loopbackOrigin(raw: string | undefined): string | null {
   if (!raw) return null;
   try {
@@ -38,7 +40,8 @@ export function midtransConfig(env: Env = process.env): MidtransConfig | null {
   const serverKey = (env.MIDTRANS_SERVER_KEY ?? "").trim();
   if (!serverKey) return null;
   const mode = (env.MIDTRANS_ENV ?? "").trim() === "production" ? "production" : "sandbox";
-  const test = loopbackOrigin(env.MIDTRANS_TEST_BASE_URL);
+  const onVercel = Boolean(env.VERCEL || env.VERCEL_ENV);
+  const test = onVercel ? null : loopbackOrigin(env.MIDTRANS_TEST_BASE_URL);
   const base = test ? { snap: test, api: test } : mode === "production" ? PRODUCTION : SANDBOX;
   return { serverKey, mode, snapUrl: `${base.snap}/snap/v1/transactions`, apiBase: base.api, redirectOrigins: [base.snap] };
 }
@@ -81,7 +84,8 @@ export type SnapInput = { providerRef: string; amountIdr: number; itemId: string
 
 // Data pribadi minimum: tanpa customer_details (nama/email/telepon/alamat tidak dikirim; Snap tidak mewajibkannya).
 export async function createSnapTransaction(cfg: MidtransConfig, input: SnapInput, fetchImpl: typeof fetch = fetch): Promise<{ token: string; redirectUrl: string }> {
-  const duration = Math.max(1, Math.floor((input.expiresAt.getTime() - input.now.getTime()) / 60_000));
+  const duration = Math.floor((input.expiresAt.getTime() - input.now.getTime()) / 60_000);
+  if (duration < MIN_PAYMENT_MINUTES) throw new MidtransError("REJECTED", "sisa waktu pesanan terlalu singkat");
   const body = {
     transaction_details: { order_id: input.providerRef, gross_amount: input.amountIdr },
     item_details: [{ id: input.itemId, price: input.amountIdr, quantity: 1, name: input.itemName.slice(0, 50) }],

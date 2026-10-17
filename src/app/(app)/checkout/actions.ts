@@ -49,8 +49,19 @@ export async function payAction(formData: FormData): Promise<void> {
     throw e;
   }
   // Hanya halaman bayar Midtrans (asal divalidasi sekali lagi terhadap konfigurasi server) yang menjadi tujuan redirect.
-  const cfg = midtransConfig();
-  if (target && cfg && cfg.redirectOrigins.includes(new URL(target).origin)) redirect(target);
+  if (target) {
+    const cfg = midtransConfig();
+    let origin: string | null = null;
+    try {
+      origin = new URL(target).origin;
+    } catch {
+      origin = null;
+    }
+    if (cfg && origin && cfg.redirectOrigins.includes(origin)) redirect(target);
+    // Tidak pernah diam-diam kembali ke checkout: tujuan di luar asal Midtrans aktif = galat penyedia dengan pemberitahuan.
+    console.error("redirect_url di luar asal Midtrans aktif ditolak", orderId);
+    redirect(`/checkout/${orderId}?notice=PROVIDER_ERROR`);
+  }
   redirect(`/checkout/${orderId}`);
 }
 

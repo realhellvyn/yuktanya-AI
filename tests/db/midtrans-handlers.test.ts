@@ -17,7 +17,7 @@ const cfg = midtransConfig({ MIDTRANS_SERVER_KEY: KEY, MIDTRANS_ENV: "sandbox" }
 const REDIRECT = (t: string) => `https://app.sandbox.midtrans.com/snap/v4/redirection/${t}`;
 
 // Midtrans palsu: Snap create + status per order_id (diatur tes).
-function fakeMidtrans() {
+function fakeMidtrans(c = cfg) {
   const statuses = new Map<string, Record<string, unknown> | "DOWN">();
   const snapBodies: Record<string, unknown>[] = [];
   let snapDown = false;
@@ -25,11 +25,11 @@ function fakeMidtrans() {
   const impl = (async (url: string, init: RequestInit) => {
     const u = String(url);
     if (new Headers(init.headers).get("authorization") !== `Basic ${Buffer.from(`${KEY}:`).toString("base64")}`) return Response.json({ status_code: "401" }, { status: 401 });
-    if (u === cfg.snapUrl) {
+    if (u === c.snapUrl) {
       if (snapDown) return new Response("down", { status: 503 });
       const b = JSON.parse(String(init.body));
       snapBodies.push(b);
-      return Response.json({ token: `tok-${snapBodies.length}`, redirect_url: REDIRECT(`tok-${snapBodies.length}`) }, { status: 201 });
+      return Response.json({ token: `tok-${snapBodies.length}`, redirect_url: `${c.redirectOrigins[0]}/snap/v4/redirection/tok-${snapBodies.length}` }, { status: 201 });
     }
     const m = /\/v2\/([^/]+)\/status$/.exec(u);
     if (m) {
@@ -54,12 +54,12 @@ const notification = (orderId: string, gross: string, status = "settlement", cod
   ({ order_id: orderId, status_code: code, gross_amount: gross, transaction_status: status, transaction_id: "tx-dari-badan", signature_key: sign(orderId, code, gross, key) });
 const hook = (body: unknown, raw?: string) => new Request("http://t/api/payments/webhook/midtrans", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "203.0.113.7" }, body: raw ?? JSON.stringify(body) });
 
-function setup(over: Partial<BillingDeps> = {}) {
-  const mt = fakeMidtrans();
-  const service = createPgBillingService(pool, [createMockAdapter(), createManualAdapter("Transfer uji"), createMidtransAdapter(cfg, () => "https://yuktanya.com", mt.impl)]);
+function setup(over: Partial<BillingDeps> = {}, c = cfg) {
+  const mt = fakeMidtrans(c);
+  const service = createPgBillingService(pool, [createMockAdapter(), createManualAdapter("Transfer uji"), createMidtransAdapter(c, () => "https://yuktanya.com", mt.impl)]);
   const deps = (userId: string | null, o: Partial<BillingDeps> = {}): BillingDeps => ({
     getUserId: async () => userId, getAdminId: async () => { throw new ForbiddenError(); }, service, production: true, now: () => NOW,
-    midtrans: { config: cfg, fetchImpl: mt.impl }, ...over, ...o,
+    midtrans: { config: c, fetchImpl: mt.impl }, ...over, ...o,
   });
   return { mt, service, deps };
 }
@@ -110,6 +110,88 @@ describe("adaptor + layanan Midtrans", () => {
     mt.paid(ref, "19000.00");
     expect(await service.refreshHosted(u, o.order_id, cfg, mt.impl, NOW)).toEqual(["SETTLED"]);
     expect(await orderStatus(o.order_id)).toBe("PAID");
+  });
+});
+
+describe("perbaikan review Task 21 (M2–M4)", () => {
+  const payStatus = async (id: string) => (await pool.query("select status from payments where id = $1", [id])).rows[0].status as string;
+
+  it("M2: URL tersimpan dari asal Snap lain (Sandbox setelah pindah ke Production) → pembayaran lama EXPIRED, transaksi baru di asal aktif", async () => {
+    const sb = setup();
+    const u = await createUser(pool);
+    const o = await kit.order(u, "MEMBERSHIP_MONTHLY", null);
+    const a = await sb.service.startPayment(u, o.order_id, "midtrans", NOW);
+    expect(new URL(a.redirectUrl!).origin).toBe("https://app.sandbox.midtrans.com");
+    const prodCfg = midtransConfig({ MIDTRANS_SERVER_KEY: KEY, MIDTRANS_ENV: "production" })!;
+    const pr = setup({}, prodCfg);
+    const b = await pr.service.startPayment(u, o.order_id, "midtrans", at(1));
+    expect(b.paymentId).not.toBe(a.paymentId);
+    expect(new URL(b.redirectUrl!).origin).toBe("https://app.midtrans.com");
+    expect(pr.mt.snapBodies).toHaveLength(1);
+    expect(await payStatus(a.paymentId)).toBe("EXPIRED");
+    expect(await payStatus(b.paymentId)).toBe("PENDING");
+    expect(await orderStatus(o.order_id)).toBe("PENDING_PAYMENT");
+    // Klik berikutnya di Production memakai ulang transaksi Production yang sama.
+    expect(await pr.service.startPayment(u, o.order_id, "midtrans", at(2))).toEqual(b);
+  });
+
+  it("M2: dana yang sudah VERIFIED tidak pernah dilepas; pesanan lunas → ORDER_NOT_PAYABLE tanpa memanggil Snap", async () => {
+    const sb = setup();
+    const u = await createUser(pool);
+    const o = await kit.order(u, "MEMBERSHIP_MONTHLY", null);
+    const a = await sb.service.startPayment(u, o.order_id, "midtrans", NOW);
+    sb.mt.paid(await refOf(a.paymentId), "19000.00");
+    expect(await sb.service.refreshHosted(u, o.order_id, cfg, sb.mt.impl, NOW)).toEqual(["SETTLED"]);
+    const pr = setup({}, midtransConfig({ MIDTRANS_SERVER_KEY: KEY, MIDTRANS_ENV: "production" })!);
+    await expect(pr.service.startPayment(u, o.order_id, "midtrans", at(1))).rejects.toMatchObject({ code: "ORDER_NOT_PAYABLE" });
+    expect(pr.mt.snapBodies).toHaveLength(0);
+    expect(await payStatus(a.paymentId)).toBe("VERIFIED");
+  });
+
+  it("M3: Perbarui status juga memeriksa pembayaran FAILED selama pesanan masih menunggu (ditolak lalu berhasil)", async () => {
+    const { mt, service, deps } = setup();
+    const u = await createUser(pool);
+    const o = await kit.order(u, "MEMBERSHIP_MONTHLY", null);
+    const a = await service.startPayment(u, o.order_id, "midtrans", NOW);
+    const ref = await refOf(a.paymentId);
+    mt.paid(ref, "19000.00", "deny", { status_code: "202" });
+    expect((await (await webhookHandler(deps(null), hook(notification(ref, "19000.00", "deny", "202")), { provider: "midtrans" })).json()).result).toBe("FAILED");
+    expect(await service.refreshHosted(u, o.order_id, cfg, mt.impl, NOW)).toEqual(["DUPLICATE"]);
+    mt.paid(ref, "19000.00");
+    expect(await service.refreshHosted(u, o.order_id, cfg, mt.impl, NOW)).toEqual(["SETTLED"]);
+    expect(await orderStatus(o.order_id)).toBe("PAID");
+    expect(await payStatus(a.paymentId)).toBe("VERIFIED");
+  });
+
+  it("M3: pembayaran FAILED pada pesanan yang sudah lunas lewat transaksi lain tidak ikut diperiksa", async () => {
+    const { mt, service } = setup();
+    const u = await createUser(pool);
+    const o = await kit.order(u, "MEMBERSHIP_MONTHLY", null);
+    const a = await service.startPayment(u, o.order_id, "midtrans", NOW);
+    await pool.query("select fail_payment('midtrans', $1, 'uji:deny', 'FAILED', $2)", [await refOf(a.paymentId), NOW]);
+    const b = await service.startPayment(u, o.order_id, "midtrans", at(1));
+    mt.paid(await refOf(b.paymentId), "19000.00");
+    // Selama pesanan menunggu, yang FAILED ikut diperiksa (tidak dikenal Midtrans → NOT_FOUND); setelah lunas tidak lagi.
+    expect(await service.refreshHosted(u, o.order_id, cfg, mt.impl, NOW)).toEqual(["NOT_FOUND", "SETTLED"]);
+    expect(await service.refreshHosted(u, o.order_id, cfg, mt.impl, NOW)).toEqual([]);
+  });
+
+  it("M4: sisa waktu pesanan < 2 menit → ORDER_EXPIRING; kasus khusus terbuka → SPECIAL_CASE_OPEN; Snap tidak dipanggil", async () => {
+    const { mt, service, deps } = setup();
+    const u = await createUser(pool);
+    const o = await kit.order(u, "MEMBERSHIP_MONTHLY", null);
+    await expect(service.startPayment(u, o.order_id, "midtrans", at(24 * 60 - 1.5))).rejects.toMatchObject({ code: "ORDER_EXPIRING" });
+    const res = await payHandler(deps(u, { now: () => at(24 * 60 - 1.5) }), payReq("midtrans"), { id: o.order_id });
+    expect([res.status, (await res.json()).code]).toEqual([409, "ORDER_EXPIRING"]);
+    const owner = await createUser(pool);
+    const v = await kit.frozen(owner);
+    const so = await kit.order(owner, "STANDARD_REVIEW", v.versionId);
+    await pool.query("select submit_special_case($1, $2, $3, true, $4, $5)", [owner, v.documentId, "Perjanjian distribusi lintas provinsi dengan klausul eksklusivitas dan denda besar.", `k-${Math.random()}-abcdef`, NOW]);
+    await expect(service.startPayment(owner, so.order_id, "midtrans", NOW)).rejects.toMatchObject({ code: "SPECIAL_CASE_OPEN" });
+    expect(mt.snapBodies).toHaveLength(0);
+    expect((await pool.query("select count(*)::int as n from payments where order_id = any($1)", [[o.order_id, so.order_id]])).rows[0].n).toBe(0);
+    // Tepat 2 menit tersisa masih boleh.
+    expect((await service.startPayment(u, o.order_id, "midtrans", at(24 * 60 - 2))).redirectUrl).toBeTruthy();
   });
 });
 
@@ -170,10 +252,10 @@ describe("webhook Midtrans", () => {
     const res = await webhookHandler(t.deps(null), hook(notification(t.ref, "19000.00", "settlement")), { provider: "midtrans" });
     expect([res.status, (await res.json()).result]).toEqual([200, "RECORDED"]);
     expect(await orderStatus(t.o.order_id)).toBe("PENDING_PAYMENT");
-    // Transaksi tidak dikenal Midtrans → 404 (tidak ada pelunasan).
+    // M5: transaksi tidak dikenal Midtrans → 200 UNKNOWN (tidak diulang tanpa guna), tanpa pelunasan.
     const t2 = await pendingPayment();
     const res2 = await webhookHandler(t2.deps(null), hook(notification(t2.ref, "19000.00")), { provider: "midtrans" });
-    expect(res2.status).toBe(404);
+    expect([res2.status, (await res2.json()).result]).toEqual([200, "UNKNOWN"]);
     expect(await orderStatus(t2.o.order_id)).toBe("PENDING_PAYMENT");
   });
 

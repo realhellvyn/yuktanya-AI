@@ -9,6 +9,8 @@ export interface PaymentAdapter {
   name: ProviderName;
   // Hosted: pengguna membayar di halaman penyedia; pembayaran baru dicatat setelah penyedia membuat transaksi.
   hosted?: boolean;
+  // Hosted: asal halaman bayar yang aktif. URL tersimpan dari asal lain (mis. Sandbox setelah pindah ke Production) tidak dipakai ulang.
+  redirectOrigins?: string[];
   createCharge(order: ChargeInput): Promise<Charge>;
 }
 
@@ -41,6 +43,7 @@ export function createMidtransAdapter(cfg: MidtransConfig, appOrigin: () => stri
   return {
     name: "midtrans",
     hosted: true,
+    redirectOrigins: cfg.redirectOrigins,
     async createCharge(order) {
       const providerRef = `ytk-${randomUUID()}`;
       const now = order.now ?? new Date();

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ForbiddenError } from "@/lib/documents/handlers";
+import { clientIp } from "@/lib/auth/rate-limit";
 import { confirmAndApply, MIDTRANS_REF, MidtransError, verifyNotificationSignature, type MidtransConfig } from "./midtrans";
 import { BillingError, ORDER_KINDS, type BillingService } from "./service";
 
@@ -39,6 +40,7 @@ function mapError(e: unknown): Response {
       case "ORDER_NOT_PAYABLE": return json({ code: "ORDER_NOT_PAYABLE" }, 409);
       case "PROVIDER_UNAVAILABLE": return json({ code: "PROVIDER_UNAVAILABLE" }, 409);
       case "PROVIDER_ERROR": return json({ code: "PROVIDER_ERROR" }, 503);
+      case "ORDER_EXPIRING": return json({ code: "ORDER_EXPIRING" }, 409);
       case "NOTE_REQUIRED": case "INVALID_ACTION": return invalid();
       case "NOT_RECONCILIATION": case "AMOUNT_MISMATCH": case "CONFLICT": return json({ code: e.code }, 409);
       default: return invalid();
@@ -165,17 +167,16 @@ async function readLimited(req: Request, max: number): Promise<string> {
   }
   return Buffer.concat(chunks).toString("utf8");
 }
-const clientIp = (req: Request) => (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
 
 // HTTP Notification Midtrans. Urutan: tanda tangan (SHA-512, waktu-konstan) → konfirmasi Get Status API dengan server key
 // → pemetaan status → fungsi DB idempoten. Badan notifikasi hanya dipakai untuk order_id; status dan jumlah dari API.
-// 200 = diproses/sudah diproses/diabaikan; 401 tanda tangan salah; 404 transaksi tidak dikenal Midtrans; 5xx hanya untuk
+// 200 = diproses/sudah diproses/diabaikan/transaksi tidak dikenal (UNKNOWN); 401 tanda tangan salah; 5xx hanya untuk
 // galat sementara (Midtrans mengulang). Pelunasan hanya membuka pesanan; tidak ada efek persetujuan profesional.
 export const webhookHandler: Handler = async (deps, req, params = {}) => {
   if (params.provider !== "midtrans") return notFound();
   const mt = deps.midtrans;
   if (!mt?.config) return json({ code: "PROVIDER_UNAVAILABLE" }, 503);
-  if (mt.limiter && !mt.limiter.allow(clientIp(req))) return json({ code: "RATE_LIMITED" }, 429);
+  if (mt.limiter && !mt.limiter.allow(clientIp(req.headers))) return json({ code: "RATE_LIMITED" }, 429);
   let raw: string;
   try {
     raw = await readLimited(req, MAX_WEBHOOK_BYTES);
@@ -196,7 +197,12 @@ export const webhookHandler: Handler = async (deps, req, params = {}) => {
   const now = deps.now?.() ?? new Date();
   try {
     const result = await confirmAndApply(mt.config, orderId, (action, eventId, amount) => deps.service.applyProviderStatus("midtrans", orderId, eventId, action, amount, now), mt.fetchImpl);
-    if (result === null) return json({ code: "NOT_FOUND" }, 404);
+    // Tanda tangan sah tetapi transaksi tidak dikenal API status: dicatat (tanpa kunci) dan dibalas 200 agar Midtrans tidak
+    // mengulang tanpa guna. Tidak ada perubahan data.
+    if (result === null) {
+      console.warn("notifikasi Midtrans untuk transaksi yang tidak dikenal API status", orderId);
+      return json({ result: "UNKNOWN" });
+    }
     // Dana masuk untuk referensi Yuktanya tanpa baris pembayaran: perlu ditangani manual (cek dashboard Midtrans).
     if (result === "NOT_FOUND") console.error("notifikasi Midtrans terkonfirmasi tanpa pembayaran Yuktanya", orderId);
     return json({ result });

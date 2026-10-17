@@ -63,6 +63,8 @@ export async function journey({ page, step, shot, base, vp, issues, llm }) {
   await step(tag("404 untuk pengguna masuk (dokumen tak dikenal) juga Indonesia"), async () => {
     const r = await page.goto(base + "/documents/00000000-0000-4000-8000-000000000000");
     if (!r || r.status() !== 404) throw new Error("status " + r?.status());
+    // Halaman 404 dialirkan setelah status (dev server: kompilasi); tunggu judulnya muncul sebelum membaca isi.
+    await page.locator("h1:has-text('Halaman tidak ditemukan')").waitFor({ timeout: 15000 }).catch(() => {});
     if (!(await page.innerText("body")).includes("Halaman tidak ditemukan")) throw new Error("bukan 404 Indonesia");
   });
 

@@ -23,6 +23,8 @@ const secondary = `${btn} border border-border-strong bg-surface`;
 export function PaymentOptions({ orderId, payments, midtransAvailable, production, manualText, payAction, refreshAction, mockSettleAction }: Props) {
   const midtransPending = payments.find((p) => p.provider === "midtrans" && p.status === "PENDING");
   const midtransEnded = !midtransPending && payments.some((p) => p.provider === "midtrans" && (p.status === "FAILED" || p.status === "EXPIRED"));
+  // Pembayaran yang ditolak dapat ternyata berhasil di Midtrans: "Perbarui status" tetap tersedia (API status yang memutuskan).
+  const midtransFailed = !midtransPending && payments.some((p) => p.provider === "midtrans" && p.status === "FAILED");
   const manualPending = payments.find((p) => p.provider === "manual" && p.status === "PENDING");
   const mockPending = payments.find((p) => p.provider === "mock" && p.status === "PENDING");
   const hidden = (provider: string) => (
@@ -65,10 +67,18 @@ export function PaymentOptions({ orderId, payments, midtransAvailable, productio
             <>
               {midtransEnded && <p>Pembayaran sebelumnya di Midtrans belum berhasil (gagal, dibatalkan, atau melewati batas waktu). Anda dapat mencoba membayar lagi.</p>}
               <p>Anda akan diarahkan ke halaman Midtrans untuk memilih cara bayar, misalnya transfer bank (virtual account) atau dompet digital. Yuktanya tidak menyimpan data kartu Anda.</p>
-              <form action={payAction}>
-                {hidden("midtrans")}
-                <button type="submit" className={primary}>Bayar dengan Midtrans</button>
-              </form>
+              <div className="flex flex-wrap gap-3">
+                <form action={payAction}>
+                  {hidden("midtrans")}
+                  <button type="submit" className={primary}>Bayar dengan Midtrans</button>
+                </form>
+                {midtransFailed && (
+                  <form action={refreshAction}>
+                    <input type="hidden" name="orderId" value={orderId} />
+                    <button type="submit" className={secondary}>Perbarui status</button>
+                  </form>
+                )}
+              </div>
             </>
           )}
         </div>

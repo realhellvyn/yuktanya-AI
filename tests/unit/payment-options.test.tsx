@@ -41,6 +41,13 @@ describe("PaymentOptions (checkout, Task 21)", () => {
     }
   });
 
+  it("pembayaran FAILED (mis. ditolak lalu ternyata berhasil): 'Perbarui status' tersedia; EXPIRED tidak", () => {
+    const failed = render({ payments: [P("midtrans", "FAILED")] });
+    expect(failed).toContain("Perbarui status");
+    expect(failed).toContain("Bayar dengan Midtrans");
+    expect(render({ payments: [P("midtrans", "EXPIRED")] })).not.toContain("Perbarui status");
+  });
+
   it("transfer manual lama yang masih menunggu tetap menampilkan instruksi dan kode referensi", () => {
     const h = render({ payments: [P("manual", "PENDING")], manualText: "Transfer ke rekening uji" });
     expect(h).toContain("Transfer ke rekening uji");

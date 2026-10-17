@@ -11,6 +11,8 @@
 --    dapat dibayar ulang selama belum kedaluwarsa.
 -- 5. record_payment_event: status antara (pending, challenge, refund dari dashboard) hanya dicatat sebagai event.
 -- 6. settle_payment: sama dengan migrasi 37, kecuali pembayaran FAILED dapat dilunasi (lihat komentar di fungsi).
+-- 7. payment_blocker: satu sumber pemeriksaan "pesanan dapat dibayar" untuk create_payment (tanda tangan dan perilaku
+--    sama dengan migrasi 35) dan untuk pra-periksa layanan sebelum memanggil Snap.
 
 -- Catatan staging: satu-satunya penghapusan objek adalah constraint CHECK provider yang langsung diganti versi yang lebih
 -- luas; varian supabase/staging/20261016000039_midtrans_nodrop.sql menulisnya sebagai SQL dinamis.
@@ -19,6 +21,51 @@ alter table public.payments add constraint payments_provider_check check (provid
 
 alter table public.payments add column if not exists checkout_url text
   constraint payments_checkout_url_check check (checkout_url is null or (char_length(checkout_url) <= 500 and checkout_url ~ '^https?://'));
+
+-- ===== Satu sumber pemeriksaan "pesanan dapat dibayar" (perbaikan review Task 21, M4) =====
+-- Dipakai create_payment (setelah order dikunci) dan oleh layanan sebagai pra-periksa SEBELUM memanggil Snap, sehingga
+-- pesanan yang akan ditolak DB tidak membuat transaksi Midtrans yatim. null = dapat dibayar.
+create or replace function public.payment_blocker(p_user uuid, p_order uuid, p_now timestamptz) returns text
+language plpgsql stable security definer set search_path = public as $$
+declare v_o public.orders%rowtype;
+begin
+  select o.* into v_o from public.orders o where o.id = p_order and o.user_id = p_user;
+  if not found then
+    return 'NOT_FOUND';
+  end if;
+  if v_o.status <> 'PENDING_PAYMENT' or v_o.expires_at <= p_now or v_o.amount_idr <= 0 then
+    return 'ORDER_NOT_PAYABLE';
+  end if;
+  if v_o.kind = 'STANDARD_REVIEW' and exists (
+       select 1 from public.document_versions v join public.special_cases c on c.document_id = v.document_id
+        where v.id = v_o.ref_id and c.status in ('SUBMITTED', 'TRIAGED', 'QUOTED', 'ACCEPTED')) then
+    return 'SPECIAL_CASE_OPEN';
+  end if;
+  return null;
+end;
+$$;
+
+-- create_payment: tanda tangan dan perilaku sama dengan migrasi 35; pemeriksaan kini lewat payment_blocker.
+create or replace function public.create_payment(p_user uuid, p_order uuid, p_provider text, p_provider_ref text, p_now timestamptz) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare v_id uuid; v_block text;
+begin
+  perform 1 from public.orders o where o.id = p_order and o.user_id = p_user for update;
+  v_block := public.payment_blocker(p_user, p_order, p_now);
+  if v_block is not null then
+    raise exception '%', v_block;
+  end if;
+  -- A21: klik ganda "bayar" dengan metode sama memakai pembayaran yang masih menunggu (baris order dikunci di atas).
+  select p.id into v_id from public.payments p where p.order_id = p_order and p.provider = p_provider and p.status = 'PENDING'
+   order by p.created_at limit 1;
+  if found then
+    return v_id;
+  end if;
+  insert into public.payments (order_id, provider, provider_ref, status, amount_idr)
+  select p_order, p_provider, p_provider_ref, 'PENDING', o.amount_idr from public.orders o where o.id = p_order returning id into v_id;
+  return v_id;
+end;
+$$;
 
 -- ===== Pembayaran hosted (Midtrans Snap): pembayaran + URL halaman bayar dalam satu transaksi =====
 create or replace function public.create_hosted_payment(p_user uuid, p_order uuid, p_provider text, p_provider_ref text, p_checkout_url text, p_now timestamptz)
@@ -150,12 +197,14 @@ end;
 $$;
 
 revoke execute on function
+  public.payment_blocker(uuid, uuid, timestamptz), public.create_payment(uuid, uuid, text, text, timestamptz),
   public.create_hosted_payment(uuid, uuid, text, text, text, timestamptz),
   public.fail_payment(text, text, text, text, timestamptz),
   public.record_payment_event(text, text, text, timestamptz),
   public.settle_payment(text, text, text, integer, integer, timestamptz, timestamptz)
   from public, anon, authenticated;
 grant execute on function
+  public.payment_blocker(uuid, uuid, timestamptz), public.create_payment(uuid, uuid, text, text, timestamptz),
   public.create_hosted_payment(uuid, uuid, text, text, text, timestamptz),
   public.fail_payment(text, text, text, text, timestamptz),
   public.record_payment_event(text, text, text, timestamptz),

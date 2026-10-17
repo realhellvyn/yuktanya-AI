@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 import type { PaymentAdapter } from "./adapters";
-import { confirmAndApply, type GatewayAction, type MidtransConfig } from "./midtrans";
+import { confirmAndApply, MIN_PAYMENT_MINUTES, type GatewayAction, type MidtransConfig } from "./midtrans";
 
 export type OrderKind = "MEMBERSHIP_MONTHLY" | "MEMBERSHIP_ANNUAL" | "BUNDLE" | "STANDARD_REVIEW" | "DEEP_REVIEW";
 export const ORDER_KINDS: readonly OrderKind[] = ["MEMBERSHIP_MONTHLY", "MEMBERSHIP_ANNUAL", "BUNDLE", "STANDARD_REVIEW", "DEEP_REVIEW"];
@@ -15,7 +15,7 @@ export type ManualPending = { paymentId: string; orderId: string; kind: string; 
 export type ReconciliationItem = { orderId: string; paymentId: string | null; status: string; amountIdr: number; createdAt: string; extraPayment: boolean };
 
 export class BillingError extends Error {
-  constructor(readonly code: "NOT_ELIGIBLE" | "NOTE_REQUIRED" | "NOT_RECONCILIATION" | "AMOUNT_MISMATCH" | "CONFLICT" | "INVALID_ACTION" | "NOT_FOUND" | "ALREADY_REVIEWED" | "PRODUCT_UNAVAILABLE" | "ORDER_NOT_PAYABLE" | "INVALID_KIND" | "FORBIDDEN" | "PROVIDER_UNAVAILABLE" | "PROVIDER_ERROR" | "SPECIAL_CASE_OPEN" | "DISCOUNT_TAKEN", readonly reason?: string) {
+  constructor(readonly code: "NOT_ELIGIBLE" | "NOTE_REQUIRED" | "NOT_RECONCILIATION" | "AMOUNT_MISMATCH" | "CONFLICT" | "INVALID_ACTION" | "NOT_FOUND" | "ALREADY_REVIEWED" | "PRODUCT_UNAVAILABLE" | "ORDER_NOT_PAYABLE" | "INVALID_KIND" | "FORBIDDEN" | "PROVIDER_UNAVAILABLE" | "PROVIDER_ERROR" | "ORDER_EXPIRING" | "SPECIAL_CASE_OPEN" | "DISCOUNT_TAKEN", readonly reason?: string) {
     super(reason ? `${code}: ${reason}` : code);
     this.name = "BillingError";
   }
@@ -37,7 +37,8 @@ export interface BillingService {
   // Status penyedia yang SUDAH dikonfirmasi lewat API penyedia → fungsi DB (settle/fail/record). Idempoten per eventId.
   // amountIdr null = jumlah tidak terbaca → diperlakukan sebagai tidak cocok (rekonsiliasi).
   applyProviderStatus(provider: "midtrans", providerRef: string, eventId: string, action: GatewayAction, amountIdr: number | null, now?: Date): Promise<string>;
-  // Tombol "Perbarui status": konfirmasi ulang ke API Midtrans untuk pembayaran PENDING milik pengguna pada pesanan ini.
+  // Tombol "Perbarui status": konfirmasi ulang ke API Midtrans untuk pembayaran PENDING milik pengguna pada pesanan ini,
+  // serta pembayaran FAILED selama pesanan masih menunggu pembayaran (ditolak lalu ternyata berhasil).
   refreshHosted(userId: string, orderId: string, cfg: MidtransConfig, fetchImpl?: typeof fetch, now?: Date): Promise<string[]>;
   getOrder(userId: string, orderId: string): Promise<OrderView | null>;
   listOrders(userId: string): Promise<OrderView[]>;
@@ -100,14 +101,28 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
       const { rows: o } = await pool.query("select id, amount_idr, kind, status, expires_at from orders where id = $1 and user_id = $2", [orderId, userId]);
       if (!o[0]) throw new BillingError("NOT_FOUND");
       if (adapter.hosted) {
-        // Pra-periksa sebelum memanggil penyedia (create_payment tetap pemeriksa akhir di DB): pesanan yang tidak dapat dibayar
-        // tidak membuat transaksi di Midtrans, dan pembayaran PENDING yang ada dipakai ulang beserta URL-nya.
-        if (o[0].status !== "PENDING_PAYMENT" || (o[0].expires_at as Date).getTime() <= now.getTime() || o[0].amount_idr <= 0) throw new BillingError("ORDER_NOT_PAYABLE");
+        // Pra-periksa sebelum memanggil penyedia, dengan sumber yang sama dengan create_payment (payment_blocker; create_payment
+        // tetap pemeriksa akhir): pesanan yang akan ditolak DB tidak membuat transaksi Midtrans yatim.
+        const block = (await pool.query("select payment_blocker($1, $2, $3) as r", [userId, orderId, now])).rows[0].r as string | null;
+        if (block === "NOT_FOUND" || block === "ORDER_NOT_PAYABLE" || block === "SPECIAL_CASE_OPEN") throw new BillingError(block);
+        if (block) throw new BillingError("ORDER_NOT_PAYABLE");
+        if ((o[0].expires_at as Date).getTime() - now.getTime() < MIN_PAYMENT_MINUTES * 60_000) throw new BillingError("ORDER_EXPIRING");
         const { rows: ex } = await pool.query(
-          "select id, checkout_url from payments where order_id = $1 and provider = $2 and status = 'PENDING' and checkout_url is not null order by created_at limit 1",
+          "select id, provider_ref, checkout_url from payments where order_id = $1 and provider = $2 and status = 'PENDING' and checkout_url is not null order by created_at",
           [orderId, provider],
         );
-        if (ex[0]) return { paymentId: ex[0].id, instructions: "", redirectUrl: ex[0].checkout_url };
+        for (const p of ex) {
+          let origin: string | null = null;
+          try {
+            origin = new URL(p.checkout_url).origin;
+          } catch {
+            origin = null;
+          }
+          if (origin && (adapter.redirectOrigins ?? []).includes(origin)) return { paymentId: p.id, instructions: "", redirectUrl: p.checkout_url };
+          // URL dari asal Snap yang tidak aktif lagi (mis. Sandbox setelah pindah ke Production): pembayaran PENDING itu ditutup
+          // lewat fail_payment (hanya PENDING yang berubah; dana VERIFIED tidak pernah disentuh), lalu transaksi baru dibuat.
+          await pool.query("select fail_payment($1, $2, $3, 'EXPIRED', $4)", [provider, p.provider_ref, `stale-origin:${p.provider_ref}`, now]);
+        }
       }
       let charge;
       try {
@@ -144,7 +159,8 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
     async refreshHosted(userId, orderId, cfg, fetchImpl = fetch, now = new Date()) {
       const { rows } = await pool.query(
         `select p.provider_ref from payments p join orders o on o.id = p.order_id
-          where o.id = $1 and o.user_id = $2 and p.provider = 'midtrans' and p.status = 'PENDING' order by p.created_at`,
+          where o.id = $1 and o.user_id = $2 and p.provider = 'midtrans'
+            and (p.status = 'PENDING' or (p.status = 'FAILED' and o.status = 'PENDING_PAYMENT')) order by p.created_at`,
         [orderId, userId],
       );
       const out: string[] = [];

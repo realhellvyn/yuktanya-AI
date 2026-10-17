@@ -136,11 +136,29 @@ describe("migrasi 39: provider midtrans", () => {
     expect((await row("payments", a.payment_id)).status).toBe("PENDING");
   });
 
+  it("payment_blocker: sumber pemeriksaan yang sama dengan create_payment (NOT_FOUND, ORDER_NOT_PAYABLE, SPECIAL_CASE_OPEN, null)", async () => {
+    const block = async (u: string, o: string, now: Date = NOW) => (await pool.query("select payment_blocker($1, $2, $3) as r", [u, o, now])).rows[0].r as string | null;
+    const u = await createUser(pool);
+    const o = await kit.order(u, "MEMBERSHIP_MONTHLY", null);
+    expect(await block(u, o.order_id)).toBeNull();
+    expect(await block(await createUser(pool), o.order_id)).toBe("NOT_FOUND");
+    expect(await block(u, o.order_id, at(25 * 60))).toBe("ORDER_NOT_PAYABLE");
+    const owner = await createUser(pool);
+    const v = await kit.frozen(owner);
+    const so = await kit.order(owner, "STANDARD_REVIEW", v.versionId);
+    expect(await block(owner, so.order_id)).toBeNull();
+    await pool.query("select submit_special_case($1, $2, $3, true, $4, $5)", [owner, v.documentId, "Perjanjian distribusi lintas provinsi dengan klausul eksklusivitas dan denda besar.", `k-${Math.random()}-abcdef`, NOW]);
+    expect(await block(owner, so.order_id)).toBe("SPECIAL_CASE_OPEN");
+    await expect(pool.query("select create_payment($1, $2, 'midtrans', $3, $4)", [owner, so.order_id, ref(), NOW])).rejects.toThrow("SPECIAL_CASE_OPEN");
+  });
+
   it("fungsi baru: search_path tetap, hanya service_role yang boleh mengeksekusi", async () => {
     const sigs = [
       "public.create_hosted_payment(uuid, uuid, text, text, text, timestamptz)",
       "public.fail_payment(text, text, text, text, timestamptz)",
       "public.record_payment_event(text, text, text, timestamptz)",
+      "public.payment_blocker(uuid, uuid, timestamptz)",
+      "public.create_payment(uuid, uuid, text, text, timestamptz)",
       "public.settle_payment(text, text, text, integer, integer, timestamptz, timestamptz)",
     ];
     for (const s of sigs) {

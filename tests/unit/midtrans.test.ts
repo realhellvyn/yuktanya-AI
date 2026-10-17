@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
-  MIDTRANS_FORM_ACTION_ORIGINS, MidtransError, createSnapTransaction, eventIdFor, getTransactionStatus, mapStatus, midtransConfig,
+  MIDTRANS_FORM_ACTION_ORIGINS, MIN_PAYMENT_MINUTES, MidtransError, createSnapTransaction, eventIdFor, getTransactionStatus, mapStatus, midtransConfig,
   parseAmount, verifyNotificationSignature,
 } from "@/lib/billing/midtrans";
 
@@ -62,6 +62,16 @@ describe("midtransConfig", () => {
     }
   });
 
+  it("MIDTRANS_TEST_BASE_URL diabaikan di Vercel (VERCEL atau VERCEL_ENV ada), walau loopback; harness lokal tetap memakainya", () => {
+    const local = { MIDTRANS_SERVER_KEY: KEY, MIDTRANS_TEST_BASE_URL: "http://127.0.0.1:54997", NODE_ENV: "production" };
+    expect(midtransConfig(local)!.apiBase).toBe("http://127.0.0.1:54997");
+    for (const v of [{ VERCEL: "1" }, { VERCEL_ENV: "production" }, { VERCEL_ENV: "preview" }]) {
+      const c = midtransConfig({ ...local, ...v })!;
+      expect([c.snapUrl, c.apiBase, c.redirectOrigins], JSON.stringify(v)).toEqual(["https://app.sandbox.midtrans.com/snap/v1/transactions", "https://api.sandbox.midtrans.com", ["https://app.sandbox.midtrans.com"]]);
+    }
+    expect(midtransConfig({ ...local, MIDTRANS_ENV: "production", VERCEL: "1" })!.apiBase).toBe("https://api.midtrans.com");
+  });
+
   it("asal form-action CSP hanya dua domain halaman bayar Midtrans", () => {
     expect(MIDTRANS_FORM_ACTION_ORIGINS).toEqual(["https://app.midtrans.com", "https://app.sandbox.midtrans.com"]);
   });
@@ -90,11 +100,15 @@ describe("createSnapTransaction", () => {
     });
   });
 
-  it("kedaluwarsa minimal 1 menit; nama item dipotong 50 karakter", async () => {
+  it("sisa waktu pesanan < MIN_PAYMENT_MINUTES (2 menit) → REJECTED tanpa memanggil Snap; nama item dipotong 50 karakter", async () => {
+    expect(MIN_PAYMENT_MINUTES).toBe(2);
+    const none = fakeFetch(json({}, 201));
+    expect(await errCode(createSnapTransaction(cfg, { ...input, expiresAt: new Date(NOW.getTime() + 119_000) }, none.impl))).toBe("REJECTED");
+    expect(none.calls).toHaveLength(0);
     const f = fakeFetch(json({ token: "t", redirect_url: "https://app.sandbox.midtrans.com/snap/v4/redirection/t" }, 201));
-    await createSnapTransaction(cfg, { ...input, itemName: "x".repeat(80), expiresAt: new Date(NOW.getTime() + 10_000) }, f.impl);
+    await createSnapTransaction(cfg, { ...input, itemName: "x".repeat(80), expiresAt: new Date(NOW.getTime() + 120_000) }, f.impl);
     const b = JSON.parse(String(f.calls[0].init.body));
-    expect(b.expiry.duration).toBe(1);
+    expect(b.expiry.duration).toBe(2);
     expect(b.item_details[0].name).toHaveLength(50);
   });
 

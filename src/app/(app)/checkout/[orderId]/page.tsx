@@ -22,6 +22,7 @@ const NOTICE: Record<string, string> = { PROVIDER_UNAVAILABLE: "Pembayaran belum
   PROVIDER_ERROR: "Midtrans belum dapat dihubungi, sehingga pembayaran belum dibuat dan tidak ada uang yang ditarik. Coba lagi beberapa saat lagi.",
   STATUS_UNAVAILABLE: "Status pembayaran belum dapat diperiksa ke Midtrans. Coba lagi beberapa saat lagi.",
   RATE_LIMITED: "Anda baru saja memeriksa status. Tunggu satu menit, lalu coba lagi.",
+  ORDER_EXPIRING: "Sisa waktu pembayaran pesanan ini kurang dari 2 menit, sehingga pembayaran tidak dapat dimulai. Tunggu beberapa menit sampai pesanan kedaluwarsa, lalu buat pesanan baru dari halaman dokumen atau halaman Membership.",
   ORDER_NOT_PAYABLE: "Pesanan ini sudah tidak dapat dibayar. Buat pesanan baru dari halaman dokumen atau halaman Membership.",
   SPECIAL_CASE_OPEN: "Dokumen ini sedang diajukan sebagai Special Legal Case, sehingga Legal Review belum dapat dibayar. Lihat statusnya di menu Special Legal Case, atau tarik pengajuan tersebut bila tidak jadi." };
 const LABEL: Record<string, string> = { MEMBERSHIP_MONTHLY: "Membership Yuktanya (1 periode)", MEMBERSHIP_ANNUAL: "Membership Yuktanya (1 tahun)", BUNDLE: "Paket kredit Legal Review", STANDARD_REVIEW: "Legal Review oleh pengacara", DEEP_REVIEW: "Deep Review oleh pengacara (tambahan)" };
