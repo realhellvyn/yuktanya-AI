@@ -4,7 +4,8 @@ import type { Data, FieldSpec, Template } from "@/lib/documents/types";
 
 // Balasan model hanya teks bebas; yang benar adalah keadaan draf di server. Modul ini (1) membersihkan nama kolom
 // internal dan format tanggal mesin, lalu (2) membuang kalimat yang tidak cocok dengan draf akhir: klaim "saya catat …"
-// atas nilai yang tidak tersimpan, pertanyaan untuk kolom yang sudah terisi, atau "dokumen siap" padahal belum.
+// atas nilai yang tidak tersimpan, pertanyaan untuk kolom yang sudah terisi, "dokumen siap" padahal belum, atau daftar
+// sisa kolom ("Tersisa: …") yang sudah terisi / saat draf sudah siap.
 // Yang dibuang diganti kalimat dari keadaan server (yang tercatat + yang masih kosong). Deterministik, tanpa LLM.
 
 // Penanda kalimat yang membicarakan suatu kolom (dipakai untuk pertanyaan dan klaim). Wajib ada untuk setiap kolom.
@@ -94,6 +95,17 @@ const READY = /siap dibuat|(sudah|telah) siap|dokumen (anda )?siap|(sudah|telah)
 const CLAIM = /\b(catat|mencatat|dicatat|tercatat|simpan|menyimpan|disimpan|tersimpan|perbarui|memperbarui|diperbarui|ubah|mengubah|diubah|ganti|mengganti|diganti|menangkap|ditangkap|mengerti|isi|mengisi|diisi|terisi|masukkan|memasukkan|dimasukkan)\b/i;
 // Kesiapan yang benar-benar dinegasikan ("belum lengkap", "tidak siap"): benar hanya bila draf memang belum siap.
 const NEG_READY = /\b(belum|tidak|bukan|tak)\s+(sepenuhnya\s+|benar-benar\s+)?(siap|lengkap|terisi)\b/i;
+// Pernyataan sisa kolom ("Tersisa: …", "kota pengadilan masih kosong", "belum diisi"). Model menulisnya dari daftar
+// SEBELUM giliran ini, jadi bisa bertentangan dengan draf akhir. "belum siap/lengkap" tetap ditangani NEG_READY.
+const REMAIN = /\b(tersisa|sisanya)\b|\bsisa\s+(kolom|data|isian|pertanyaan)\b|\bmasih\s+(perlu|kosong|kurang|belum|dibutuhkan|diperlukan)\b|\bbelum\s+(diisi|terisi|ada|dilengkapi|disebutkan|ditulis)\b|\b(yang|masih)\s+kosong\b|\b(yang|masih|datanya|kolomnya)\s+kurang\b|\bkurang\s+(satu|dua|tiga|lagi)\b/i;
+// "tinggal" hanya berarti sisa bila diikuti kolom atau jumlah ("tinggal kota pengadilan", "tinggal satu lagi"),
+// bukan "tinggal di Bandung" atau "Anda tinggal memeriksa ringkasan".
+const TINGGAL = /\btinggal\b(?!\s+(?:di|ke|dari|bersama|dengan|serumah)\b)([^.!?]*)/i;
+const TINGGAL_TAIL = /\b(satu|dua|tiga|sedikit|lagi|kolom|isian|pertanyaan)\b/i;
+// "Tidak ada (lagi) yang kurang/kosong" = klaim kesiapan, bukan daftar sisa.
+const NOTHING_LEFT = /\b(tidak|tak)\s+ada\s+(lagi\s+)?(yang|kolom|data|isian)\b/i;
+// Tawaran koreksi bersyarat ("Bila masih perlu koreksi, sebutkan saja") bukan pernyataan sisa.
+const OFFER = /\b(jika|bila|kalau|apabila|seandainya)\b[^.!?]*\b(koreksi|ubah|mengubah|diubah|ganti|mengganti|diganti|perbaiki|memperbaiki|diperbaiki)\b/i;
 // Penolakan/negasi ("saya tidak bisa mengisi …") bukan klaim mencatat; hanya nilai yang disebut yang diperiksa.
 const NEGATION = /\b(tidak|tak|belum|bukan|gagal)\b/i;
 // Pertanyaan konfirmasi atau tawaran koreksi tidak meminta nilai baru, jadi tidak dibuang walau kolomnya sudah terisi.
@@ -137,6 +149,12 @@ const wholeWord = (needle: string, hay: string) =>
 function mentioned(t: Template, text: string): FieldSpec[] {
   const cues = FIELD_CUES[t.id] ?? {};
   return t.fields.filter((f) => cues[f.key]?.test(text));
+}
+
+function remainStatement(t: Template, text: string): boolean {
+  if (REMAIN.test(text)) return true;
+  const m = TINGGAL.exec(text);
+  return !!m && (TINGGAL_TAIL.test(m[1]) || mentioned(t, m[1]).length > 0);
 }
 
 type Mentions = { dates: (string | null)[]; numbers: number[]; names: string[] };
@@ -229,7 +247,23 @@ function shown(f: FieldSpec, v: string | number): string {
   return shorten(String(v));
 }
 
-export const READY_LINE = "Semua kolom wajib sudah terisi. Periksa ringkasan, lalu buat dokumen.";
+// Istilah glosarium untuk rute penilaian khusus. "Kasus Khusus"/"kasus khusus" bebas dari model (bukan bagian dari
+// "Kasus Hukum Khusus", bukan kode KASUS_KHUSUS) → "Kasus Hukum Khusus (Special Legal Case)" pada sebutan pertama,
+// "Kasus Hukum Khusus" berikutnya; "(Special Legal Case)" tidak digandakan bila sudah ada di teks.
+const SPECIAL_TERM = "Kasus Hukum Khusus";
+const SPECIAL_FULL = `${SPECIAL_TERM} (Special Legal Case)`;
+export function normalizeSpecialCaseTerm(text: string): string {
+  let tagged = /Special Legal Case/i.test(text);
+  return text.replace(/(?<![\p{L}\p{N}_])kasus\s+khusus(?![\p{L}\p{N}_])(\s*\(\s*Special Legal Case\s*\))?/giu, (_m, en?: string) => {
+    if (en || !tagged) {
+      tagged = true;
+      return SPECIAL_FULL;
+    }
+    return SPECIAL_TERM;
+  });
+}
+
+export const READY_LINE ="Semua kolom wajib sudah terisi. Periksa ringkasan, lalu buat dokumen.";
 export const CORRECTION_LINE = "Jika ada yang perlu dikoreksi, sebutkan saja.";
 
 export function reconcileReply(said: string, s: ReplyState): string {
@@ -274,6 +308,24 @@ export function reconcileReply(said: string, s: ReplyState): string {
           continue;
         }
         for (const f of fields) if (f.required && blankVal(s.final[f.key])) asked.add(f.key);
+      }
+    } else if (!READY.test(clean) && !OFFER.test(clean) && NOTHING_LEFT.test(clean)) {
+      // "Tidak ada lagi yang kosong" hanya benar bila draf memang siap.
+      if (!s.ready) {
+        drop(CLAIM.test(clean));
+        continue;
+      }
+    } else if (!READY.test(clean) && !OFFER.test(clean) && remainStatement(t, clean)) {
+      // Daftar sisa dari model: dibuang bila siap (server menulis READY_LINE), atau bila menyebut kolom yang sudah
+      // terisi atau kolom opsional. Kalimat sisa tanpa kolom spesifik boleh tetap saat belum siap.
+      if (s.ready || mentioned(t, clean).some((f) => !f.required || !blankVal(s.final[f.key]))) {
+        drop(CLAIM.test(clean));
+        continue;
+      }
+      // Bagian klaim ("saya catat X, tinggal Y") tetap diperiksa nilainya; kolom sisa sudah diperiksa di atas.
+      if (CLAIM.test(clean) && !claimConsistent(t, clean, s, false)) {
+        drop(true);
+        continue;
       }
     } else if (NEG_READY.test(clean)) {
       // "dokumen belum siap", "data belum lengkap": benar hanya bila memang belum siap.

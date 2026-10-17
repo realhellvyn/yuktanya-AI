@@ -13,7 +13,7 @@ import { GatewayError, type ChatMessage, type chat as gatewayChat } from "./gate
 import { buildSystemPrompt } from "./chat-prompt";
 import { groundSuggestions } from "./grounding";
 import { parseInterviewJson } from "./interview";
-import { reconcileReply } from "./reply-guard";
+import { normalizeSpecialCaseTerm, reconcileReply } from "./reply-guard";
 import type { UsageStore } from "./quota";
 
 export type ChatTurnDeps = {
@@ -171,8 +171,10 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
       await deps.store.finalize(reservation.groupId, deps.now?.() ?? new Date()).catch(() => undefined);
       await aiEvent("ai_request_succeeded");
 
-      // Nilai yang diusulkan model tapi tidak dicatat: sampaikan jujur, jangan biarkan balasan AI mengaku sudah mencatat.
-      const unnoted = template.fields.filter((f) => raw[f.key] != null && String(raw[f.key]).trim() !== "" && !cleared.includes(f.key) && !sameAsFinal(template, f, raw[f.key], final[f.key]));
+      // Nilai yang benar-benar ditulis pengguna (lolos grounding) tapi tidak tersimpan, mis. ditolak validasi: sampaikan jujur.
+      // Usulan karangan model yang tidak ada di pesan pengguna dibuang diam-diam (tidak disimpan, tidak dicatat di sini);
+      // reconcileReply tetap membuang klaim "saya catat …" atas nilai itu.
+      const unnoted = template.fields.filter((f) => f.key in grounded && !cleared.includes(f.key) && !sameAsFinal(template, f, raw[f.key], final[f.key]));
       const note =
         unnoted.length > 0 || issues.length > 0
           ? `Belum tercatat: ${unnoted.map((f) => f.label).join(", ") || "perubahan terakhir"}.${issues.length || fieldIssues.length ? ` ${[...fieldIssues, ...issues].join(" ")}` : " Tulis nilainya lengkap di pesan, sesuai contoh pada pertanyaan."}`
@@ -182,7 +184,8 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
       // Balasan disesuaikan dengan draf akhir: klaim/pertanyaan yang tidak cocok diganti kalimat dari keadaan server.
       const ready = isReady(template, final);
       const guarded = reconcileReply(said, { template, final, applied, cleared, ready, userText, noted: note !== "", notedKeys: unnoted.map((f) => f.key) });
-      const out = [guarded, note].filter(Boolean).join("\n\n").slice(0, 4000);
+      // Istilah glosarium untuk rute penilaian khusus ("kasus khusus" bebas dari model → Kasus Hukum Khusus (Special Legal Case)).
+      const out = [normalizeSpecialCaseTerm(guarded), note].filter(Boolean).join("\n\n").slice(0, 4000);
       await saveAssistantReply(deps.pool, userId, params.id, out, readUpTo);
       return json({ reply: out, applied: [...applied, ...cleared], missing, ready, issues });
     } catch (e) {

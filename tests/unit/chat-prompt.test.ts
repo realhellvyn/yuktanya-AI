@@ -20,6 +20,15 @@ describe("prompt sistem percakapan dokumen", () => {
     expect(p).toMatch(/jangan menanyakan kolom yang sudah terisi/i);
   });
 
+  it.each(templates.map((t) => [t.id, t] as const))("%s: model tidak membuat daftar sisa kolom/status kelengkapan; kolom opsional tidak disebut tersisa", (_id, t) => {
+    const p = buildSystemPrompt(t, {});
+    expect(p).toMatch(/jangan menulis daftar kolom yang tersisa/i);
+    expect(p).toMatch(/server yang menyampaikannya/i);
+    expect(p).toMatch(/kolom opsional tidak pernah disebut tersisa/i);
+    // Model tidak lagi diminta menyatakan "dokumen siap dibuat" (dari data sebelum pesan ini; server yang menyatakannya).
+    expect(p).not.toMatch(/katakan dokumen siap dibuat/i);
+  });
+
   it.each(templates.map((t) => [t.id, t] as const))("%s: memuat contoh percakapan untuk pola kalimat yang terlewat di uji langsung", (_id, t) => {
     const shots = FEW_SHOT[t.category];
     expect(shots.length).toBeGreaterThanOrEqual(2);

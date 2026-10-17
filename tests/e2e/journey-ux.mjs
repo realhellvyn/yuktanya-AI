@@ -112,7 +112,7 @@ export async function journey({ page, step, shot, base, vp, issues, llm }) {
     if (!/17 dari 20/.test(q)) throw new Error("dua pesan pemilih + satu pesan dokumen harus memakai 3 jatah: " + q);
   });
 
-  await step(tag("Saya belum tahu: keperluan rumit (cerai) diarahkan ke rute Kasus Khusus, bukan ke dokumen katalog"), async () => {
+  await step(tag("Saya belum tahu: keperluan rumit (cerai) diarahkan ke rute Kasus Hukum Khusus (Special Legal Case), bukan ke dokumen katalog"), async () => {
     const before = llm.control.chooser ?? 0;
     await page.goto(base + "/workspace/pilih");
     await page.fill("textarea[name=message]", "Saya sedang digugat cerai dan bingung harus buat dokumen apa.");

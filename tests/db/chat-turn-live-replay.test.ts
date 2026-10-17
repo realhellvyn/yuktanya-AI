@@ -91,6 +91,8 @@ describe("pemutaran ulang uji langsung 2026-10-16", () => {
     }]);
     expect(r.draft).toEqual({ scope: "usaha katering", startDate: "2026-11-01", valueIdr: 20000000 });
     expect(r.draft.endDate).toBeUndefined();
+    // Task 22 (A09): tanggal berakhir hasil hitungan model tidak pernah ditulis pengguna → tanpa "Belum tercatat".
+    expect(r.out[0].reply).not.toContain("Belum tercatat");
     expect(r.out[0].reply).not.toMatch(/catat[^.]*Gilang Ramadhan/);
     expect(r.out[0].reply).toContain("Nilai kerja sama (rupiah): Rp20.000.000");
     expect(r.out[0].reply).toContain("Siapa nama pihak pertama? Contoh: PT Maju Bersama.");

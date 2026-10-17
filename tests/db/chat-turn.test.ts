@@ -39,7 +39,8 @@ describe("handleChatTurn", () => {
     const b = await res.json();
     expect(b.applied.sort()).toEqual(["disclosingParty", "receivingParty", "termMonths"]);
     expect(b.reply).toContain("Kapan tanggal perjanjiannya?");
-    expect(b.reply).toContain("Belum tercatat: Kota pengadilan");
+    // Task 22 (A09): "Jakarta Selatan" dikarang model (tidak ada di pesan) → dibuang diam-diam, tanpa "Belum tercatat".
+    expect(b.reply).not.toContain("Belum tercatat");
     expect(b.ready).toBe(false);
     expect(b.missing).toEqual(expect.arrayContaining(["signingDate", "confidentialInfo", "purpose", "disputeCity"]));
     expect((await docs.get(u, id))!.draft.data).toEqual({ disclosingParty: "Sinta Dewi", receivingParty: "Budi Santoso", termMonths: 12 });
@@ -198,14 +199,76 @@ describe("handleChatTurn: temuan reviewer", () => {
     expect(b.ready).toBe(true);
   });
 
-  it("nilai yang dibuang diakui jujur: balasan memuat 'Belum tercatat'", async () => {
+  it("A01: nilai terakhir diisi di giliran ini (siap) sementara model menulis 'Tersisa: …' dari daftar lama → tanpa kontradiksi", async () => {
+    const u = await createUser(pool);
+    const partial: Record<string, string | number> = { ...base };
+    delete partial.disputeCity;
+    const id = await utang(u, partial);
+    const t = setup(u, answer({ disputeCity: "Surabaya" }, "Baik, saya catat Surabaya. Tersisa: kota pengadilan bila terjadi sengketa."));
+    const b = await (await t.call(id, { message: "kalau ada sengketa di Pengadilan Negeri Surabaya" })).json();
+    expect(b.applied).toEqual(["disputeCity"]);
+    expect(b.ready).toBe(true);
+    expect(b.reply).not.toMatch(/Tersisa/i);
+    expect(b.reply).toContain("Baik, saya catat Surabaya.");
+    expect(b.reply).toContain("Semua kolom wajib sudah terisi");
+    // Daftar di prompt tetap dari draf awal (model belum tahu nilai giliran ini), plus larangan membuat daftar sisa.
+    const system = t.chat.mock.calls[0][0][0].content;
+    expect(system).toContain("Kolom wajib yang belum terisi: disputeCity");
+    expect(system).toMatch(/jangan menulis daftar kolom yang tersisa/i);
+  });
+
+  // Task 22 (A09): "Belum tercatat" hanya untuk nilai yang benar-benar ditulis pengguna (lolos grounding) tapi ditolak.
+  // "lima juta" tidak lolos grounding (angka berupa kata), jadi diperlakukan seperti usulan model: tanpa catatan,
+  // tetapi balasan tetap jujur (klaim "sudah saya catat" dibuang, server menyatakan belum ada data baru).
+  it("nilai yang tidak lolos grounding tidak disimpan dan tidak diaku tercatat; tanpa 'Belum tercatat'", async () => {
     const u = await createUser(pool);
     const id = await utang(u, {});
     const t = setup(u, answer({ principalIdr: 5000000 }, "Baik, Rp5.000.000 sudah saya catat."));
     const b = await (await t.call(id, { message: "saya pinjam lima juta" })).json();
     expect(b.applied).toEqual([]);
-    expect(b.reply).toContain("Belum tercatat");
-    expect(b.reply).toContain("Jumlah pinjaman");
+    expect((await docs.get(u, id))!.draft.data.principalIdr).toBeUndefined();
+    expect(b.reply).not.toContain("sudah saya catat");
+    expect(b.reply).not.toContain("Belum tercatat");
+    expect(b.reply).toContain("Belum ada data baru yang tercatat dari pesan ini.");
+  });
+
+  it("A09: nilai karangan model (tidak ada di pesan) dibuang diam-diam, tidak disimpan, balasan tidak mengaku mencatatnya", async () => {
+    const u = await createUser(pool);
+    const id = await newDoc(u);
+    const t = setup(u, answer(
+      { disclosingParty: "Sinta Dewi", receivingParty: "Budi Santoso", signingDate: "16 Oktober 2026", disputeCity: "Jakarta Selatan" },
+      "Baik, saya catat Sinta Dewi, Budi Santoso, tanggal 16 Oktober 2026, dan kota pengadilan Jakarta Selatan.",
+    ));
+    const b = await (await t.call(id, { message: "Saya Sinta Dewi ingin NDA dengan Budi Santoso." })).json();
+    expect(b.applied.sort()).toEqual(["disclosingParty", "receivingParty"]);
+    expect((await docs.get(u, id))!.draft.data).toEqual({ disclosingParty: "Sinta Dewi", receivingParty: "Budi Santoso" });
+    expect(b.reply).not.toContain("Belum tercatat");
+    expect(b.reply).not.toMatch(/16 Oktober 2026 *[,.]|Jakarta Selatan\./);
+    expect(b.reply).not.toContain("saya catat Sinta Dewi, Budi Santoso, tanggal");
+    expect(b.reply).toContain("Yang tercatat dari pesan ini:");
+    // Kolom yang dikarang tetap ditanyakan karena masih kosong.
+    expect(b.reply).toContain("Tanggal perjanjian dibuat?");
+  });
+
+  it("A09: nilai tidak valid yang ditulis pengguna tetap 'Belum tercatat' + alasan; usulan karangan di giliran yang sama tidak disebut", async () => {
+    const u = await createUser(pool);
+    const id = await utang(u, {});
+    const t = setup(u, answer({ disputeCity: "Pengadilan Agama Semarang", principalIdr: 7000000 }, "Baik."));
+    const b = await (await t.call(id, { message: "kalau ribut di Pengadilan Agama Semarang" })).json();
+    expect(b.applied).toEqual([]);
+    expect(b.reply).toContain("Belum tercatat: Kota pengadilan bila terjadi sengketa.");
+    expect(b.reply).toContain("Pengadilan Negeri");
+    expect(b.reply).not.toMatch(/Belum tercatat:[^\n]*Jumlah pinjaman/);
+    expect((await docs.get(u, id))!.draft.data).toEqual({});
+  });
+
+  it("Task 22 (A02): 'kasus khusus' di balasan percakapan dokumen memakai istilah glosarium", async () => {
+    const u = await createUser(pool);
+    const id = await utang(u, {});
+    const t = setup(u, answer({}, "Pinjaman dengan jaminan tanah termasuk kasus khusus, jadi tidak bisa dibuat di sini."));
+    const b = await (await t.call(id, { message: "pinjamannya pakai jaminan sertifikat tanah" })).json();
+    expect(b.reply).toContain("termasuk Kasus Hukum Khusus (Special Legal Case), jadi");
+    expect(b.reply).not.toMatch(/kasus khusus/i);
   });
 
   it("kolom opsional dapat dikosongkan bila pengguna jelas memintanya; kolom wajib tidak", async () => {

@@ -9,6 +9,6 @@ export function aiReviewStatus(status: number): AiReviewStatus {
 export const AI_REVIEW_STATUS_TEXT: Record<AiReviewStatus, string> = {
   ok: "Analisis awal AI selesai. Hasilnya ada di bawah.",
   quota: "Batas analisis AI atau pesan AI hari ini sudah tercapai. Kuota Anda tidak terpakai. Coba lagi besok setelah pukul 00.00 WIB.",
-  khusus: "Dokumen ini memerlukan penilaian khusus, jadi tidak dianalisis AI. Kuota Anda tidak terpakai.",
+  khusus: "Dokumen ini perlu dinilai melalui Kasus Hukum Khusus (Special Legal Case), jadi tidak dianalisis AI. Kuota Anda tidak terpakai.",
   down: "Analisis AI belum berhasil. Kuota Anda tidak terpakai. Silakan coba lagi.",
 };

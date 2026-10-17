@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CORRECTION_LINE, FIELD_CUES, reconcileReply, sanitizeReply, type ReplyState } from "@/lib/ai/reply-guard";
+import { CORRECTION_LINE, FIELD_CUES, normalizeSpecialCaseTerm, READY_LINE, reconcileReply, sanitizeReply, type ReplyState } from "@/lib/ai/reply-guard";
 import { nda } from "@/lib/documents/templates/nda";
 import { pks } from "@/lib/documents/templates/pks";
 import { TEMPLATES } from "@/lib/documents/templates/registry";
@@ -200,5 +200,85 @@ describe("reconcileReply: balasan mengikuti apa yang benar-benar tersimpan", () 
     expect(reconcileReply("Apakah tanggal perjanjian 20 Oktober 2026 sudah benar?", s2)).not.toContain("20 Oktober 2026");
     // Tawaran koreksi umum tetap.
     expect(reconcileReply("Ada yang ingin dikoreksi?", state(nda, fullNda, "…", { applied: [] }))).toContain("Ada yang ingin dikoreksi?");
+  });
+});
+
+// Task 22 (A01): kalimat model "Tersisa: …" / "tinggal … yang masih kosong" tidak boleh bertentangan dengan READY_LINE.
+describe("reconcileReply: pernyataan sisa kolom mengikuti draf akhir", () => {
+  const fullUtang = { creditor: "Rina Wulandari", debtor: "Agus Prasetyo", signingDate: "2026-10-16", principalIdr: 5000000, dueDate: "2027-01-16", disputeCity: "Surabaya" };
+  const userUtang = "Saya Rina Wulandari meminjamkan Rp5.000.000 kepada Agus Prasetyo, surat 16 Oktober 2026, lunas 16 Januari 2027, pengadilan Surabaya.";
+
+  it("probe: siap → 'Tersisa: catatan cara pembayaran' dibuang, konfirmasi tetap, READY_LINE tetap", () => {
+    const out = reconcileReply("Baik, saya catat jatuh tempo. Tersisa: catatan cara pembayaran.", state(utangPiutang, fullUtang, userUtang, { applied: ["dueDate"] }));
+    expect(out).not.toMatch(/Tersisa/i);
+    expect(out).toContain("Baik, saya catat jatuh tempo.");
+    expect(out).toContain(READY_LINE);
+  });
+
+  it("probe: siap → '… tinggal kota pengadilan yang masih kosong' dibuang", () => {
+    for (const said of ["Baik, saya catat. Tinggal kota pengadilan yang masih kosong.", "Baik, saya catat tanggal lunas, tinggal kota pengadilan yang masih kosong.", "Baik, saya catat. Tersisa: kota pengadilan."]) {
+      const out = reconcileReply(said, state(utangPiutang, fullUtang, userUtang, { applied: ["dueDate"] }));
+      expect(out, said).not.toMatch(/tinggal|masih kosong|Tersisa/i);
+      expect(out, said).toContain(READY_LINE);
+    }
+  });
+
+  it("belum siap: sisa kolom yang memang masih kosong dipertahankan", () => {
+    const final = { creditor: "Rina Wulandari", debtor: "Agus Prasetyo", signingDate: "2026-10-16", principalIdr: 5000000 };
+    for (const said of ["Tersisa: tanggal pinjaman harus lunas dan kota pengadilan.", "Tinggal kota pengadilan yang masih kosong.", "Kota pengadilan belum diisi."]) {
+      const out = reconcileReply(`Baik, saya catat. ${said}`, state(utangPiutang, final, userUtang, { applied: ["principalIdr"] }));
+      expect(out, said).toContain(said);
+      expect(out, said).not.toContain(READY_LINE);
+    }
+  });
+
+  it("belum siap: kalimat yang menyebut kolom yang sudah terisi (atau kolom opsional) sebagai sisa dibuang", () => {
+    const final = { creditor: "Rina Wulandari", debtor: "Agus Prasetyo", signingDate: "2026-10-16", principalIdr: 5000000 };
+    for (const said of ["Tersisa: jumlah pinjaman dan kota pengadilan.", "Tanggal surat dibuat masih kosong.", "Nama peminjam belum terisi.", "Tersisa: catatan cara pembayaran."]) {
+      const out = reconcileReply(`Baik. ${said}`, state(utangPiutang, final, userUtang, { applied: [] }));
+      expect(out, said).not.toContain(said);
+      // Server tetap menanyakan kolom wajib yang masih kosong.
+      expect(out, said).toContain("Tanggal pinjaman harus lunas?");
+    }
+  });
+
+  it("belum siap: pernyataan sisa tanpa kolom spesifik dipertahankan", () => {
+    const out = reconcileReply("Baik. Masih ada data yang kosong.", state(utangPiutang, { creditor: "Rina Wulandari" }, "Saya Rina Wulandari", { applied: [] }));
+    expect(out).toContain("Masih ada data yang kosong.");
+  });
+
+  it("kalimat biasa tanpa isyarat sisa tidak tersentuh (siap maupun belum)", () => {
+    const ok = [
+      "Baik, saya catat Budi Santoso yang tinggal di Bandung sebagai penerima.",
+      "Anda tinggal memeriksa ringkasan, lalu menekan tombol Buat dokumen.",
+      "Bila masih perlu koreksi, sebutkan saja.",
+      "Tidak ada yang kurang.",
+      "Catatan tambahan boleh dikosongkan.",
+      "Maaf, saya tidak bisa memberikan nasihat hukum.",
+    ];
+    const ready = { signingDate: "2026-10-16", disclosingParty: "Sinta Dewi", receivingParty: "Budi Santoso", confidentialInfo: "daftar pelanggan", purpose: "menilai kerja sama", termMonths: 12, disputeCity: "Bandung" };
+    for (const s of ok) expect(reconcileReply(s, state(nda, ready, "Saya Sinta Dewi, penerimanya Budi Santoso yang tinggal di Bandung.", { applied: [] })), s).toContain(s);
+    expect(reconcileReply(ok[5], state(nda, { disclosingParty: "Sinta Dewi" }, "Saya Sinta Dewi", { applied: [] }))).toContain(ok[5]);
+  });
+
+  it("'tidak ada yang kurang' saat belum siap = klaim kesiapan palsu → dibuang", () => {
+    const out = reconcileReply("Tidak ada lagi kolom yang kosong.", state(nda, { disclosingParty: "Sinta Dewi" }, "Saya Sinta Dewi", { applied: [] }));
+    expect(out).not.toContain("Tidak ada lagi kolom yang kosong.");
+    expect(out).toContain("Nama pihak yang menerima informasi rahasia?");
+  });
+});
+
+// Task 22 (A02): istilah glosarium untuk rute penilaian khusus.
+describe("normalizeSpecialCaseTerm", () => {
+  it("'Kasus Khusus'/'kasus khusus' → 'Kasus Hukum Khusus (Special Legal Case)' sekali, berikutnya tanpa kurung", () => {
+    expect(normalizeSpecialCaseTerm("Ini kasus khusus. Ajukan Kasus Khusus.")).toBe("Ini Kasus Hukum Khusus (Special Legal Case). Ajukan Kasus Hukum Khusus.");
+    expect(normalizeSpecialCaseTerm("KASUS KHUSUS ya")).toBe("Kasus Hukum Khusus (Special Legal Case) ya");
+  });
+
+  it("tidak menggandakan '(Special Legal Case)' dan tidak menyentuh istilah yang sudah benar atau kata lain", () => {
+    expect(normalizeSpecialCaseTerm("Lewat Kasus Khusus (Special Legal Case).")).toBe("Lewat Kasus Hukum Khusus (Special Legal Case).");
+    expect(normalizeSpecialCaseTerm("Special Legal Case (kasus khusus) dinilai firma.")).toBe("Special Legal Case (Kasus Hukum Khusus) dinilai firma.");
+    const ok = "Ajukan Kasus Hukum Khusus (Special Legal Case). Dokumen berkasus khusus, penilaian khusus, dan KASUS_KHUSUS tetap.";
+    expect(normalizeSpecialCaseTerm(ok)).toBe(ok);
   });
 });
