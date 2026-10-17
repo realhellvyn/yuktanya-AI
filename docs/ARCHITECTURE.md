@@ -119,6 +119,7 @@ Payment callbacks have provider verification or controlled manual reconciliation
 event IDs and idempotency. Transactional outbox retries QR/notification work after commit;
 failure cannot produce fake completion or duplicate records. Public QR lookup reads current
 authoritative status; historical PDF cannot promise current active status without lookup.
-Feature flags AI_PRE_REVIEW, DEEP_REVIEW_PURCHASE, ENHANCED_ISSUANCE default OFF in
-production pending corresponding gates. Flags never waive auth, quota or professional checks.
+Feature flags AI_PRE_REVIEW, DEEP_REVIEW_PURCHASE, ENHANCED_ISSUANCE default OFF in code
+(env unset = off). Owner decision 17 Oct 2026: all three are ON in production (see
+DECISIONS_AND_PRECEDENCE.md). Flags never waive auth, quota or professional checks.
 Retain secure worker lease/idempotency if workload exceeds hosting request limits.

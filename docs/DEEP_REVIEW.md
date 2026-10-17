@@ -74,7 +74,9 @@ assessment time, policy version. Evidence is private and access-controlled.
 
 M4/M6/M7 mandatory, cannot N/A. Others may N/A only if policy permits and reason approved;
 mandatory applicability decisions cannot be delegated to AI. Partner must define document-
-specific evidence thresholds; until signed, Enhanced production feature remains OFF.
+specific evidence thresholds; until signed, Enhanced cannot be issued (`decide_deep` rejects
+an unapproved rubric). Owner decision 17 Oct 2026: the ENHANCED_ISSUANCE and
+DEEP_REVIEW_PURCHASE flags are ON in production; the rubric gate above still applies.
 No unresolved material or critical notes; a MINOR/INFO limitation may remain only if rubric
 permits, disclosed in enhanced report and not represented as zero remaining notes.
 

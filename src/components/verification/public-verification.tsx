@@ -1,7 +1,8 @@
 import { formatDateId } from "@/lib/documents/format";
 import { LEGAL_DISCLAIMER, QR_NOT_SIGNATURE, UPLOAD_HASH_NOTE, VERIFICATION_TITLES, VERIFIED_LABEL, verificationStatement } from "@/lib/copy";
 import type { PublicVerificationResult } from "@/lib/verification/service";
-import { VerificationSeal } from "./verification-seal";
+import { medalFor } from "@/lib/verification/medal";
+import { VerificationMedal } from "./verification-medal";
 
 const wibDay = (iso: string): string => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
 
@@ -29,12 +30,11 @@ export function PublicVerification({ result, code }: { result: PublicVerificatio
       </main>
     );
   }
+  const medal = medalFor(result.kind, result.status, result.outcome);
   return (
     <main className="mx-auto max-w-2xl space-y-4 p-6">
-      <div className="flex items-center gap-3">
-        <VerificationSeal variant={result.kind === "AI" ? "unreviewed" : "verified"} />
-        <h1 className="text-3xl font-semibold">{title}</h1>
-      </div>
+      {medal && <VerificationMedal tier={medal.tier} note={medal.note} size="lg" />}
+      <h1 className="text-3xl font-semibold">{title}</h1>
       <p role="status" className="font-semibold">Status: Aktif</p>
       <p>{verificationStatement(result.kind, result.outcome)}</p>
       {result.kind !== "AI" && <p className="font-semibold">{VERIFIED_LABEL}</p>}

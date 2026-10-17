@@ -103,7 +103,7 @@ describe("token brand kit di globals.css", () => {
 
   const UI_PAIRS: [string, string][] = [
     ["border-strong", "bg"], ["border-strong", "surface"], ["focus", "bg"], ["focus", "surface"], ["focus", "tint"],
-    ["success", "surface"], // lingkaran lencana verifikasi vs centang putih
+    ["success", "surface"], // warna status berhasil sebagai ikon/garis di atas surface
   ];
   it.each(UI_PAIRS)("komponen UI %s di atas %s ≥ 3:1", (fg, bg) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(3);
@@ -169,9 +169,17 @@ describe("aturan gold dan palet hangat di src/**", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("nilai gold mentah (#D4A66A / var(--gold)) tidak dipakai di kode komponen", () => {
-    const offenders = SRC.filter((f) => /#d4a66a|var\(--gold\)|var\(--color-gold\)/i.test(readFileSync(f, "utf8")));
-    expect(offenders).toEqual([]);
+  // Satu pengecualian tercatat (Task 20, keputusan pemilik 17 Okt 2026): isi cincin grafis medali gold memakai #D4A66A
+  // dengan garis tepi gelap #8A6420 (≥3:1, diuji di verification-medal.test.tsx). Itu grafis bertulisan, bukan teks/ikon/tombol.
+  const RAW_GOLD_ALLOWED = ["src/components/verification/verification-medal.tsx"];
+  it("nilai gold mentah (#D4A66A / var(--gold)) tidak dipakai di kode komponen (kecuali grafis medali gold)", () => {
+    const offenders = SRC.filter((f) => /#d4a66a|var\(--gold\)|var\(--color-gold\)/i.test(readFileSync(f, "utf8"))).map((f) => f.slice(ROOT.length + 1));
+    expect(offenders.filter((f) => !RAW_GOLD_ALLOWED.includes(f))).toEqual([]);
+    // Di berkas medali, gold hanya muncul sekali sebagai isi cincin, dan tidak lewat var(--gold).
+    const medal = read(RAW_GOLD_ALLOWED[0]);
+    expect(medal.match(/#d4a66a/gi)).toHaveLength(1);
+    expect(medal).toMatch(/ring: "#D4A66A", edge: "#8A6420"/);
+    expect(medal).not.toMatch(/var\(--gold\)|var\(--color-gold\)/);
   });
 
   it("tidak ada kelas abu kebiruan/biru Tailwind atau token lama brand di src", () => {

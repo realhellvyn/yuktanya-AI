@@ -1,6 +1,7 @@
 import { LEGAL_DISCLAIMER, QR_NOT_SIGNATURE, VERIFICATION_STATEMENTS, VERIFICATION_TITLES, VERIFIED_LABEL } from "@/lib/copy";
 import type { OwnerDeep } from "@/lib/deep/service";
-import { VerificationSeal } from "@/components/verification/verification-seal";
+import { VerificationMedal } from "@/components/verification/verification-medal";
+import { medalFor } from "@/lib/verification/medal";
 
 const TITLE: Record<string, string> = {
   ENHANCED_APPROVED: "Selesai: Enhanced disetujui",
@@ -17,6 +18,7 @@ export function DeepResult({ deep, verifyUrl }: { deep: OwnerDeep; verifyUrl?: s
   }
   const enhanced = deep.outcome === "ENHANCED_APPROVED" && deep.verification?.status === "ACTIVE";
   const lapsed = deep.outcome === "ENHANCED_APPROVED" && !enhanced;
+  const medal = enhanced && deep.verification ? medalFor("LEGAL_ENHANCED", deep.verification.status, deep.outcome) : null;
   return (
     <section aria-labelledby="deep-hasil-h" className="space-y-3">
       <h2 id="deep-hasil-h" className="text-2xl font-semibold">{lapsed ? (deep.verification?.status === "REVOKED" ? "Selesai: Enhanced dicabut" : deep.verification?.status === "SUSPENDED" ? "Selesai: Enhanced ditangguhkan sementara" : "Selesai: Enhanced belum berlaku") : TITLE[deep.outcome ?? ""] ?? "Selesai"}</h2>
@@ -31,10 +33,8 @@ export function DeepResult({ deep, verifyUrl }: { deep: OwnerDeep; verifyUrl?: s
       )}
       {enhanced && deep.verification && (
         <div className="space-y-2 rounded-lg border border-line bg-surface p-4">
-          <div className="flex items-center gap-3">
-            {deep.verification.status === "ACTIVE" && <VerificationSeal variant="verified" />}
-            <h3 className="text-lg font-semibold">{VERIFICATION_TITLES.LEGAL_ENHANCED}</h3>
-          </div>
+          {medal && <VerificationMedal tier={medal.tier} note={medal.note} />}
+          <h3 className="text-lg font-semibold">{VERIFICATION_TITLES.LEGAL_ENHANCED}</h3>
           <p role="status" className="font-semibold">Status: {deep.verification.status === "ACTIVE" ? "Aktif" : deep.verification.status === "SUSPENDED" ? "Ditangguhkan sementara" : "Dicabut"}</p>
           <p>{VERIFICATION_STATEMENTS.LEGAL_ENHANCED}</p>
           <p className="font-semibold">{VERIFIED_LABEL}</p>

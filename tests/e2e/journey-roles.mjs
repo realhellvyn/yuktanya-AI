@@ -148,11 +148,17 @@ export async function journey({ step, base, vp, db, newActor }) {
     await ownerA.shot("05-hasil");
     // Label Verified wajib (SECURITY_AND_LEGAL) tampil persis di hasil pemilik dan di halaman publik.
     if (!(await ownerA.page.innerText("main")).includes(VERIFIED_LABEL)) throw new Error("label Verified tidak ada di hasil pemilik");
+    // Task 20: Legal Verified WITH_NOTES = medali silver bertulisan "Legal Review · Dengan Catatan", di hasil pemilik dan /verify.
+    const medalsOf = (pg) => pg.locator("main [data-medal]").evaluateAll((els) => els.map((e) => `${e.getAttribute("data-medal")}:${e.textContent}`));
+    const own = await medalsOf(ownerA.page);
+    if (own.join("|") !== "silver:Legal VerifiedLegal Review · Dengan Catatan") throw new Error("medali hasil pemilik: " + own.join("|"));
     const pub = await (await ownerA.page.context().browser().newContext()).newPage();
     await pub.goto(base + "/verify/" + code);
     const pubText = await pub.innerText("body");
     if (!pubText.includes("Aktif")) throw new Error("tidak Aktif");
     if (!pubText.includes(VERIFIED_LABEL)) throw new Error("label Verified tidak ada di /verify");
+    const pubMedals = await medalsOf(pub);
+    if (pubMedals.join("|") !== own.join("|")) throw new Error("medali /verify: " + pubMedals.join("|"));
     // Tangkapan layar /verify dan /login (desktop dan HP) untuk tinjauan visual brand (Task 18). Hanya bila SHOTS_DIR diset;
     // kegagalan menulis berkas tidak menggagalkan perjalanan fungsional (sama dengan shot() di journey lain).
     const dir = process.env.SHOTS_DIR;
@@ -277,9 +283,14 @@ export async function journey({ step, base, vp, db, newActor }) {
     const done = await ownerA.page.innerText("main");
     if (!done.includes("Enhanced disetujui") || !done.includes("Batasan:") || !done.includes("Pembayaran tidak menjamin Enhanced")) throw new Error("hasil Enhanced tidak lengkap: " + done.slice(0, 500));
     await ownerA.shot("07b-status-deep");
+    // Task 20: Enhanced aktif = medali gold (halaman status Deep Review dan /verify rekaman Enhanced).
+    const goldOf = (pg) => pg.locator("main [data-medal]").evaluateAll((els) => els.map((e) => e.getAttribute("data-medal")));
+    if ((await goldOf(ownerA.page)).join() !== "gold") throw new Error("medali status Deep Review: " + (await goldOf(ownerA.page)).join());
     const pub = await (await ownerA.page.context().browser().newContext()).newPage();
     await pub.goto(base + "/verify/" + enhancedCode);
     if (!(await pub.innerText("body")).includes("Aktif")) throw new Error("Enhanced tidak aktif");
+    if ((await goldOf(pub)).join() !== "gold") throw new Error("medali /verify Enhanced: " + (await goldOf(pub)).join());
+    if (process.env.SHOTS_DIR) await pub.screenshot({ path: `${process.env.SHOTS_DIR}/publik-desktop-verify-enhanced.png`, fullPage: true }).catch(() => {});
     await pub.close();
   });
 
@@ -295,6 +306,9 @@ export async function journey({ step, base, vp, db, newActor }) {
     const enhancedText = await pub.innerText("body");
     if (!/Ditangguhkan|Dicabut/.test(enhancedText)) throw new Error("Enhanced tetap aktif padahal induk dicabut");
     if (/\bAktif\b/.test(enhancedText)) throw new Error("halaman Enhanced masih menampilkan Aktif setelah induk dicabut");
+    if (await pub.locator("[data-medal]").count()) throw new Error("medali masih tampil untuk Enhanced yang tidak aktif");
+    await pub.goto(base + "/verify/" + code);
+    if (await pub.locator("[data-medal]").count()) throw new Error("medali masih tampil untuk Legal Verified yang dicabut");
     
     // Pemilik: halaman status tidak lagi mengaku "Enhanced disetujui" setelah induk dicabut.
     await ownerA.page.goto(base + "/reviews");
@@ -304,6 +318,7 @@ export async function journey({ step, base, vp, db, newActor }) {
     const lapsed = await ownerA.page.innerText("main");
     if (/Enhanced disetujui|memastikan semua syarat/.test(lapsed)) throw new Error("halaman pemilik masih mengaku Enhanced disetujui setelah pencabutan: " + lapsed.slice(0, 500));
     if (!/Ditangguhkan|Dicabut/.test(lapsed) || !/pernah dicatat/.test(lapsed)) throw new Error("halaman pemilik tidak menjelaskan status Enhanced: " + lapsed.slice(0, 500));
+    if (await ownerA.page.locator("main [data-medal]").count()) throw new Error("medali gold masih tampil di halaman pemilik setelah Enhanced ditangguhkan");
     await ownerA.shot("07c-deep-ditangguhkan");
     await pub.close();
   });

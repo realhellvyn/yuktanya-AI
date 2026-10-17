@@ -105,10 +105,15 @@ export async function journey({ step, base, db, llm, newActor }) {
     const kinds = (await db.query("select kind from document_verifications v join document_versions dv on dv.id = v.version_id where dv.document_id = $1", [docId])).rows.map((r) => r.kind).join(",");
     if (kinds !== "AI") throw new Error("verifikasi: " + kinds);
     for (const s2 of ["Kode teks yang diperiksa (dipakai di QR dan halaman verifikasi)", "Kode berkas asli yang Anda unggah"]) if (!t.includes(s2)) throw new Error(`label kode tanpa "${s2}"`);
+    // Task 20: rekaman AI Verified = medali bronze (panel verifikasi + laporan AI), tanpa silver/gold dan tanpa kata Legal di medali.
+    const medals = await p.locator("main [data-medal]").evaluateAll((els) => els.map((e) => [e.getAttribute("data-medal"), e.textContent]));
+    if (medals.length !== 2 || medals.some(([tier, text]) => tier !== "bronze" || /legal|\bsah\b|terjamin/i.test(text))) throw new Error("medali halaman dokumen: " + JSON.stringify(medals));
     const verify = await p.locator("a[href*='/verify/']").first().getAttribute("href");
     const pub = await (await actors.b.page.context().browser().newContext()).newPage();
     await pub.goto(verify);
     if (!(await pub.innerText("main")).includes("Kode ini untuk teks hasil pembacaan, bukan berkas asli.")) throw new Error("catatan kode teks tidak tampil di halaman verifikasi publik");
+    const pubMedals = await pub.locator("main [data-medal]").evaluateAll((els) => els.map((e) => e.getAttribute("data-medal")));
+    if (pubMedals.join() !== "bronze") throw new Error("medali /verify rekaman AI: " + pubMedals.join());
     await pub.context().close();
   });
 

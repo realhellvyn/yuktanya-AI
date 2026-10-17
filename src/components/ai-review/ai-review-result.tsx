@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { AiReviewReport } from "@/lib/ai/prereview";
+import { VerificationMedal } from "@/components/verification/verification-medal";
 import { AI_PREREVIEW_LABEL, VERIFICATION_STATEMENTS, VERIFICATION_TITLES } from "@/lib/copy";
 
 const GROUPS: { key: keyof AiReviewReport; title: string }[] = [
@@ -11,11 +12,14 @@ const GROUPS: { key: keyof AiReviewReport; title: string }[] = [
 
 // Hasil analisis awal AI dikelompokkan sesuai docs/WIREFRAMES.md §8. Isi dari model selalu dirender sebagai teks biasa
 // (React meng-escape), tidak pernah sebagai HTML. AI Verified ditampilkan terpisah dan tegas bukan Legal Verified.
+// `verified` = ada rekaman AI Verified aktif untuk versi ini (server hanya menerbitkannya untuk dokumen unggahan); hanya
+// saat itu medali bronze tampil. Laporan AI dokumen hasil template tidak punya rekaman itu, jadi tetap tanpa medali.
 export function AiReviewResult({ report, completedAt, verified }: { report: AiReviewReport; completedAt: string; verified: boolean }) {
   const when = new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(completedAt));
   return (
     <Card className="space-y-4" aria-labelledby="hasil-ai-h">
       <div className="space-y-2">
+        {verified && <VerificationMedal tier="bronze" />}
         <h3 id="hasil-ai-h" className="text-xl font-bold text-navy">Hasil analisis awal AI</h3>
         <p className="text-sm text-muted">Selesai {when} WIB</p>
         <div className="flex flex-wrap gap-2">

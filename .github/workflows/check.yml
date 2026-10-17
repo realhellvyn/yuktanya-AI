@@ -73,8 +73,9 @@ jobs:
         env:
           VIEWPORTS: '[{"name":"desktop","width":1280,"height":800},{"name":"mobile","width":375,"height":812}]'
         run: bash scripts/e2e/run.sh
-      # E17e (Task 17): build produksi + next start, hanya journey-ux desktop (tambahan beberapa menit).
-      - name: E2E mode produksi (next build + next start, journey-ux desktop)
+      # E17e (Task 17, diperluas Task 20): build produksi + next start dengan ketiga flag fitur menyala; journey-ux,
+      # journey-prod-ai (unggah + analisis AI + medali bronze) dan journey-roles (Legal Review, tawaran Deep Review, Enhanced), desktop.
+      - name: E2E mode produksi (next build + next start; journey-ux, journey-prod-ai, journey-roles desktop)
         run: npm run test:e2e:prod
       - name: Unggah tangkapan layar
         if: failure()

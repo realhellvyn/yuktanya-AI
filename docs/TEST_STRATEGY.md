@@ -23,7 +23,9 @@ hash-bound issuance, outbox retry and revocation dependency; synthetic files onl
 E2E: scenario catalogue in tests/e2e/SCENARIOS.md; implement in Playwright against mocked AI
 and payment adapters/test Supabase, not real paid transactions or confidential documents.
 Use isolated accounts user/reviewer/coordinator/admin and no shared mutable fixtures.
-Production-mode E2E (`npm run test:e2e:prod`, E17e): `next build` + `next start` with the same fake env, production React,
+Production-mode E2E (`npm run test:e2e:prod`, E17e): `next build` + `next start` with the same fake env (all three feature
+flags on, as in production since 17 Oct 2026; default journeys `journey-ux`, `journey-prod-ai` upload + AI review + bronze
+medal + `/verify`, and `journey-roles` Legal Review → silver → Deep Review offer → gold), production React,
 minified Turbopack chunks and the production nonce CSP. Run it before every release/deploy promotion and after changes to
 client components, server-action forms (`useActionState`, `useFormStatus`, actions passed as props) or `src/proxy.ts`;
 not after every change. Plain E2E uses `next dev` and missed a production-only crash (Task 17). Every browser context

@@ -25,6 +25,7 @@ export function startFakeSupabase({ databaseUrl, port }) {
   const outbox = []; // email palsu yang "terkirim": { kind: "recover" | "resend", email }
   const codes = new Map(); // kode PKCE pemulihan -> email
   const deleted = []; // akun yang dihapus lewat Admin API: { id, email, soft }
+  const objects = new Map(); // Storage palsu: "<bucket>/<path>" -> Buffer
   const session = (u, method = "password") => {
     const exp = Math.floor(Date.now() / 1000) + 3600;
     const user = { id: u.id, aud: "authenticated", role: "authenticated", email: u.email, app_metadata: { provider: "email" }, user_metadata: {}, created_at: new Date().toISOString() };
@@ -99,6 +100,33 @@ export function startFakeSupabase({ databaseUrl, port }) {
         deleted.push({ id: u.id, email: u.email, soft: Boolean((await body(req)).should_soft_delete) });
         await pool.query("update auth.users set email = null where id = $1", [u.id]);
         return send(res, 200, session(u).user);
+      }
+      // Storage palsu (Task 20): mode produksi (`E2E_PROD=1`) memakai adapter Supabase Storage (src/lib/documents/blob.ts),
+      // jadi unggahan di build produksi butuh tiga panggilan storage-js ini. Disimpan di memori; hanya service role.
+      // Bentuk permintaan/jawaban meniru Storage API: POST/GET /storage/v1/object/<bucket>/<path>, DELETE /storage/v1/object/<bucket>.
+      const obj = /^\/storage\/v1\/object\/([^/]+)(?:\/(.+))?$/.exec(url.pathname);
+      if (obj) {
+        if ((req.headers.authorization ?? "") !== `Bearer ${SERVICE_KEY}`) return send(res, 403, { statusCode: "403", error: "Unauthorized", message: "invalid signature" });
+        const bucket = decodeURIComponent(obj[1]);
+        const key = obj[2] ? `${bucket}/${decodeURIComponent(obj[2])}` : null;
+        if (key && req.method === "POST") {
+          const chunks = [];
+          for await (const c of req) chunks.push(c);
+          if (objects.has(key) && req.headers["x-upsert"] !== "true") return send(res, 400, { statusCode: "409", error: "Duplicate", message: "The resource already exists" });
+          objects.set(key, Buffer.concat(chunks));
+          return send(res, 200, { Id: randomUUID(), Key: key });
+        }
+        if (key && req.method === "GET") {
+          const bytes = objects.get(key);
+          if (!bytes) return send(res, 400, { statusCode: "404", error: "not_found", message: "Object not found" });
+          res.writeHead(200, { "content-type": "application/octet-stream" });
+          return res.end(bytes);
+        }
+        if (!key && req.method === "DELETE") {
+          const { prefixes = [] } = await body(req);
+          const removed = prefixes.filter((p) => objects.delete(`${bucket}/${p}`)).map((p) => ({ name: p, bucket_id: bucket }));
+          return send(res, 200, removed);
+        }
       }
       if (url.pathname === "/rest/v1/user_roles") {
         const pl = verify((req.headers.authorization ?? "").replace(/^Bearer /, ""));

@@ -6,6 +6,8 @@ import { getPool } from "@/lib/db";
 import { getSessionRoles } from "@/lib/supabase/server";
 import { revokeVerificationAction } from "./actions";
 import { fixedText } from "@/lib/query-text";
+import { VerificationMedal } from "@/components/verification/verification-medal";
+import { medalFor } from "@/lib/verification/medal";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pencabutan verifikasi | Admin Yuktanya" };
@@ -32,22 +34,27 @@ export default async function VerificationsAdminPage({ searchParams }: { searchP
         <button type="submit" className={buttonClass("secondary")}>Cari kode</button>
       </form>
       <ul className="space-y-4">
-        {rows.map((r) => (
-          <li key={r.id} className="space-y-2 rounded-2xl border border-line bg-surface p-5">
-            <p className="font-semibold text-navy">{KIND[r.kind] ?? r.kind} · Status: {STATUS[r.status] ?? r.status}</p>
-            <p className="font-mono break-all">{r.code}</p>
-            {r.status !== "REVOKED" && (
-              <form action={revokeVerificationAction} className="space-y-2">
-                <input type="hidden" name="id" value={r.id} />
-                <label className="block"><span className={labelText}>Alasan</span>
-                  <select name="reason" className={fieldClass}><option value="ERROR">Terdapat kesalahan</option><option value="MISLEADING">Menyesatkan</option><option value="AUTHORITY_REVOKED">Otoritas pemeriksa dicabut</option><option value="OWNER_REQUEST">Permintaan pemilik dokumen</option><option value="OTHER">Lainnya</option></select>
-                </label>
-                <label className="block"><span className={labelText}>Catatan pribadi (Wajib, tidak tampil publik)</span><input name="note" required minLength={5} maxLength={2000} className={fieldClass} /></label>
-                <button type="submit" className={buttonClass("primary")}>Cabut verifikasi</button>
-              </form>
-            )}
-          </li>
-        ))}
+        {rows.map((r) => {
+          // Medali hanya untuk rekaman Aktif, dari jenis/status/hasil yang tersimpan (tanpa keputusan baru di halaman admin).
+          const medal = medalFor(r.kind, r.status, r.outcome);
+          return (
+            <li key={r.id} className="space-y-2 rounded-2xl border border-line bg-surface p-5">
+              {medal && <VerificationMedal tier={medal.tier} note={medal.note} size="sm" />}
+              <p className="font-semibold text-navy">{KIND[r.kind] ?? r.kind} · Status: {STATUS[r.status] ?? r.status}</p>
+              <p className="font-mono break-all">{r.code}</p>
+              {r.status !== "REVOKED" && (
+                <form action={revokeVerificationAction} className="space-y-2">
+                  <input type="hidden" name="id" value={r.id} />
+                  <label className="block"><span className={labelText}>Alasan</span>
+                    <select name="reason" className={fieldClass}><option value="ERROR">Terdapat kesalahan</option><option value="MISLEADING">Menyesatkan</option><option value="AUTHORITY_REVOKED">Otoritas pemeriksa dicabut</option><option value="OWNER_REQUEST">Permintaan pemilik dokumen</option><option value="OTHER">Lainnya</option></select>
+                  </label>
+                  <label className="block"><span className={labelText}>Catatan pribadi (Wajib, tidak tampil publik)</span><input name="note" required minLength={5} maxLength={2000} className={fieldClass} /></label>
+                  <button type="submit" className={buttonClass("primary")}>Cabut verifikasi</button>
+                </form>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </main>
   );

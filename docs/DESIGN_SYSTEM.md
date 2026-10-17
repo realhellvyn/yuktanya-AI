@@ -95,6 +95,35 @@ Source of truth in code: `:root` + `@theme inline` in `src/app/globals.css`; con
   use `BrandLogo`: small navy mark 32px (`alt=""`) + serif wordmark. `src/app/icon.svg` = app icon;
   `src/app/apple-icon.png` (180×180) and `src/app/opengraph-image.png` (1200×630) are rendered once by
   `node scripts/brand/render-icons.mjs` and committed. Exported DOCX/PDF documents carry no logo (not in Task 18).
-- Verification badge: `VerificationSeal` — a circle with a check in `success` for active Legal Verified/Enhanced, a
-  dashed circle without check for "not professionally reviewed" (AI Verified). Never a shield, never gold, never the
-  logo mark, so it cannot be confused with the brand. Meaning is always carried by the status text next to it.
+- Verification badge: replaced in Task 20 by the tiered medal below (`VerificationSeal` removed).
+
+## Verification medals (Task 20) — owner decision 17 Oct 2026
+Design and text come from the legal partner brief, approved by the owner (see DECISIONS_AND_PRECEDENCE.md, Task 20).
+This supersedes the brand-kit rule "the badge must not use a shield, gold or the logo mark". The medal only visualises
+verification records that already exist; it never creates a tier or an issuance rule.
+
+| Tier | Record shown (server status) | Medal text (main / small) | Ring · edge · face | Shape |
+|---|---|---|---|---|
+| bronze | `AI` ACTIVE (AI Verified, uploaded documents only) | AI Verified / Pemeriksaan Awal oleh AI | `#A86B3C` · `#7A4A26` · `#F0D2B4` | single ring |
+| silver | `LEGAL` ACTIVE, outcome WITH_NOTES / WITHIN_SCOPE | Legal Verified / Legal Review · Dengan Catatan, or Legal Review · Sesuai Lingkup | `#C7CCD3` · `#6B7480` · `#EEF0F3` | single ring |
+| gold | `LEGAL_ENHANCED` ACTIVE, outcome ENHANCED_APPROVED | Legal Verified Enhanced / Pemeriksaan lanjutan profesional | `#D4A66A` · `#8A6420` · `#F6E3BF` | double ring |
+
+- Component: `VerificationMedal` (`src/components/verification/verification-medal.tsx`, prop `tier`, optional `note`,
+  `size` `sm` 32px / `md` 56px / `lg` 80px). The tier is always chosen with `medalFor(kind, status, outcome)`
+  (`src/lib/verification/medal.ts`); REVOKED/SUSPENDED and badge-less outcomes return no medal and the existing status
+  text stays. Static copies with text: `public/brand/medals/medal-{bronze,silver,gold}.svg` (documentation only; kept
+  identical to the component by `tests/unit/verification-medal.test.tsx`, regenerate with `UPDATE_MEDALS=1`).
+- Graphic: flat SVG, three tones per metal (no gradients), outer ring + inner face + the brand-kit small mark in navy
+  (path copied verbatim from `public/brand/yuktanya-mark-small-navy.svg`, not redrawn). `aria-hidden`; the text under the
+  medal is real text read by screen readers. Text uses `heading` (main) and `muted` (small), ≥4.5:1 on `bg`/`surface`.
+- Contrast (tested): edge vs `bg` / `surface` — bronze 6.79 / 7.41, silver 4.34 / 4.74, gold 4.91 / 5.35 (all ≥3:1);
+  navy mark vs face ≥12:1. Gold `#D4A66A` is used only as the ring fill of this graphic with the dark `#8A6420` edge
+  (the single exemption in `tests/unit/brand-tokens.test.ts`); it is still never text, an icon or a button fill.
+- Where it appears: document verification panel (`VerificationPanel`), owner AI report for uploaded documents
+  (`AiReviewResult`, only when an active AI Verified record exists), Legal Review result (`ResultPanel`), Deep Review
+  result (`DeepResult`), public `/verify` (`PublicVerification`, active only), admin verification list (32px). AI reports
+  of template documents never show a medal (they have no AI Verified record). DOCX/PDF exports keep the official title
+  text without the medal graphic.
+- Prohibited: a medal without its ring or text; using the medal as a logo, header mark, favicon, decoration or marketing
+  illustration; bronze text containing "Legal", "Sah" or "Terjamin"; showing a medal for a revoked/suspended record;
+  rendering gold without an active Enhanced record; implying a notarial, government or official seal.

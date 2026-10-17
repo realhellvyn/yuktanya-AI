@@ -13,7 +13,7 @@ import { fixedText } from "@/lib/query-text";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pembayaran | Yuktanya" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const NOTICE: Record<string, string> = { PROVIDER_UNAVAILABLE: "Metode pembayaran ini belum tersedia. Pilih metode lain.", ORDER_NOT_PAYABLE: "Pesanan ini sudah tidak dapat dibayar. Buat pengajuan baru dari halaman dokumen atau halaman Membership.",
+const NOTICE: Record<string, string> = { PROVIDER_UNAVAILABLE: "Metode pembayaran ini belum tersedia. Pilih metode lain.", ORDER_NOT_PAYABLE: "Pesanan ini sudah tidak dapat dibayar. Buat pesanan baru dari halaman dokumen atau halaman Membership.",
   SPECIAL_CASE_OPEN: "Dokumen ini sedang diajukan sebagai Special Legal Case, sehingga Legal Review belum dapat dibayar. Lihat statusnya di menu Special Legal Case, atau tarik pengajuan tersebut bila tidak jadi." };
 const LABEL: Record<string, string> = { MEMBERSHIP_MONTHLY: "Membership Yuktanya (1 periode)", MEMBERSHIP_ANNUAL: "Membership Yuktanya (1 tahun)", BUNDLE: "Paket kredit Legal Review", STANDARD_REVIEW: "Legal Review oleh pengacara", DEEP_REVIEW: "Deep Review oleh pengacara (tambahan)" };
 const btn = "min-h-12 rounded-lg px-5 font-semibold";

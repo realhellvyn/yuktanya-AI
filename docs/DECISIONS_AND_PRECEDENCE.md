@@ -115,3 +115,36 @@ Refunds, re-review rounds, SLA and negative-outcome legal wording require signed
   dipakai otomatis oleh `quote_price`). INCONCLUSIVE tidak membuat kredit atau pengembalian dana otomatis, dan dinyatakan begitu.
 - `loading.tsx` hanya di segmen `/dashboard`: di segmen yang memuat halaman bersarang dengan `notFound()`, respons yang
   mengalir lebih dulu membuat status 404 menjadi 200.
+
+## Lencana medali dan flag produksi (Task 20) — keputusan pemilik 17 Okt 2026
+- **Lencana medali bronze/silver/gold.** Desain dan teks lencana berasal dari brief mitra hukum dan disetujui pemilik
+  (sumber: pernyataan pemilik di sesi kerja 17 Okt 2026; referensi dokumen brief mitra dapat ditambahkan pemilik).
+  Medali = mark small Yuktanya di dalam cincin logam dengan tulisan di bawahnya (`VerificationMedal`,
+  `src/components/verification/verification-medal.tsx`; salinan SVG statis `public/brand/medals/`). Keputusan ini
+  menggantikan aturan brand kit lama "lencana tidak boleh memakai perisai, gold, atau mark logo" dan segel
+  lingkaran-centang `VerificationSeal` (dihapus).
+  - Bronze "AI Verified" / "Pemeriksaan Awal oleh AI" memvisualkan tingkat **AI Verified yang sudah ada di v8**
+    (kind `AI`, hanya untuk dokumen unggahan). Aturan penerbitan tidak berubah: dokumen hasil template tetap tidak
+    pernah mendapat AI Verified, sehingga laporan AI dokumen template tetap tanpa medali.
+  - Silver "Legal Verified" / "Legal Review · Dengan Catatan" atau "Legal Review · Sesuai Lingkup": rekaman LEGAL
+    aktif dengan hasil WITH_NOTES / WITHIN_SCOPE.
+  - Gold "Legal Verified Enhanced" / "Pemeriksaan lanjutan profesional": hanya rekaman LEGAL_ENHANCED aktif
+    (ENHANCED_APPROVED). Tanpa rekaman Enhanced yang sah, gold tidak pernah dirender.
+  - Tidak ada tingkat atau aturan penerbitan baru; tingkat dipetakan dari jenis + status + hasil server
+    (`medalFor`, `src/lib/verification/medal.ts`). Judul resmi `VERIFICATION_TITLES`, pernyataan wajib, dan ekspor
+    DOCX/PDF (teks, tanpa grafis medali) tidak berubah.
+  - Pengaman yang berlaku dan diuji (`tests/unit/verification-medal.test.tsx`, E2E `journey-ai-review`,
+    `journey-roles`, `journey-prod-ai`): (1) bronze tidak pernah memuat "Legal", "Sah", atau "Terjamin", tidak pernah
+    untuk LEGAL/LEGAL_ENHANCED, dan setiap tempat bronze tetap menampilkan penjelasan bahwa AI Verified bukan pemeriksaan
+    profesional; (2) bronze tampil di semua tempat rekaman AI Verified tampil (panel verifikasi dokumen, laporan AI
+    pemilik, `/verify`, daftar admin), tidak untuk laporan AI dokumen template, dan ekspor tidak diubah; (3) silver/gold
+    hanya dari status server yang sudah ada; dicabut/ditangguhkan tanpa medali dengan teks status yang ada;
+    `ENHANCED_ISSUANCE` tidak diubah oleh lencana; (4) setiap medali bertuliskan tingkatnya, grafis `aria-hidden`,
+    tulisan terbaca pembaca layar; (5) tulisan memakai `heading`/`muted`, garis tepi grafis ≥3:1 terhadap `surface` dan
+    `bg` di setiap tingkat, terbaca di 32px; (6) medali bukan logo: wajib cincin + tulisan, hanya dipakai di tampilan
+    verifikasi yang tercatat (diuji), tidak di header atau sebagai hiasan.
+- **Flag fitur aktif di produksi.** `AI_PREREVIEW_ENABLED`, `DEEP_REVIEW_PURCHASE`, `ENHANCED_ISSUANCE` = true di produksi
+  sejak 17 Okt 2026 atas keputusan pemilik (berlaku pada deploy berikutnya). Perilaku kode flag tidak berubah (dibaca dari
+  env, mati bila kosong). Gerbang di database tetap berlaku: Enhanced hanya terbit bila rubrik disetujui di
+  `/admin/rubric` dan semua penjaga `decide_deep` terpenuhi. Akibat yang tercatat di `docs/RELEASE_CHECKLIST.md`
+  (bagian "Flag produksi").

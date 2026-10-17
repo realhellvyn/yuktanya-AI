@@ -33,13 +33,14 @@ const env = {
   DATABASE_URL: process.env.TEST_DATABASE_URL, AI_MOCK_MODE: "false", FREELLM_BASE_URL: "http://127.0.0.1:54998", FREELLM_API_KEY: "uji", ALLOW_UNAPPROVED_TEMPLATES: "true",
   NEXT_PUBLIC_APP_URL: `http://localhost:${APP}`, DOCUMENT_BLOB_DIR: mkdtempSync(path.join(tmpdir(), "yk-blob-")),
   MANUAL_PAYMENT_INSTRUCTIONS: "Transfer ke rekening uji 000-000", NEXT_TELEMETRY_DISABLED: "1",
+  // Ketiga flag fitur menyala di dev DAN produksi harness, sama dengan produksi sejak 17 Okt 2026 (keputusan pemilik).
   DEEP_REVIEW_PURCHASE: "true", ENHANCED_ISSUANCE: "true", AI_PREREVIEW_ENABLED: "true",
 };
 const PROD = process.env.E2E_PROD === "1";
 // Produksi menolak NEXT_PUBLIC_APP_URL non-https (src/lib/app-url.ts); URL ini hanya untuk tautan email/QR, bukan untuk navigasi uji.
 if (PROD) env.NEXT_PUBLIC_APP_URL = `https://localhost:${APP}`;
 if (PROD) {
-  console.log("E2E_PROD=1: next build (mode produksi)…");
+  console.log(`E2E_PROD=1: next build (mode produksi), flag AI_PREREVIEW_ENABLED=${env.AI_PREREVIEW_ENABLED} DEEP_REVIEW_PURCHASE=${env.DEEP_REVIEW_PURCHASE} ENHANCED_ISSUANCE=${env.ENHANCED_ISSUANCE}…`);
   // `next build` menulis ulang next-env.d.ts ke tipe produksi; isi yang tercatat di git dikembalikan setelahnya.
   const nextEnv = existsSync("next-env.d.ts") ? readFileSync("next-env.d.ts", "utf8") : null;
   const b = spawnSync("npx", ["next", "build"], { env: { ...env, NODE_ENV: "production" }, stdio: "inherit" });
@@ -66,7 +67,7 @@ try {
   for (let i = 0; i < 90; i++) { try { const r = await fetch(`http://localhost:${APP}/login`); if (r.ok) break; } catch {} await new Promise((r) => setTimeout(r, 1000)); }
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM ?? undefined });
   const viewports = JSON.parse(process.env.VIEWPORTS ?? '[{"name":"desktop","width":1280,"height":800}]');
-  const files = (process.env.JOURNEY ?? "./journey.mjs,./journey-roles.mjs,./journey-public.mjs,./journey-ui-roles.mjs,./journey-cases.mjs,./journey-ai-review.mjs,./journey-admin-analytics.mjs,./journey-data-rights.mjs,./journey-ux.mjs").split(",");
+  const files = (process.env.JOURNEY ?? "./journey.mjs,./journey-roles.mjs,./journey-public.mjs,./journey-ui-roles.mjs,./journey-cases.mjs,./journey-ai-review.mjs,./journey-admin-analytics.mjs,./journey-data-rights.mjs,./journey-ux.mjs,./journey-prod-ai.mjs").split(",");
   for (const file of files) {
     const mod = await import(file);
     for (const vp of viewports.filter((v) => !mod.onlyViewport || v.name === mod.onlyViewport)) {

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { LEGAL_DISCLAIMER, LEGAL_NOTE_EXPLAINER, LEGAL_NOTE_TERM, NEW_VERSION_NOT_REVIEWED, QR_NOT_SIGNATURE, VERIFICATION_TITLES, VERIFIED_LABEL, verificationStatement } from "@/lib/copy";
 import type { OwnerReview } from "@/lib/reviews/service";
 import { LegalNoteCard } from "./legal-note-card";
-import { VerificationSeal } from "@/components/verification/verification-seal";
+import { VerificationMedal } from "@/components/verification/verification-medal";
+import { medalFor } from "@/lib/verification/medal";
 
 const OUTCOME_TITLE: Record<string, string> = {
   WITH_NOTES: "Selesai: dengan Legal Note",
@@ -28,6 +29,7 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
   }
   const v = review.verification;
   const badge = v && (review.outcome === "WITH_NOTES" || review.outcome === "WITHIN_SCOPE");
+  const medal = badge && v ? medalFor("LEGAL", v.status, review.outcome) : null;
   const declined = review.status === "DECLINED";
   // Kredit masih AVAILABLE di database tetapi sudah lewat expires_at: jangan dibaca seolah masih berlaku.
   const creditLapsed = !!review.credit && new Date(review.credit.expiresAt).getTime() <= now.getTime();
@@ -79,10 +81,8 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
       )}
       {badge && v && (
         <div className="space-y-2 rounded-lg border border-line bg-surface p-4">
-          <div className="flex items-center gap-3">
-            {v.status === "ACTIVE" && <VerificationSeal variant="verified" />}
-            <h3 className="text-lg font-semibold">{VERIFICATION_TITLES.LEGAL}</h3>
-          </div>
+          {medal && <VerificationMedal tier={medal.tier} note={medal.note} />}
+          <h3 className="text-lg font-semibold">{VERIFICATION_TITLES.LEGAL}</h3>
           <p role="status" className="font-semibold">Status: {v.status === "ACTIVE" ? "Aktif" : v.status === "REVOKED" ? "Dicabut" : "Ditangguhkan sementara"}</p>
           <p>{verificationStatement("LEGAL", review.outcome)}</p>
           {v.status === "ACTIVE" && <p className="font-semibold">{VERIFIED_LABEL}</p>}

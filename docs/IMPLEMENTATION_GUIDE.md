@@ -44,7 +44,8 @@ new columns/tables, backfill kind STANDARD for old known human reviews, preserve
 normalize verification table names, then validate constraints. No retroactive Enhanced,
 no automatic conversion of old free text to actionable published notes without professional
 confirmation. Generate historical QR safely without changing original hashes/issue dates.
-Use feature flags OFF for deep payment and Enhanced until policies/partner rubric signed.
+Use feature flags OFF for deep payment and Enhanced until policies/partner rubric signed
+(superseded 17 Oct 2026 by owner decision: flags ON in production; rubric gate stays in DB).
 Deploy schema-compatible server before enabling UI; rollback disables new intake, preserves
 paid work and evidence for audited operations resolution. Migration tests on staging.
 
