@@ -28,7 +28,7 @@ export default function Home() {
     <>
       <SiteHeader />
       <main>
-        <section className="bg-gradient-to-b from-blue-50 to-canvas">
+        <section className="bg-gradient-to-b from-tint to-canvas">
           <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:px-8 md:py-20 lg:grid-cols-2 lg:items-center">
             <div className="space-y-6">
               <h1 className="text-4xl font-bold leading-tight tracking-tight text-navy md:text-5xl">Buat dokumen hukum lebih mudah</h1>
@@ -41,11 +41,11 @@ export default function Home() {
             </div>
             <Card aria-hidden="true" className="hidden space-y-3 lg:block">
               <p className="text-sm font-semibold text-muted">Contoh tampilan (bukan dokumen sungguhan)</p>
-              <div className="h-3 w-2/3 rounded-full bg-slate-200" />
-              <div className="h-3 w-full rounded-full bg-slate-100" />
-              <div className="h-3 w-5/6 rounded-full bg-slate-100" />
-              <div className="h-3 w-1/2 rounded-full bg-slate-200" />
-              <div className="h-3 w-full rounded-full bg-slate-100" />
+              <div className="h-3 w-2/3 rounded-full bg-line" />
+              <div className="h-3 w-full rounded-full bg-subtle" />
+              <div className="h-3 w-5/6 rounded-full bg-subtle" />
+              <div className="h-3 w-1/2 rounded-full bg-line" />
+              <div className="h-3 w-full rounded-full bg-subtle" />
             </Card>
           </div>
         </section>
@@ -66,7 +66,7 @@ export default function Home() {
               {STEPS.map((s) => (
                 <li key={s.n}>
                   <Card className="h-full space-y-2">
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-navy font-bold text-white" aria-hidden="true">{s.n}</span>
+                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-navy font-bold text-gold" aria-hidden="true">{s.n}</span>
                     <h3 className="text-lg font-bold text-navy"><span className="sr-only">Langkah {s.n}: </span>{s.title}</h3>
                     <p className="text-muted">{s.text}</p>
                   </Card>
@@ -104,7 +104,7 @@ export default function Home() {
             <h2 id="faq" className="text-3xl font-bold text-navy">Pertanyaan umum</h2>
             <div className="space-y-3">
               {FAQ.map((f) => (
-                <details key={f.q} className="rounded-2xl border border-line bg-white p-4">
+                <details key={f.q} className="rounded-2xl border border-line bg-surface p-4">
                   <summary className="flex min-h-12 cursor-pointer items-center font-semibold text-navy">{f.q}</summary>
                   <p className="mt-2 text-muted">{f.a}</p>
                 </details>

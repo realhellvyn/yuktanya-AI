@@ -103,8 +103,8 @@ export default async function DocumentPage({ params, searchParams }: { params: P
               {selectedStatus && <StatusBadge tone={selectedStatus.tone}>{selectedStatus.text}</StatusBadge>}
             </div>
             {exportedId && (
-              <p role="status" className="rounded-xl border border-blue-300 bg-blue-50 p-4">
-                <a className="inline-flex min-h-12 items-center font-semibold text-brand-dark underline" href={`/api/documents/exports/${exportedId}`}>
+              <p role="status" className="rounded-xl border border-border-strong bg-tint p-4">
+                <a className="inline-flex min-h-12 items-center font-semibold text-link underline" href={`/api/documents/exports/${exportedId}`}>
                   Berkas siap. Tekan di sini untuk mengunduh.
                 </a>
               </p>
@@ -159,7 +159,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
               </Card>
             )}
             {quote && (
-              <Card className="space-y-3 border-blue-200 bg-blue-50/60">
+              <Card className="space-y-3 border-line bg-tint">
                 <form action={requestReviewAction} className="space-y-3">
                   <input type="hidden" name="versionId" value={selected.id} />
                   <p>Pemeriksaan oleh pengacara untuk versi ini: <strong>{formatIdr(quote.amountIdr)}</strong>. Pembayaran adalah biaya pemeriksaan dan tidak menjamin hasil positif.</p>
@@ -171,7 +171,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
               <div className="flex flex-wrap items-center gap-x-2 text-muted"><span>Dokumen Anda rumit atau berisiko tinggi?</span><ButtonLink href={`/cases/new?document=${id}`} variant="quiet" className="!px-0">Ajukan penilaian khusus</ButtonLink></div>
             )}
             <div id="analisis-ai" className="space-y-3">
-              {aiStatus && <p role="status" className="rounded-xl border border-line bg-white p-3 font-semibold">{AI_REVIEW_STATUS_TEXT[aiStatus]}</p>}
+              {aiStatus && <p role="status" className="rounded-xl border border-line bg-surface p-3 font-semibold">{AI_REVIEW_STATUS_TEXT[aiStatus]}</p>}
               {aiReport && <AiReviewResult report={aiReport.report} completedAt={aiReport.completedAt} verified={aiVerified} />}
               {flags.aiPreReview && !highRisk && (
                 <Card>
@@ -189,7 +189,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
             </div>
           </section>
 
-          <details className="rounded-2xl border border-line bg-white p-4" open={Boolean(packId || q.notice)}>
+          <details className="rounded-2xl border border-line bg-surface p-4" open={Boolean(packId || q.notice)}>
             <summary className="inline-flex min-h-12 cursor-pointer items-center text-lg font-bold text-navy">Berbagi, pengingat, dan paket bukti</summary>
             <div className="mt-4">
               <VaultPanel
@@ -207,7 +207,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
             </div>
           </details>
 
-          {!upload && <details className="rounded-2xl border border-line bg-white p-4">
+          {!upload && <details className="rounded-2xl border border-line bg-surface p-4">
             <summary className="inline-flex min-h-12 cursor-pointer items-center text-lg font-bold text-navy">Ubah atau salin dokumen ({doc.versions.length} versi)</summary>
             <div className="mt-4 space-y-4">
               <div className="flex flex-wrap gap-3">

@@ -12,7 +12,7 @@ export function TrendChart({ id, title, days, values, format = "count", note }: 
   const fmt = format === "idr" ? fmtIdr : fmtCount;
   if (!values) {
     return (
-      <figure aria-labelledby={`${id}-t`} className="min-w-0 rounded-2xl border border-line bg-white p-4">
+      <figure aria-labelledby={`${id}-t`} className="min-w-0 rounded-2xl border border-line bg-surface p-4">
         <figcaption id={`${id}-t`} className="font-semibold text-navy">{title}</figcaption>
         <p className="mt-2 text-muted">{NO_DATA}{note ? `. ${note}` : ""}</p>
       </figure>
@@ -28,7 +28,7 @@ export function TrendChart({ id, title, days, values, format = "count", note }: 
     ? `${title}: tidak ada kejadian pada ${days.length} hari.`
     : `${title}: total ${fmt(total)} dalam ${days.length} hari; tertinggi ${fmt(max)} pada ${shortDay(days[peakIdx])}.`;
   return (
-    <figure aria-labelledby={`${id}-t`} className="min-w-0 rounded-2xl border border-line bg-white p-4">
+    <figure aria-labelledby={`${id}-t`} className="min-w-0 rounded-2xl border border-line bg-surface p-4">
       <figcaption id={`${id}-t`} className="flex flex-wrap items-baseline justify-between gap-x-3">
         <span className="font-semibold text-navy">{title}</span>
         <span className="text-muted">Total: <strong className="text-ink">{fmt(total)}</strong></span>
@@ -42,7 +42,7 @@ export function TrendChart({ id, title, days, values, format = "count", note }: 
           return (
             <g key={days[i]}>
               <rect x={i * slot} y={0} width={slot} height={H} fill="transparent" />
-              {h > 0 && <rect x={i * slot + gap / 2} y={H - h} width={bw} height={h} rx={Math.min(2, bw / 2)} fill="var(--color-brand)" />}
+              {h > 0 && <rect x={i * slot + gap / 2} y={H - h} width={bw} height={h} rx={Math.min(2, bw / 2)} fill="var(--primary)" />}
               <title>{`${shortDay(days[i])}: ${fmt(n)}`}</title>
             </g>
           );
@@ -53,7 +53,7 @@ export function TrendChart({ id, title, days, values, format = "count", note }: 
         {days.length > 1 && <span>{shortDay(days[days.length - 1])}</span>}
       </div>
       <details className="mt-2">
-        <summary className="flex min-h-12 cursor-pointer items-center font-semibold text-brand">Lihat angka per hari</summary>
+        <summary className="flex min-h-12 cursor-pointer items-center font-semibold text-link underline underline-offset-4">Lihat angka per hari</summary>
         <div className="max-h-64 overflow-auto">
           <table className="w-full border-collapse text-left">
             <caption className="sr-only">{title} per hari</caption>

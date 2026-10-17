@@ -22,13 +22,13 @@ export default async function FeaturesPage() {
       <p>Pengaturan awal untuk fitur Vault hanya usulan dan dapat diubah di sini. Setiap perubahan tercatat di audit.</p>
       <ul className="space-y-3">
         {FEATURES.map((f) => (
-          <li key={f.key} className="space-y-3 rounded-2xl border border-line bg-white p-5">
+          <li key={f.key} className="space-y-3 rounded-2xl border border-line bg-surface p-5">
             <p className="text-lg font-bold text-navy">{f.label}</p>
             <div className="grid gap-3 sm:grid-cols-2">
               {PLANS.map((p) => {
                 const active = on.has(`${f.key}:${p}`);
                 return (
-                  <form key={p} action={setFeatureAction} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 p-3">
+                  <form key={p} action={setFeatureAction} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-subtle p-3">
                     <input type="hidden" name="feature" value={f.key} />
                     <input type="hidden" name="plan" value={p} />
                     <input type="hidden" name="enabled" value={String(!active)} />

@@ -11,7 +11,7 @@ import { fixedText } from "@/lib/query-text";
 export const metadata = { title: "Kata sandi baru | Yuktanya" };
 export const dynamic = "force-dynamic";
 
-const field = "mt-2 block min-h-12 w-full rounded-xl border border-slate-400 bg-white px-4 text-lg";
+const field = "mt-2 block min-h-12 w-full rounded-xl border border-border-strong bg-surface px-4 text-lg";
 
 export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const q = await searchParams;

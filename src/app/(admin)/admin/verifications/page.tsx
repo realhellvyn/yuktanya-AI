@@ -33,7 +33,7 @@ export default async function VerificationsAdminPage({ searchParams }: { searchP
       </form>
       <ul className="space-y-4">
         {rows.map((r) => (
-          <li key={r.id} className="space-y-2 rounded-2xl border border-line bg-white p-5">
+          <li key={r.id} className="space-y-2 rounded-2xl border border-line bg-surface p-5">
             <p className="font-semibold text-navy">{KIND[r.kind] ?? r.kind} · Status: {STATUS[r.status] ?? r.status}</p>
             <p className="font-mono break-all">{r.code}</p>
             {r.status !== "REVOKED" && (

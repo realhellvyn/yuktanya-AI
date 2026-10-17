@@ -24,7 +24,7 @@ export default async function ReviewsOpsPage({ searchParams }: { searchParams: P
         <KpiCard label="Waktu selesai (median)" value={fmtHours(o.reviews.sla_median_hours)} hint="Dari pembayaran terverifikasi ke selesai. Target SLA belum ditetapkan." />
         <KpiCard label="Waktu selesai (P95)" value={fmtHours(o.reviews.sla_p95_hours)} />
       </div>
-      <Link className="inline-flex min-h-12 items-center font-semibold text-brand underline underline-offset-4" href="/admin/routing">Buka perutean review</Link>
+      <Link className="inline-flex min-h-12 items-center font-semibold text-link underline underline-offset-4" href="/admin/routing">Buka perutean review</Link>
     </main>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { googleAuthEnabled } from "@/lib/auth/google";
@@ -21,11 +22,11 @@ export function AuthForm({ mode, action, error, sent, resent, returnTo }: Props)
   const isLogin = mode === "login";
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-4 py-10">
-      <Link href="/" className="inline-flex min-h-12 items-center self-start text-2xl font-bold tracking-tight text-navy">Yuktanya</Link>
+      <BrandLogo href="/" className="self-start" />
       <Card className="space-y-5 !p-6 md:!p-8">
         <h1 className="text-[1.75rem] font-bold leading-tight text-navy">{isLogin ? "Masuk ke Yuktanya" : "Buat akun Yuktanya"}</h1>
         {sent && (
-          <p role="status" className="rounded-xl border border-blue-300 bg-blue-50 p-4">
+          <p role="status" className="rounded-xl border border-border-strong bg-tint p-4">
             Kami sudah mengirim email konfirmasi. Buka email Anda lalu tekan tautannya. Belum menerima? Periksa folder spam, lalu kirim ulang lewat kotak di bawah.
           </p>
         )}
@@ -52,13 +53,13 @@ export function AuthForm({ mode, action, error, sent, resent, returnTo }: Props)
           <input type="hidden" name="returnTo" value={returnTo} />
           <label className="block">
             <span className="font-semibold">Email <span className="font-normal text-muted">(Wajib)</span></span>
-            <input name="email" type="email" required autoComplete="email" className="mt-2 block min-h-12 w-full rounded-xl border border-slate-400 bg-white px-4 text-lg" />
+            <input name="email" type="email" required autoComplete="email" className="mt-2 block min-h-12 w-full rounded-xl border border-border-strong bg-surface px-4 text-lg" />
           </label>
           <PasswordField autoComplete={isLogin ? "current-password" : "new-password"} />
-          {isLogin && <Link className="inline-flex min-h-12 items-center font-semibold text-brand-dark underline" href="/forgot-password">Lupa kata sandi?</Link>}
+          {isLogin && <Link className="inline-flex min-h-12 items-center font-semibold text-link underline" href="/forgot-password">Lupa kata sandi?</Link>}
           {!isLogin && (
             <p className="text-sm text-muted">
-              Sebelum mendaftar, baca <Link className="inline-flex min-h-11 items-center font-semibold text-brand-dark underline" href="/privacy">Kebijakan Privasi</Link> dan <Link className="inline-flex min-h-11 items-center font-semibold text-brand-dark underline" href="/terms">Syarat Penggunaan</Link>.
+              Sebelum mendaftar, baca <Link className="inline-flex min-h-11 items-center font-semibold text-link underline" href="/privacy">Kebijakan Privasi</Link> dan <Link className="inline-flex min-h-11 items-center font-semibold text-link underline" href="/terms">Syarat Penggunaan</Link>.
             </p>
           )}
           <Button type="submit" className="w-full text-lg">{isLogin ? "Masuk" : "Daftar Gratis"}</Button>
@@ -70,7 +71,7 @@ export function AuthForm({ mode, action, error, sent, resent, returnTo }: Props)
             <p className="font-semibold">Belum menerima email konfirmasi?</p>
             <label className="block">
               <span>Email untuk kirim ulang konfirmasi</span>
-              <input name="email" type="email" required autoComplete="email" className="mt-2 block min-h-12 w-full rounded-xl border border-slate-400 bg-white px-4 text-lg" />
+              <input name="email" type="email" required autoComplete="email" className="mt-2 block min-h-12 w-full rounded-xl border border-border-strong bg-surface px-4 text-lg" />
             </label>
             <Button type="submit" variant="secondary" className="w-full">Kirim ulang email konfirmasi</Button>
           </form>
@@ -78,9 +79,9 @@ export function AuthForm({ mode, action, error, sent, resent, returnTo }: Props)
       </Card>
       <p className="text-center">
         {isLogin ? (
-          <>Belum punya akun? <Link className="inline-flex min-h-12 items-center font-semibold text-brand-dark underline" href="/register">Daftar Gratis</Link></>
+          <>Belum punya akun? <Link className="inline-flex min-h-12 items-center font-semibold text-link underline" href="/register">Daftar Gratis</Link></>
         ) : (
-          <>Sudah punya akun? <Link className="inline-flex min-h-12 items-center font-semibold text-brand-dark underline" href="/login">Masuk</Link></>
+          <>Sudah punya akun? <Link className="inline-flex min-h-12 items-center font-semibold text-link underline" href="/login">Masuk</Link></>
         )}
       </p>
     </main>

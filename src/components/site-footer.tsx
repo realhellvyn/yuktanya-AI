@@ -10,7 +10,7 @@ export const FOOTER_LINKS = [
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-line bg-white">
+    <footer className="border-t border-line bg-surface">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-sm text-muted md:px-8">
         <p>© Yuktanya. {SLOGAN}</p>
         <nav aria-label="Tautan bawah" className="flex flex-wrap gap-x-2">

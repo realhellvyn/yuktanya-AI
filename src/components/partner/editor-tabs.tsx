@@ -11,11 +11,11 @@ export function EditorTabs({ panels, initial }: { panels: EditorPanel[]; initial
   const [active, setActive] = useState<EditorPanelId>(initial);
   return (
     <div className="space-y-5">
-      <div role="tablist" aria-label="Bagian pemeriksaan" className="grid grid-cols-2 gap-2 rounded-2xl border border-line bg-white p-2 sm:grid-cols-4 xl:hidden">
+      <div role="tablist" aria-label="Bagian pemeriksaan" className="grid grid-cols-2 gap-2 rounded-2xl border border-line bg-surface p-2 sm:grid-cols-4 xl:hidden">
         {panels.map((p) => (
           <button key={p.id} type="button" role="tab" id={`tab-${p.id}`} aria-selected={active === p.id} aria-controls={`panel-${p.id}`}
             onClick={() => setActive(p.id)}
-            className={cn("min-h-12 rounded-xl px-2 text-base font-semibold", active === p.id ? "bg-brand text-white" : "bg-slate-100 text-ink hover:bg-slate-200")}>
+            className={cn("min-h-12 rounded-xl px-2 text-base font-semibold", active === p.id ? "bg-primary text-on-primary" : "bg-subtle text-ink hover:bg-line")}>
             {p.label}
           </button>
         ))}

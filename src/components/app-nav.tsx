@@ -11,7 +11,7 @@ export const NAV = [
   { href: "/workspace/new", label: "Buat Dokumen", short: "Buat Dokumen", icon: "M12 5v14M5 12h14" },
   { href: "/documents", label: "Dokumen Saya", short: "Dokumen Saya", icon: "M7 3h7l5 5v13H7zM14 3v5h5" },
   { href: "/reviews", label: "Review Saya", short: "Review", icon: "M5 12l4 4L19 6" },
-  { href: "/cases", label: "Kasus Khusus", short: "Kasus", icon: "M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z" },
+  { href: "/cases", label: "Kasus Khusus", short: "Kasus", icon: "M4 8h16v12H4zM9 8V5h6v3M4 13h16" },
   { href: "/vault", label: "Legal Vault", short: "Vault", icon: "M5 10V7a7 7 0 0 1 14 0v3M4 10h16v11H4z" },
   { href: "/membership", label: "Membership", short: "Membership", icon: "M3 7h18v10H3zM3 11h18" },
   { href: "/bantuan", label: "Bantuan", short: "Bantuan", icon: "M9 9a3 3 0 1 1 4 2.8c-.6.3-1 .9-1 1.6V15M12 18h.01M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18" },
@@ -44,7 +44,7 @@ export function SideNav() {
         const on = isActive(path, l.href);
         return (
           <Link key={l.href} href={l.href} aria-current={on ? "page" : undefined}
-            className={cn("flex min-h-12 items-center gap-3 rounded-xl px-4 text-base font-semibold", on ? "bg-blue-50 text-brand-dark ring-1 ring-blue-200" : "text-ink hover:bg-slate-100")}>
+            className={cn("flex min-h-12 items-center gap-3 rounded-xl px-4 text-base font-semibold", on ? "bg-tint text-navy ring-1 ring-line" : "text-ink hover:bg-subtle")}>
             <Icon d={l.icon} />
             {l.label}
           </Link>
@@ -57,15 +57,15 @@ export function SideNav() {
 export function BottomNav() {
   const path = usePathname();
   return (
-    <nav aria-label="Menu utama" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav aria-label="Menu utama" className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden">
       <ul className="mx-auto grid max-w-xl grid-cols-4">
         {BOTTOM.map((l) => {
           const on = isActive(path, l.href) || l.also.some((p) => isActive(path, p));
           return (
             <li key={l.href}>
               <Link href={l.href} aria-current={on ? "page" : undefined}
-                className={cn("flex min-h-16 flex-col items-center justify-center gap-0.5 px-1 text-center text-sm font-semibold leading-tight", on ? "text-brand-dark" : "text-muted")}>
-                <span className={cn("rounded-full px-4 py-1", on && "bg-blue-100")}><Icon d={l.icon} /></span>
+                className={cn("flex min-h-16 flex-col items-center justify-center gap-0.5 px-1 text-center text-sm font-semibold leading-tight", on ? "font-bold text-navy" : "text-muted")}>
+                <span className={cn("rounded-full px-4 py-1", on && "bg-tint")}><Icon d={l.icon} /></span>
                 {l.short}
               </Link>
             </li>

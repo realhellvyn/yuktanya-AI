@@ -18,7 +18,7 @@ export default async function RubricPage({ searchParams }: { searchParams: Promi
       <PageHeading title="Persetujuan rubrik Enhanced" />
       {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">Persetujuan dicatat.</p>}
       {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">Isi referensi persetujuan mitra (minimal 3 karakter).</p>}
-      <section className="space-y-2 rounded-2xl border border-line bg-white p-5">
+      <section className="space-y-2 rounded-2xl border border-line bg-surface p-5">
         <p>Versi rubrik: <strong>{RUBRIC_VERSION}</strong> (butir M1–M7 dari docs/DEEP_REVIEW.md).</p>
         <p>Status: {row ? `Disetujui mitra — ${row.signoff_ref}` : "Belum disetujui. Enhanced tidak dapat diterbitkan."}</p>
         <p>Flag pembelian Deep Review: {flags.deepReviewPurchase ? "aktif" : "mati"}. Flag penerbitan Enhanced: {flags.enhancedIssuance ? "aktif" : "mati"} (diatur lewat variabel lingkungan).</p>

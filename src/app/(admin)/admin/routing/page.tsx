@@ -40,7 +40,7 @@ export default async function RoutingPage({ searchParams }: { searchParams: Prom
       <section aria-labelledby="belum-h" className="space-y-3">
         <h2 id="belum-h" className="text-xl font-bold text-navy md:text-2xl">Belum ditugaskan ({unassigned.length})</h2>
         {unassigned.map((r) => (
-          <form key={r.requestId} action={assignAction} className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-white p-5">
+          <form key={r.requestId} action={assignAction} className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-surface p-5">
             <input type="hidden" name="requestId" value={r.requestId} />
             <p className="w-full break-words font-semibold text-navy">{CATEGORY[r.category] ?? r.category}</p>
             {r.conflict && <p role="status" className="w-full rounded-xl border border-amber-400 bg-amber-50 p-3 text-amber-950">{CONFLICT_NOTE}</p>}
@@ -52,7 +52,7 @@ export default async function RoutingPage({ searchParams }: { searchParams: Prom
       <section aria-labelledby="jalan-h" className="space-y-3">
         <h2 id="jalan-h" className="text-xl font-bold text-navy md:text-2xl">Sedang dikerjakan ({inflight.length})</h2>
         {inflight.map((r) => (
-          <form key={r.requestId} action={reassignAction} className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-white p-5">
+          <form key={r.requestId} action={reassignAction} className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-surface p-5">
             <input type="hidden" name="requestId" value={r.requestId} />
             <p className="w-full break-words font-semibold text-navy">{CATEGORY[r.category] ?? r.category} · Reviewer {r.reviewerId.slice(0, 8)}{!r.reviewerAuthorized ? " · otorisasi tidak aktif" : ""}</p>
             <label className="block min-w-0 flex-1 basis-56"><span className={labelText}>Pindahkan ke</span>{select}</label>
@@ -63,7 +63,7 @@ export default async function RoutingPage({ searchParams }: { searchParams: Prom
       <section aria-labelledby="deep-h" className="space-y-3">
         <h2 id="deep-h" className="text-xl font-bold text-navy md:text-2xl">Pemeriksaan mendalam ({dUn.length + dIn.length})</h2>
         {[...dUn.map((r) => ({ id: r.deepId, mode: "assign", note: "Belum ditugaskan", cat: r.category, conflict: r.conflict })), ...dIn.map((r) => ({ id: r.deepId, mode: "reassign", note: `Reviewer ${r.reviewerId.slice(0, 8)}${r.reviewerAuthorized ? "" : " · otorisasi tidak aktif"}`, cat: r.category, conflict: false }))].map((r) => (
-          <form key={r.id} action={assignDeepAction} className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-white p-5">
+          <form key={r.id} action={assignDeepAction} className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-surface p-5">
             <input type="hidden" name="deepId" value={r.id} /><input type="hidden" name="mode" value={r.mode} />
             <p className="w-full break-words font-semibold text-navy">{CATEGORY[r.cat] ?? r.cat} · {r.note}</p>
             {r.conflict && <p role="status" className="w-full rounded-xl border border-amber-400 bg-amber-50 p-3 text-amber-950">{CONFLICT_NOTE}</p>}

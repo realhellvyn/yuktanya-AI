@@ -3,7 +3,7 @@
 export default function Loading() {
   return (
     <div role="status" aria-live="polite" className="flex min-h-[40vh] items-center justify-center gap-3 text-lg text-muted">
-      <span aria-hidden="true" className="h-6 w-6 animate-spin rounded-full border-4 border-slate-300 border-t-brand motion-reduce:animate-none" />
+      <span aria-hidden="true" className="h-6 w-6 animate-spin rounded-full border-4 border-line border-t-primary motion-reduce:animate-none" />
       Memuat…
     </div>
   );

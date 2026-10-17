@@ -9,9 +9,9 @@ export function ErrorView({ digest, onRetry }: { digest?: string; onRetry: () =>
       <p className="text-lg">Maaf, halaman ini belum dapat ditampilkan. Data yang sudah tersimpan tetap aman. Tekan Coba lagi, atau kembali ke Beranda.</p>
       {digest && /^[A-Za-z0-9]{1,32}$/.test(digest) && <p className="text-muted">Kode rujukan: <span className="font-mono">{digest}</span></p>}
       <div className="flex flex-wrap gap-3">
-        <button type="button" onClick={onRetry} className="inline-flex min-h-[52px] items-center justify-center rounded-xl bg-brand px-6 font-semibold text-white hover:bg-brand-dark">Coba lagi</button>
-        <Link href="/" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-400 bg-white px-6 font-semibold text-ink hover:bg-slate-50">Ke Beranda</Link>
-        <Link href="/bantuan" className="inline-flex min-h-12 items-center justify-center rounded-xl px-3 font-semibold text-brand underline">Bantuan</Link>
+        <button type="button" onClick={onRetry} className="inline-flex min-h-[52px] items-center justify-center rounded-xl bg-primary px-6 font-semibold text-on-primary hover:bg-primary-hover">Coba lagi</button>
+        <Link href="/" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border-strong bg-surface px-6 font-semibold text-ink hover:bg-subtle">Ke Beranda</Link>
+        <Link href="/bantuan" className="inline-flex min-h-12 items-center justify-center rounded-xl px-3 font-semibold text-link underline">Bantuan</Link>
       </div>
     </main>
   );

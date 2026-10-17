@@ -22,7 +22,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
           <form action={requestPasswordReset} className="space-y-5">
             <label className="block">
               <span className="font-semibold">Email <span className="font-normal text-muted">(Wajib)</span></span>
-              <input name="email" type="email" required autoComplete="email" className="mt-2 block min-h-12 w-full rounded-xl border border-slate-400 bg-white px-4 text-lg" />
+              <input name="email" type="email" required autoComplete="email" className="mt-2 block min-h-12 w-full rounded-xl border border-border-strong bg-surface px-4 text-lg" />
             </label>
             <Button type="submit" className="w-full text-lg">Kirim tautan</Button>
           </form>

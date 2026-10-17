@@ -9,7 +9,7 @@ import { fixedText } from "@/lib/query-text";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Hapus Akun | Yuktanya" };
 
-const link = "inline-flex min-h-12 items-center font-semibold text-brand-dark underline";
+const link = "inline-flex min-h-12 items-center font-semibold text-link underline";
 const ERRORS: Record<string, string> = {
   confirm: `Ketik kata ${CONFIRM_WORD} persis seperti contoh untuk melanjutkan. Akun Anda belum dihapus.`,
   blocked: "Akun belum bisa dihapus. Lihat alasannya di bawah. Tidak ada data yang berubah.",
@@ -77,10 +77,10 @@ export default async function DeleteAccountPage({ searchParams }: { searchParams
                   autoComplete="off"
                   autoCapitalize="characters"
                   spellCheck={false}
-                  className="mt-2 block min-h-12 w-full rounded-xl border border-slate-400 bg-white px-4 text-lg"
+                  className="mt-2 block min-h-12 w-full rounded-xl border border-border-strong bg-surface px-4 text-lg"
                 />
               </label>
-              <button type="submit" className="min-h-[52px] w-full rounded-xl bg-danger px-6 text-lg font-semibold text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-300">
+              <button type="submit" className="min-h-[52px] w-full rounded-xl bg-danger px-6 text-lg font-semibold text-white hover:opacity-90">
                 Hapus akun saya selamanya
               </button>
             </form>

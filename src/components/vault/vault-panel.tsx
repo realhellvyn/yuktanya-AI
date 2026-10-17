@@ -27,10 +27,10 @@ type Props = {
 };
 
 const when = (iso: string) => new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(iso));
-const btn = "min-h-12 rounded-lg border border-slate-400 bg-white px-5 font-medium";
-const primary = "min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white";
+const btn = "min-h-12 rounded-lg border border-border-strong bg-surface px-5 font-medium";
+const primary = "min-h-12 rounded-lg bg-primary hover:bg-primary-hover px-5 font-semibold text-on-primary";
 
-const Locked = () => <p className="rounded-lg border border-line bg-slate-50 p-3">Tersedia untuk Member</p>;
+const Locked = () => <p className="rounded-lg border border-line bg-subtle p-3">Tersedia untuk Member</p>;
 
 function shareStatus(s: ShareRow): string {
   if (s.revokedAt) return "Dicabut";
@@ -40,7 +40,7 @@ function shareStatus(s: ShareRow): string {
 export function VaultPanel({ documentId, versionId, features, shares, acks, reminderOptions, packId, notice, emailAvailable, actions }: Props) {
   return (
     <div className="space-y-8">
-      {fixedText(PANEL_NOTICES, notice) && <p role="alert" className="rounded-lg border border-red-700 bg-white p-4 text-danger">{fixedText(PANEL_NOTICES, notice)}</p>}
+      {fixedText(PANEL_NOTICES, notice) && <p role="alert" className="rounded-lg border border-red-700 bg-surface p-4 text-danger">{fixedText(PANEL_NOTICES, notice)}</p>}
 
       <section aria-labelledby="share-h" className="space-y-3">
         <h2 id="share-h" className="text-2xl font-semibold">Bagikan ke pihak lawan</h2>
@@ -54,7 +54,7 @@ export function VaultPanel({ documentId, versionId, features, shares, acks, remi
             {shares.length > 0 && (
               <ul className="space-y-2">
                 {shares.map((s) => (
-                  <li key={s.id} className="rounded-lg border border-line bg-white p-3">
+                  <li key={s.id} className="rounded-lg border border-line bg-surface p-3">
                     <p>Dibuat {when(s.createdAt)} WIB · berlaku sampai {when(s.expiresAt)} WIB · {shareStatus(s)} · Dibuka {s.openedCount} kali</p>
                     {!s.revokedAt && (
                       <form action={actions.revokeShare}>
@@ -80,10 +80,10 @@ export function VaultPanel({ documentId, versionId, features, shares, acks, remi
 
       <section aria-labelledby="rem-h" className="space-y-3">
         <h2 id="rem-h" className="text-2xl font-semibold">Pengingat tenggat</h2>
-        {features.reminders && !emailAvailable && <p role="status" className="rounded-lg border border-line bg-slate-50 p-3">Pengingat lewat email belum dapat dikirim karena layanan email belum aktif. Pengingat yang Anda atur tersimpan, tetapi belum ada email yang terkirim.</p>}
+        {features.reminders && !emailAvailable && <p role="status" className="rounded-lg border border-line bg-subtle p-3">Pengingat lewat email belum dapat dikirim karena layanan email belum aktif. Pengingat yang Anda atur tersimpan, tetapi belum ada email yang terkirim.</p>}
         {!features.reminders ? <Locked /> : reminderOptions.length === 0 ? <p>Dokumen ini tidak punya tenggat yang bisa diingatkan.</p> : (
           reminderOptions.map((o) => (
-            <form key={o.specId} action={actions.setReminder} className="space-y-2 rounded-lg border border-line bg-white p-3">
+            <form key={o.specId} action={actions.setReminder} className="space-y-2 rounded-lg border border-line bg-surface p-3">
               <input type="hidden" name="documentId" value={documentId} />
               <input type="hidden" name="versionId" value={versionId} />
               <input type="hidden" name="specId" value={o.specId} />
@@ -115,7 +115,7 @@ export function VaultPanel({ documentId, versionId, features, shares, acks, remi
               <input type="hidden" name="versionId" value={versionId} />
               <button type="submit" className={primary}>Buat paket bukti</button>
             </form>
-            {packId && <a className="inline-flex min-h-12 items-center text-brand-dark underline" href={`/api/documents/evidence/${packId}`}>Paket siap. Tekan di sini untuk mengunduh.</a>}
+            {packId && <a className="inline-flex min-h-12 items-center text-link underline" href={`/api/documents/evidence/${packId}`}>Paket siap. Tekan di sini untuk mengunduh.</a>}
           </>
         )}
       </section>

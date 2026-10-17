@@ -36,17 +36,17 @@ export default function PricingPage() {
           </thead>
           <tbody>
             {ROWS.map((r) => (
-              <tr key={r.item} className="border-b border-slate-200 align-top">
+              <tr key={r.item} className="border-b border-line align-top">
                 <th scope="row" className="py-3 pr-4 text-left font-normal">
                   {r.item}
-                  {r.note && <span className="block text-slate-700">{r.note}</span>}
+                  {r.note && <span className="block text-muted">{r.note}</span>}
                 </th>
                 <td className="py-3 font-semibold">{r.price}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="rounded-lg border border-line bg-white p-4">{CHECKOUT_NOTE}</p>
+        <p className="rounded-lg border border-line bg-surface p-4">{CHECKOUT_NOTE}</p>
       </main>
       <SiteFooter />
     </>

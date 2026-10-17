@@ -5,8 +5,8 @@ A calm, trustworthy Indonesian legal service usable by first-time smartphone use
 
 ## Visual direction
 - Professional, reassuring, uncluttered; **not** a playful AI chatbot aesthetic.
-- Brand palette proposal (adjust only with explicit approval): navy `#17324D`, blue `#2563EB`, off-white `#F8FAFC`, white `#FFFFFF`, ink `#17212B`, muted `#475569`, success `#166534`, danger `#B91C1C`, border `#CBD5E1`. Verify contrast on actual components. Do not communicate state using color alone.
-- Use one readable UI font (e.g. Inter or system sans) and avoid thin weights. Avoid loading remote fonts as a critical dependency.
+- Brand palette: **approved Yuktanya brand kit (navy · gold · cream), light theme only** — see "Brand kit (Task 18)" below. The earlier proposal (navy `#17324D`, blue `#2563EB`, off-white `#F8FAFC`, border `#CBD5E1`) is superseded. Verify contrast on actual components. Do not communicate state using color alone.
+- One readable UI font: **Plus Jakarta Sans** (self-hosted, see below); avoid thin weights. Never load remote fonts (CSP `font-src 'self'`).
 - Default body **16–18px**, major labels 16px+, main page headings 26–32px mobile, 32–40px desktop. Minimum 14px only for noncritical secondary text; legal instructions never tiny.
 - Line height 1.5–1.7, sentence case, generous whitespace.
 - Tap/click target **at least 44×44 CSS px**, preferably 48px on mobile. Buttons min-height 48px, primary actions 52px. Gap between adjacent destructive/primary controls.
@@ -58,3 +58,43 @@ as text, not color alone. Scope/limitations and payment-not-positive-outcome cop
 size, not footnotes/tooltips. Existing typography/tap targets/mobile/zoom rules apply.
 Use `Pemeriksaan mendalam (tambahan)` and explain Legal Note as `Catatan dari pemeriksa`.
 Loading/save states announced politely; failure must not say saved or completed.
+
+## Brand kit (Task 18) — implemented tokens
+Owner-approved brand kit "Yuktanya" (tokens.json + README of the kit). **Light theme only** for now; no dark theme.
+Source of truth in code: `:root` + `@theme inline` in `src/app/globals.css`; contrast pairs are enforced by
+`tests/unit/brand-tokens.test.ts`.
+
+| Role token | Value | Tailwind class | Use |
+|---|---|---|---|
+| `bg` | cream `#F8F5EC` | `bg-canvas` | page background |
+| `surface` | `#FFFFFF` | `bg-surface` | cards, inputs, panels |
+| `ink` | charcoal `#1A1A1A` | `text-ink` | body text (16:1 on cream) |
+| `heading` / `navy` | `#0D1B2A` | `text-heading`, `text-navy` | headings, wordmark |
+| `muted` | `#5B5A55` | `text-muted` | secondary text (6.3:1 on cream) |
+| `primary` / `primary-hover` / `on-primary` | `#0D1B2A` / `#1F3550` / `#FFFFFF` | `bg-primary`, `hover:bg-primary-hover`, `text-on-primary` | primary button |
+| `link` | `#0D1B2A` | `text-link` + `underline` | links are always underlined |
+| `gold-ink` | `#8A6420` | `text-gold-ink` | the only gold shade allowed for text on light backgrounds |
+| `line` | `#E4DDCD` | `border-line` | decorative dividers, card borders |
+| `border-strong` | `#7A7468` | `border-border-strong` | input and secondary-button borders (≥3:1) |
+| `focus` | `#8A6420` | global `:focus-visible` outline | 3px solid ring, offset 2px |
+| `tint` / `subtle` | `#F4EBDA` / `#F2EEE4` | `bg-tint`, `bg-subtle` | warm highlight (active menu, user chat bubble, suggestion card) / neutral hover and notes |
+| `success`, `danger` | `#166534`, `#B91C1C` | `text-success`, `text-danger` | status, always with words + icon |
+
+- **Gold `#D4A66A` is never text, meaningful icon or button fill on a light background** (2.04:1 on cream). It is only
+  for the logo and accents on navy (7.8:1), e.g. the step numerals on the home page (`bg-navy text-gold`). Tested rule: a
+  class string containing a `*-gold` colour class must also contain `bg-navy`.
+- Warning `amber-*` and green/red status boxes stay as they are (meaning of status); their contrast on cream is tested.
+- No Tailwind `slate/gray/blue/...` palette classes in `src/**` (warm neutrals only; tested).
+- Typography: **Plus Jakarta Sans** (variable, `@fontsource-variable/plus-jakarta-sans`) for all text, body stays 17px;
+  **Source Serif 4 700** (`@fontsource/source-serif-4`, latin subset) only for the wordmark "Yuktanya"
+  (`src/components/brand-logo.tsx`). Both are SIL Open Font License 1.1 (OFL-1.1; licence text ships in each npm package
+  under `node_modules/.../LICENSE`). They are imported as CSS in `src/app/layout.tsx`, bundled by Next.js and served
+  from our own origin (`/_next/static/media`), so `next build` works offline and CSP `font-src 'self'` holds.
+- Logo: final SVGs copied unchanged from the brand kit into `public/brand/` (`yuktanya-mark-{navy,gold,white}.svg`,
+  `yuktanya-mark-small-{navy,gold}.svg`, `yuktanya-app-icon.svg`). Headers (public, user, partner, admin, auth, 404)
+  use `BrandLogo`: small navy mark 32px (`alt=""`) + serif wordmark. `src/app/icon.svg` = app icon;
+  `src/app/apple-icon.png` (180×180) and `src/app/opengraph-image.png` (1200×630) are rendered once by
+  `node scripts/brand/render-icons.mjs` and committed. Exported DOCX/PDF documents carry no logo (not in Task 18).
+- Verification badge: `VerificationSeal` — a circle with a check in `success` for active Legal Verified/Enhanced, a
+  dashed circle without check for "not professionally reviewed" (AI Verified). Never a shield, never gold, never the
+  logo mark, so it cannot be confused with the brand. Meaning is always carried by the status text next to it.

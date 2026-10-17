@@ -1,5 +1,7 @@
 "use client";
 
+import "@fontsource-variable/plus-jakarta-sans/wght.css";
+import "@fontsource/source-serif-4/latin-700.css";
 import "./globals.css";
 import { ErrorView } from "@/components/error-view";
 

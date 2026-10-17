@@ -27,7 +27,7 @@ export default async function TeamPage() {
     <main className="max-w-4xl space-y-8">
       <PageHeading title="Tim firma" lead="Reviewer di firma Anda, beban kerja aktif, dan masa berlaku otorisasi profesional."
         actions={<ButtonLink href="/partner#penugasan">Tugaskan permintaan</ButtonLink>} />
-      <p className="rounded-xl border border-line bg-white p-4">Koordinator menugaskan pekerjaan, tetapi tidak memberi peran atau otorisasi. Penambahan anggota dan otorisasi profesional dilakukan oleh admin platform setelah verifikasi.</p>
+      <p className="rounded-xl border border-line bg-surface p-4">Koordinator menugaskan pekerjaan, tetapi tidak memberi peran atau otorisasi. Penambahan anggota dan otorisasi profesional dilakukan oleh admin platform setelah verifikasi.</p>
       {firms.length === 0 && <EmptyState title="Belum ada reviewer" text="Belum ada reviewer di firma Anda. Minta admin platform menambahkan reviewer." />}
       {firms.map(([firmId, firmName]) => (
         <section key={firmId} aria-label={firmName} className="space-y-3">

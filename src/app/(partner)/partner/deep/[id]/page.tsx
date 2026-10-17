@@ -72,7 +72,7 @@ export default async function DeepEditorPage({ params, searchParams }: { params:
   return (
     <main className="space-y-6">
       <header className="space-y-2">
-        <Link href="/partner" className="inline-flex min-h-12 items-center font-semibold text-brand underline underline-offset-4">Kembali ke antrean</Link>
+        <Link href="/partner" className="inline-flex min-h-12 items-center font-semibold text-link underline underline-offset-4">Kembali ke antrean</Link>
         <p className="text-sm font-semibold uppercase tracking-wide text-muted">Pemeriksaan Mendalam · {categoryLabel(d.category)}</p>
         <h1 className="break-words text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">Pemeriksaan mendalam — {d.title}</h1>
         <div className="flex flex-wrap items-center gap-2">

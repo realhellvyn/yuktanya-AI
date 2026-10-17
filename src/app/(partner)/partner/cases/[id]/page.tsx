@@ -45,7 +45,7 @@ export default async function PartnerCasePage({ params, searchParams }: { params
         </div>
         <p className="text-muted">Masuk {formatWib(c.createdAt)}. Pemilik menyetujui berbagi ringkasan pada {formatWib(c.consentAt)}.</p>
         <h3 className="font-semibold">Ringkasan dari pemilik</h3>
-        <p className="whitespace-pre-wrap break-words rounded-xl border border-line bg-slate-50 p-3">{c.summary}</p>
+        <p className="whitespace-pre-wrap break-words rounded-xl border border-line bg-subtle p-3">{c.summary}</p>
       </Card>
 
       {c.status === "SUBMITTED" && (

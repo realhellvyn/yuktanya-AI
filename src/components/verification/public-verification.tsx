@@ -1,6 +1,7 @@
 import { formatDateId } from "@/lib/documents/format";
 import { LEGAL_DISCLAIMER, QR_NOT_SIGNATURE, UPLOAD_HASH_NOTE, VERIFICATION_TITLES, VERIFIED_LABEL, verificationStatement } from "@/lib/copy";
 import type { PublicVerificationResult } from "@/lib/verification/service";
+import { VerificationSeal } from "./verification-seal";
 
 const wibDay = (iso: string): string => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
 
@@ -30,11 +31,14 @@ export function PublicVerification({ result, code }: { result: PublicVerificatio
   }
   return (
     <main className="mx-auto max-w-2xl space-y-4 p-6">
-      <h1 className="text-3xl font-semibold">{title}</h1>
+      <div className="flex items-center gap-3">
+        <VerificationSeal variant={result.kind === "AI" ? "unreviewed" : "verified"} />
+        <h1 className="text-3xl font-semibold">{title}</h1>
+      </div>
       <p role="status" className="font-semibold">Status: Aktif</p>
       <p>{verificationStatement(result.kind, result.outcome)}</p>
       {result.kind !== "AI" && <p className="font-semibold">{VERIFIED_LABEL}</p>}
-      <dl className="space-y-2 rounded-lg border border-line bg-white p-4">
+      <dl className="space-y-2 rounded-lg border border-line bg-surface p-4">
         <div><dt className="font-medium">Tanggal terbit</dt><dd>{formatDateId(wibDay(result.issuedAt))}</dd></div>
         <div><dt className="font-medium">Kode</dt><dd className="font-mono break-all">{code}</dd></div>
         <div>

@@ -17,7 +17,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Promis
     <main className="max-w-3xl space-y-6">
       <PageHeading title="Kasus Khusus" lead="Permintaan penilaian khusus oleh firma hukum mitra." actions={<ButtonLink href="/cases/new">Ajukan penilaian khusus</ButtonLink>} />
       {q.notice === "khusus" && <p role="alert" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold">{caseErrorText("SPECIAL_CASE_OPEN")}</p>}
-      <p className="rounded-xl border border-line bg-white p-4">{SPECIAL_CASE_NOTE}</p>
+      <p className="rounded-xl border border-line bg-surface p-4">{SPECIAL_CASE_NOTE}</p>
       {rows.length === 0 ? (
         <EmptyState title="Belum ada permintaan penilaian khusus" text="Gunakan bila dokumen Anda rumit atau berisiko tinggi dan tidak cocok untuk pemeriksaan standar oleh pengacara." />
       ) : (

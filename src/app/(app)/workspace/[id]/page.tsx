@@ -67,7 +67,7 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
           <Card aria-label="Dokumen siap dibuat" className="space-y-4 border-green-300 bg-green-50">
             <h2 className="text-xl font-bold text-navy">Dokumen siap dibuat</h2>
             <details>
-              <summary className="inline-flex min-h-12 cursor-pointer items-center font-semibold text-brand-dark">Lihat ringkasan jawaban</summary>
+              <summary className="inline-flex min-h-12 cursor-pointer items-center font-semibold text-link underline underline-offset-4">Lihat ringkasan jawaban</summary>
               <dl className="mt-2 space-y-2">
                 {summarize(t, data).map((s) => (
                   <div key={s.label}>
@@ -98,9 +98,9 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
           placeholder={PLACEHOLDER[doc.category]}
           userId={userId}
         />
-        {doc.versions.length > 0 && <Link className="inline-flex min-h-12 items-center font-semibold text-brand-dark underline" href={`/documents/${id}`}>Lihat versi yang sudah dibuat</Link>}
-        <details className="rounded-2xl border border-line bg-white p-4 lg:hidden">
-          <summary className="inline-flex min-h-12 cursor-pointer items-center font-semibold text-brand-dark">Lihat draf dokumen</summary>
+        {doc.versions.length > 0 && <Link className="inline-flex min-h-12 items-center font-semibold text-link underline" href={`/documents/${id}`}>Lihat versi yang sudah dibuat</Link>}
+        <details className="rounded-2xl border border-line bg-surface p-4 lg:hidden">
+          <summary className="inline-flex min-h-12 cursor-pointer items-center font-semibold text-link underline underline-offset-4">Lihat draf dokumen</summary>
           <div className="mt-3">{preview}</div>
         </details>
       </div>

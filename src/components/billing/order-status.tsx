@@ -19,7 +19,7 @@ export const isPastDue = (order: OrderLike, now: Date = new Date()) =>
 export function OrderStatus({ order, now = new Date() }: { order: OrderLike; now?: Date }) {
   const pastDue = isPastDue(order, now);
   return (
-    <div className="space-y-1 rounded-lg border border-line bg-white p-4">
+    <div className="space-y-1 rounded-lg border border-line bg-surface p-4">
       <p role="status" className="text-lg font-semibold">Status: {pastDue ? "Batas waktu pembayaran lewat" : STATUS[order.status] ?? "Sedang diproses"}</p>
       <p>Jumlah: {formatIdr(order.amountIdr)}</p>
       {pastDue && <p>Pesanan ini tidak dapat dibayar lagi. Untuk melanjutkan, buat permintaan baru dari halaman dokumen atau membership. Bila Anda sudah telanjur mentransfer, jangan transfer lagi: tim kami mencocokkan transfer yang masuk.</p>}

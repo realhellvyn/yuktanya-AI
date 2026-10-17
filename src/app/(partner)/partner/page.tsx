@@ -75,7 +75,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
                 <li key={r.requestId}>
                   <Card className="flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-0 space-y-1">
-                      <Link className="inline-flex min-h-12 items-center text-lg font-semibold text-brand underline underline-offset-4" href={`/partner/reviews/${r.requestId}`}>{categoryLabel(r.category)}</Link>
+                      <Link className="inline-flex min-h-12 items-center text-lg font-semibold text-link underline underline-offset-4" href={`/partner/reviews/${r.requestId}`}>{categoryLabel(r.category)}</Link>
                       <p className="text-muted">Review Standar · Usia {age(r.createdAt)}</p>
                     </div>
                     <StatusBadge tone={r.status === "IN_REVIEW" ? "info" : "warning"}>{statusText(r.status)}</StatusBadge>
@@ -95,7 +95,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
               <li key={r.deepId}>
                 <Card className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0 space-y-1">
-                    <Link className="inline-flex min-h-12 items-center text-lg font-semibold text-brand underline underline-offset-4" href={`/partner/deep/${r.deepId}`}>{categoryLabel(r.category)}</Link>
+                    <Link className="inline-flex min-h-12 items-center text-lg font-semibold text-link underline underline-offset-4" href={`/partner/deep/${r.deepId}`}>{categoryLabel(r.category)}</Link>
                     <p className="text-muted">Pemeriksaan Mendalam · Usia {age(r.createdAt)}</p>
                   </div>
                   <StatusBadge tone={r.status === "IN_REVIEW" ? "info" : "warning"}>{statusText(r.status)}</StatusBadge>

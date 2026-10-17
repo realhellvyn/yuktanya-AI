@@ -22,7 +22,7 @@ const NOT_OK: Record<string, string> = {
   EXPIRED: "Tautan sudah kedaluwarsa. Minta tautan baru kepada pemilik dokumen.",
   REVOKED: "Tautan sudah dicabut oleh pemiliknya.",
 };
-const box = "mt-1 block min-h-12 w-full rounded-lg border border-slate-400 px-3 text-lg";
+const box = "mt-1 block min-h-12 w-full rounded-lg border border-border-strong px-3 text-lg";
 
 export function PublicShare({ view, token, requestAction, verifyAction, ackAvailable, step, email, result, error }: Props) {
   if (view.status !== "OK") {
@@ -42,14 +42,14 @@ export function PublicShare({ view, token, requestAction, verifyAction, ackAvail
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">{view.title}</h1>
       <p>Versi {view.versionNo} · kode versi <span className="font-mono">{view.sha256.slice(0, 12)}</span> · Versi baru belum diperiksa</p>
-      {view.hasNewer && <p role="status" className="rounded-lg border border-line bg-white p-3">Ada versi yang lebih baru. Minta tautan baru kepada pemilik dokumen.</p>}
+      {view.hasNewer && <p role="status" className="rounded-lg border border-line bg-surface p-3">Ada versi yang lebih baru. Minta tautan baru kepada pemilik dokumen.</p>}
       <DocumentPreview doc={view.doc} />
 
-      <section aria-labelledby="ack-h" className="space-y-3 rounded-lg border border-line bg-white p-4">
+      <section aria-labelledby="ack-h" className="space-y-3 rounded-lg border border-line bg-surface p-4">
         <h2 id="ack-h" className="text-xl font-semibold">Konfirmasi baca (opsional)</h2>
         <p>Konfirmasi baca hanya menyatakan Anda sudah membaca versi ini. Ini bukan tanda tangan elektronik.</p>
         {!ackAvailable ? (
-          <p role="status" className="rounded-lg border border-line bg-slate-50 p-3">{ACK_ERROR_MESSAGES.unavailable} Anda tetap dapat membaca dokumen ini.</p>
+          <p role="status" className="rounded-lg border border-line bg-subtle p-3">{ACK_ERROR_MESSAGES.unavailable} Anda tetap dapat membaca dokumen ini.</p>
         ) : <>
         {resultMsg && <p role="status" className="font-semibold">{resultMsg}</p>}
         {errorMsg && <p role="alert" className="font-semibold text-danger">{errorMsg}</p>}
@@ -63,15 +63,15 @@ export function PublicShare({ view, token, requestAction, verifyAction, ackAvail
                 <span className="font-medium">Kode 6 digit dari email Anda (Wajib)</span>
                 <input name="code" inputMode="numeric" pattern="\d{6}" maxLength={6} required autoComplete="one-time-code" className={box} />
               </label>
-              <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Konfirmasi</button>
+              <button type="submit" className="min-h-12 rounded-lg bg-primary hover:bg-primary-hover px-5 font-semibold text-on-primary">Konfirmasi</button>
             </form>
             <div className="flex flex-wrap gap-3">
               <form action={requestAction}>
                 <input type="hidden" name="token" value={token} />
                 <input type="hidden" name="email" value={safeEmail} />
-                <button type="submit" className="min-h-12 rounded-lg border border-slate-400 bg-white px-5 font-medium">Kirim ulang kode</button>
+                <button type="submit" className="min-h-12 rounded-lg border border-border-strong bg-surface px-5 font-medium">Kirim ulang kode</button>
               </form>
-              <a href={`/s/${encodeURIComponent(token)}`} className="inline-flex min-h-12 items-center rounded-lg border border-slate-400 bg-white px-5 font-medium">Ubah email</a>
+              <a href={`/s/${encodeURIComponent(token)}`} className="inline-flex min-h-12 items-center rounded-lg border border-border-strong bg-surface px-5 font-medium">Ubah email</a>
             </div>
           </div>
         ) : (
@@ -81,13 +81,13 @@ export function PublicShare({ view, token, requestAction, verifyAction, ackAvail
               <span className="font-medium">Email Anda (Wajib)</span>
               <input name="email" type="email" required autoComplete="email" className={box} />
             </label>
-            <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Kirim kode</button>
+            <button type="submit" className="min-h-12 rounded-lg bg-primary hover:bg-primary-hover px-5 font-semibold text-on-primary">Kirim kode</button>
           </form>
         )}
         </>}
       </section>
 
-      <a href="/register" className="inline-flex min-h-12 items-center rounded-lg border border-slate-400 bg-white px-5 font-medium">Buat dokumen sendiri, gratis</a>
+      <a href="/register" className="inline-flex min-h-12 items-center rounded-lg border border-border-strong bg-surface px-5 font-medium">Buat dokumen sendiri, gratis</a>
     </main>
   );
 }

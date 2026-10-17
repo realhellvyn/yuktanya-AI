@@ -35,7 +35,7 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
     <main className="max-w-3xl space-y-6">
       <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">Pembayaran</h1>
       {review && (
-        <section aria-labelledby="dok-h" className="space-y-2 rounded-lg border border-line bg-white p-4">
+        <section aria-labelledby="dok-h" className="space-y-2 rounded-lg border border-line bg-surface p-4">
           <h2 id="dok-h" className="text-xl font-semibold">Yang akan diperiksa</h2>
           {subject ? (
             <dl className="space-y-1">
@@ -59,7 +59,7 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
       {order.status === "PENDING_PAYMENT" && !pastDue && (
         <section className="space-y-4" aria-label="Cara membayar">
           {pending?.provider === "manual" && (
-            <div className="space-y-2 rounded-lg border border-line bg-white p-4">
+            <div className="space-y-2 rounded-lg border border-line bg-surface p-4">
               <h2 className="text-xl font-semibold">Transfer bank</h2>
               {manualText ? <p className="whitespace-pre-line">{manualText}</p> : (
                 <p>Instruksi transfer belum tersedia. Jangan transfer dulu. <Link className="inline-flex min-h-12 items-center underline" href="/bantuan">Lihat halaman Bantuan</Link></p>
@@ -72,21 +72,21 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
             <form action={payAction} className="space-y-3">
               <input type="hidden" name="orderId" value={order.id} />
               <input type="hidden" name="provider" value="manual" />
-              <button type="submit" className={`${btn} bg-brand hover:bg-brand-dark text-white`}>Bayar dengan transfer bank</button>
+              <button type="submit" className={`${btn} bg-primary hover:bg-primary-hover text-on-primary`}>Bayar dengan transfer bank</button>
             </form>
           )}
           {!production && !pending && (
             <form action={payAction}>
               <input type="hidden" name="orderId" value={order.id} />
               <input type="hidden" name="provider" value="mock" />
-              <button type="submit" className={`${btn} border border-slate-400 bg-white`}>Pembayaran simulasi (hanya uji)</button>
+              <button type="submit" className={`${btn} border border-border-strong bg-surface`}>Pembayaran simulasi (hanya uji)</button>
             </form>
           )}
           {!production && pending?.provider === "mock" && (
             <form action={mockSettleAction}>
               <input type="hidden" name="orderId" value={order.id} />
               <input type="hidden" name="paymentId" value={pending.id} />
-              <button type="submit" className={`${btn} border border-slate-400 bg-white`}>Simulasikan pembayaran berhasil</button>
+              <button type="submit" className={`${btn} border border-border-strong bg-surface`}>Simulasikan pembayaran berhasil</button>
             </form>
           )}
         </section>

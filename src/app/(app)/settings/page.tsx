@@ -13,7 +13,7 @@ import { fixedText } from "@/lib/query-text";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pengaturan | Yuktanya" };
 
-const link = "inline-flex min-h-12 items-center font-semibold text-brand-dark underline";
+const link = "inline-flex min-h-12 items-center font-semibold text-link underline";
 
 const NOTICES: Record<string, string> = {
   "export-limit": "Anda sudah mengunduh data beberapa kali dalam satu jam terakhir. Coba lagi nanti.",

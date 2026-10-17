@@ -1,6 +1,7 @@
 import { LEGAL_DISCLAIMER, NEW_VERSION_NOT_REVIEWED, QR_NOT_SIGNATURE, VERIFICATION_TITLES, VERIFIED_LABEL, verificationStatement } from "@/lib/copy";
 import { formatDateId } from "@/lib/documents/format";
 import type { VerificationView } from "@/lib/verification/service";
+import { VerificationSeal } from "./verification-seal";
 
 const STATUS: Record<VerificationView["status"], string> = { ACTIVE: "Aktif", REVOKED: "Dicabut", SUSPENDED: "Ditangguhkan sementara" };
 const wibDay = (iso: string): string => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
@@ -8,13 +9,16 @@ const wibDay = (iso: string): string => new Date(iso).toLocaleDateString("en-CA"
 // Sisi pemilik: verifikasi yang terikat versi ini. Versi tanpa verifikasi menampilkan pernyataan bahwa versi ini belum diperiksa.
 export function VerificationPanel({ verifications, qrDataUrls, urls }: { verifications: VerificationView[]; qrDataUrls: Record<string, string>; urls: Record<string, string> }) {
   if (verifications.length === 0) {
-    return <p className="rounded-lg border border-line bg-white p-3">{NEW_VERSION_NOT_REVIEWED}</p>;
+    return <p className="rounded-lg border border-line bg-surface p-3">{NEW_VERSION_NOT_REVIEWED}</p>;
   }
   return (
     <ul className="space-y-4">
       {verifications.map((v) => (
-        <li key={v.id} className="space-y-2 rounded-lg border border-line bg-white p-4">
-          <h3 className="text-lg font-semibold">{VERIFICATION_TITLES[v.kind]}</h3>
+        <li key={v.id} className="space-y-2 rounded-lg border border-line bg-surface p-4">
+          <div className="flex items-center gap-3">
+            {v.kind === "AI" ? <VerificationSeal variant="unreviewed" /> : v.status === "ACTIVE" && <VerificationSeal variant="verified" />}
+            <h3 className="text-lg font-semibold">{VERIFICATION_TITLES[v.kind]}</h3>
+          </div>
           <p role="status" className="font-semibold">Status: {STATUS[v.status]}</p>
           <p>{verificationStatement(v.kind, v.outcome)}</p>
           {v.kind !== "AI" && v.status === "ACTIVE" && <p className="font-semibold">{VERIFIED_LABEL}</p>}

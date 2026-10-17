@@ -36,7 +36,7 @@ function Quota({ label, left, total }: { label: string; left: number; total: num
         <span className="font-medium">{label}</span>
         <span className="whitespace-nowrap font-semibold text-navy">{left} dari {total}</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-slate-200" aria-hidden="true"><div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` }} /></div>
+      <div className="h-2 overflow-hidden rounded-full bg-line" aria-hidden="true"><div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} /></div>
     </li>
   );
 }
@@ -60,7 +60,7 @@ export default async function DashboardPage() {
         <p className="text-xl text-muted">Apa yang ingin Anda buat hari ini?</p>
       </header>
 
-      <Card className="space-y-4 border-blue-200 bg-blue-50/60">
+      <Card className="space-y-4 border-line bg-tint">
         {draft ? (
           <>
             <p className="text-lg font-semibold text-navy">Lanjutkan dokumen terakhir: {draft.title}</p>
@@ -77,7 +77,7 @@ export default async function DashboardPage() {
           </>
         )}
         <p className="text-muted">{AI_DRAFT_LABEL} AI bukan pengacara.</p>
-        <div className="border-t border-blue-200 pt-4">
+        <div className="border-t border-line pt-4">
           {flags.aiPreReview
             ? <ButtonLink href="/documents/upload" variant="secondary">Periksa dokumen yang sudah Anda punya</ButtonLink>
             : <ButtonLink href="/bantuan#pengacara" variant="secondary">Cara memeriksakan dokumen ke pengacara</ButtonLink>}

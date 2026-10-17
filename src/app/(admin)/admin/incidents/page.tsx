@@ -19,7 +19,7 @@ export default async function IncidentsPage({ searchParams }: { searchParams: Pr
         <KpiCard label="Email gagal terkirim" value={fmtCount(o.incidents.failed_outbox)} hint="Saat ini" />
         <KpiCard label="Permintaan AI gagal" value={fmtCount(o.incidents.ai_failures)} />
       </div>
-      <Link className="inline-flex min-h-12 items-center font-semibold text-brand underline underline-offset-4" href="/admin/payments">Selesaikan rekonsiliasi pembayaran</Link>
+      <Link className="inline-flex min-h-12 items-center font-semibold text-link underline underline-offset-4" href="/admin/payments">Selesaikan rekonsiliasi pembayaran</Link>
     </main>
   );
 }

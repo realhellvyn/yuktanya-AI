@@ -16,6 +16,8 @@
     "test:e2e:prod": "E2E_PROD=1 JOURNEY=${JOURNEY:-./journey-ux.mjs} bash scripts/e2e/run.sh"
   },
   "dependencies": {
+    "@fontsource-variable/plus-jakarta-sans": "5.3.0",
+    "@fontsource/source-serif-4": "5.3.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
     "clsx": "^2.1.1",

@@ -25,7 +25,7 @@ export function UploadForm({ action, idempotencyKey }: {
           name="file"
           required
           accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
-          className="block min-h-12 w-full max-w-full rounded-xl border border-slate-400 bg-white px-3 py-2 text-base file:mr-3 file:min-h-10 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:font-semibold"
+          className="block min-h-12 w-full max-w-full rounded-xl border border-border-strong bg-surface px-3 py-2 text-base file:mr-3 file:min-h-10 file:rounded-lg file:border-0 file:bg-subtle file:px-4 file:font-semibold"
         />
       </label>
       <label className="flex min-h-12 items-start gap-3">
@@ -37,7 +37,7 @@ export function UploadForm({ action, idempotencyKey }: {
           <p className="font-semibold">{state.error}</p>
           {state.code !== "NO_CONSENT" && state.code !== "FEATURE_DISABLED" && <p>Pilih berkas lagi sebelum mencoba.</p>}
           {state.code && SPECIAL.has(state.code) && (
-            <Link href="/cases/new" className="inline-flex min-h-12 items-center font-semibold text-brand underline underline-offset-4">Ajukan penilaian khusus</Link>
+            <Link href="/cases/new" className="inline-flex min-h-12 items-center font-semibold text-link underline underline-offset-4">Ajukan penilaian khusus</Link>
           )}
         </div>
       )}

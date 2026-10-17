@@ -12,7 +12,7 @@ export function RangeNav({ path, range }: { path: string; range: Range }) {
         const on = o.days === range.days;
         return (
           <Link key={o.r} href={`${path}?r=${o.r}`} aria-current={on ? "page" : undefined}
-            className={cn("inline-flex min-h-12 items-center rounded-xl border px-4 font-semibold", on ? "border-brand bg-blue-50 text-brand-dark" : "border-slate-400 bg-white text-ink hover:bg-slate-50")}>
+            className={cn("inline-flex min-h-12 items-center rounded-xl border px-4 font-semibold", on ? "border-primary bg-tint text-navy" : "border-border-strong bg-surface text-ink hover:bg-subtle")}>
             {o.label}{on ? " (dipilih)" : ""}
           </Link>
         );

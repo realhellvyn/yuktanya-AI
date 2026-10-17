@@ -18,10 +18,10 @@ export function ReviewTimeline({ status, timeline }: { status: string; timeline?
         const current = !cancelled && i === reached && !done;
         return (
           <li key={s} className="flex flex-wrap items-baseline gap-x-2">
-            <span aria-hidden="true" className={i <= reached ? "font-bold" : "text-slate-500"}>{i <= reached ? "✓" : "○"}</span>
+            <span aria-hidden="true" className={i <= reached ? "font-bold" : "text-muted"}>{i <= reached ? "✓" : "○"}</span>
             <span className={current ? "font-semibold" : undefined}>{s}</span>
-            <span className="text-slate-700">{done ? "— selesai" : current ? "— tahap ini" : "— belum"}</span>
-            {at[i] && i <= reached && <span className="text-slate-700">({date(at[i]!)} WIB)</span>}
+            <span className="text-muted">{done ? "— selesai" : current ? "— tahap ini" : "— belum"}</span>
+            {at[i] && i <= reached && <span className="text-muted">({date(at[i]!)} WIB)</span>}
           </li>
         );
       })}

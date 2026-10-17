@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LEGAL_DISCLAIMER, LEGAL_NOTE_EXPLAINER, LEGAL_NOTE_TERM, NEW_VERSION_NOT_REVIEWED, QR_NOT_SIGNATURE, VERIFIED_LABEL, verificationStatement } from "@/lib/copy";
 import type { OwnerReview } from "@/lib/reviews/service";
 import { LegalNoteCard } from "./legal-note-card";
+import { VerificationSeal } from "@/components/verification/verification-seal";
 
 const OUTCOME_TITLE: Record<string, string> = {
   WITH_NOTES: "Selesai — Dengan Legal Note",
@@ -9,13 +10,13 @@ const OUTCOME_TITLE: Record<string, string> = {
   INCONCLUSIVE: "Selesai — Belum dapat disimpulkan",
   DECLINED: "Tidak dapat diperiksa",
 };
-const link = "inline-flex min-h-12 items-center font-semibold text-brand-dark underline";
+const link = "inline-flex min-h-12 items-center font-semibold text-link underline";
 const day = (iso: string) => new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeZone: "Asia/Jakarta" }).format(new Date(iso));
 
 export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = true, now = new Date() }: { review: OwnerReview; verifyUrl?: string; qrDataUrl?: string; isLatestVersion?: boolean; now?: Date }) {
   if (review.status === "CANCELLED") {
     return (
-      <section aria-labelledby="hasil-h" className="space-y-3 rounded-lg border border-line bg-white p-4">
+      <section aria-labelledby="hasil-h" className="space-y-3 rounded-lg border border-line bg-surface p-4">
         <h2 id="hasil-h" className="text-2xl font-semibold">Permintaan dibatalkan</h2>
         <p>Permintaan pemeriksaan ini dibatalkan, jadi tidak ada hasil pemeriksaan untuk versi {review.versionNo}.</p>
         <p><Link className={link} href="/bantuan#pengacara">Baca cara meminta pemeriksaan pengacara</Link></p>
@@ -23,7 +24,7 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
     );
   }
   if (review.status !== "COMPLETED" && review.status !== "DECLINED") {
-    return <p role="status" className="rounded-lg border border-line bg-white p-4">Pemeriksaan belum selesai. Hasil akan tampil di sini.</p>;
+    return <p role="status" className="rounded-lg border border-line bg-surface p-4">Pemeriksaan belum selesai. Hasil akan tampil di sini.</p>;
   }
   const v = review.verification;
   const badge = v && (review.outcome === "WITH_NOTES" || review.outcome === "WITHIN_SCOPE");
@@ -40,7 +41,7 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
         <div><dt className="inline font-semibold">Diperiksa oleh: </dt><dd className="inline">{review.firmName ? `profesional hukum dari firma mitra ${review.firmName}` : "profesional hukum dari firma mitra Yuktanya"}</dd></div>
         {review.completedAt && <div><dt className="inline font-semibold">{declined ? "Diputuskan pada: " : "Selesai diperiksa pada: "}</dt><dd className="inline">{day(review.completedAt)}</dd></div>}
       </dl>
-      {!isLatestVersion && <p role="status" className="rounded-lg border border-line bg-white p-3">{NEW_VERSION_NOT_REVIEWED}. Hasil ini hanya berlaku untuk versi {review.versionNo}.</p>}
+      {!isLatestVersion && <p role="status" className="rounded-lg border border-line bg-surface p-3">{NEW_VERSION_NOT_REVIEWED}. Hasil ini hanya berlaku untuk versi {review.versionNo}.</p>}
       {declined && (
         <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-4">
           <p className="font-semibold">Pemeriksa tidak dapat memeriksa dokumen ini, jadi tidak ada hasil pemeriksaan dan tidak ada Legal Verified.</p>
@@ -59,7 +60,7 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
         </div>
       )}
       {review.outcome === "INCONCLUSIVE" && (
-        <div className="space-y-2 rounded-lg border border-line bg-white p-4">
+        <div className="space-y-2 rounded-lg border border-line bg-surface p-4">
           <p>Pemeriksa sudah memeriksa versi ini tetapi belum dapat menarik kesimpulan, misalnya karena informasi yang tersedia tidak cukup. Baca ringkasan pemeriksa di bawah.</p>
           <p>Biaya pemeriksaan ini tetap tercatat lunas; sistem tidak membuat kredit atau pengembalian dana otomatis untuk hasil ini.</p>
           <p>Langkah berikutnya: lengkapi dokumen lalu minta pemeriksaan untuk versi baru, atau ajukan penilaian khusus bila dokumen Anda rumit.</p>
@@ -77,8 +78,11 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
         </div>
       )}
       {badge && v && (
-        <div className="space-y-2 rounded-lg border border-line bg-white p-4">
-          <h3 className="text-lg font-semibold">Yuktanya Legal Verified</h3>
+        <div className="space-y-2 rounded-lg border border-line bg-surface p-4">
+          <div className="flex items-center gap-3">
+            {v.status === "ACTIVE" && <VerificationSeal variant="verified" />}
+            <h3 className="text-lg font-semibold">Yuktanya Legal Verified</h3>
+          </div>
           <p role="status" className="font-semibold">Status: {v.status === "ACTIVE" ? "Aktif" : v.status === "REVOKED" ? "Dicabut" : "Ditangguhkan sementara"}</p>
           <p>{verificationStatement("LEGAL", review.outcome)}</p>
           {v.status === "ACTIVE" && <p className="font-semibold">{VERIFIED_LABEL}</p>}
@@ -93,7 +97,7 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
       )}
       {!badge && <p>Pemeriksaan ini tidak menghasilkan Yuktanya Legal Verified.</p>}
       {!declined && (
-        <div className="space-y-1 rounded-lg border border-line bg-white p-4">
+        <div className="space-y-1 rounded-lg border border-line bg-surface p-4">
           <h3 className="font-semibold">Unduh</h3>
           <p>Laporan pemeriksaan (ruang lingkup, ringkasan, dan Legal Note) belum tersedia sebagai berkas unduhan. Untuk menyimpannya, cetak atau simpan halaman ini.</p>
           <p>Dokumen versi {review.versionNo} dapat diunduh (Word atau PDF){badge && v?.status === "ACTIVE" ? " beserta kode verifikasi dan kode QR" : ""}.</p>

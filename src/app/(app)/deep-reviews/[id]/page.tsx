@@ -34,9 +34,9 @@ export default async function DeepStatusPage({ params }: { params: Promise<{ id:
         <ol aria-label="Tahapan pemeriksaan mendalam" className="space-y-2">
           {steps.map((s) => (
             <li key={s.label} className="flex flex-wrap items-center gap-2">
-              <span aria-hidden="true" className={s.state === "todo" ? "text-slate-500" : "font-bold"}>{s.state === "done" ? "✓" : s.state === "current" ? "●" : "○"}</span>
+              <span aria-hidden="true" className={s.state === "todo" ? "text-muted" : "font-bold"}>{s.state === "done" ? "✓" : s.state === "current" ? "●" : "○"}</span>
               <span className={s.state === "current" ? "font-semibold" : undefined}>{s.label}</span>
-              <span className="text-slate-700">{s.state === "done" ? "— selesai" : s.state === "current" ? "— tahap ini" : "— belum"}</span>
+              <span className="text-muted">{s.state === "done" ? "— selesai" : s.state === "current" ? "— tahap ini" : "— belum"}</span>
             </li>
           ))}
         </ol>

@@ -16,11 +16,11 @@ type Props = { eligible: boolean; reason: string; quote: { amountIdr: number; va
 // Tawaran hanya dirender oleh halaman bila fitur aktif. Tidak menjanjikan hasil Enhanced.
 export function DeepOffer({ eligible, reason, quote, action, parentRequestId, standardPaidIdr }: Props) {
   if (!eligible || !quote) {
-    return <p role="status" className="rounded-lg border border-line bg-white p-4">{fixedText(REASON, reason) ?? "Pemeriksaan mendalam belum tersedia untuk pemeriksaan ini."}</p>;
+    return <p role="status" className="rounded-lg border border-line bg-surface p-4">{fixedText(REASON, reason) ?? "Pemeriksaan mendalam belum tersedia untuk pemeriksaan ini."}</p>;
   }
   const member = quote.variant === "MEMBER";
   return (
-    <section aria-labelledby="deep-h" className="space-y-3 rounded-lg border border-line bg-white p-4">
+    <section aria-labelledby="deep-h" className="space-y-3 rounded-lg border border-line bg-surface p-4">
       <h2 id="deep-h" className="text-xl font-semibold">Pemeriksaan mendalam (tambahan)</h2>
       <p>Pemeriksaan tambahan oleh profesional hukum atas Legal Note (Catatan dari pemeriksa) yang sudah ditemukan, sebagai tambahan setelah pemeriksaan standar Anda. Tidak wajib.</p>
       <dl className="space-y-1">
@@ -35,7 +35,7 @@ export function DeepOffer({ eligible, reason, quote, action, parentRequestId, st
       <p>Hasil pemeriksaan mendalam bisa berupa persetujuan Enhanced, selesai dengan catatan, belum dapat disimpulkan, atau dirujuk sebagai kasus khusus. Pembayaran tidak menjamin salah satunya.</p>
       <form action={action}>
         <input type="hidden" name="parentRequestId" value={parentRequestId} />
-        <button type="submit" className="min-h-12 rounded-lg bg-brand hover:bg-brand-dark px-5 font-semibold text-white">Lanjut ke pembayaran</button>
+        <button type="submit" className="min-h-12 rounded-lg bg-primary hover:bg-primary-hover px-5 font-semibold text-on-primary">Lanjut ke pembayaran</button>
       </form>
     </section>
   );

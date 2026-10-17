@@ -15,7 +15,7 @@ export const AI_FREE_LAWYER_PAID = "AI gratis; pemeriksaan pengacara berbayar.";
 // Rincian biaya di halaman pembayaran: harga dari snapshot order (server), keterangan varian, dan aturan harga yang berlaku.
 export function PriceBreakdown({ service, quote, kind = "STANDARD_REVIEW" }: { service: string; quote: Quote; kind?: string }) {
   return (
-    <section aria-labelledby="harga-h" className="space-y-3 rounded-lg border border-line bg-white p-4">
+    <section aria-labelledby="harga-h" className="space-y-3 rounded-lg border border-line bg-surface p-4">
       <h2 id="harga-h" className="text-xl font-semibold">Rincian biaya</h2>
       <dl className="space-y-2">
         <div><dt className="font-medium">Layanan</dt><dd>{service}</dd></div>

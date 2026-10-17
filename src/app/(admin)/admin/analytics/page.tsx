@@ -75,7 +75,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
             const on = !custom && !query.error && query.days === Number(r);
             return (
               <Link key={r} href={preset(r)} aria-current={on ? "page" : undefined}
-                className={cn("inline-flex min-h-12 items-center rounded-xl border px-4 font-semibold", on ? "border-brand bg-blue-50 text-brand-dark" : "border-slate-400 bg-white text-ink hover:bg-slate-50")}>
+                className={cn("inline-flex min-h-12 items-center rounded-xl border px-4 font-semibold", on ? "border-primary bg-tint text-navy" : "border-border-strong bg-surface text-ink hover:bg-subtle")}>
                 {label}{on ? " (dipilih)" : ""}
               </Link>
             );
@@ -158,7 +158,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
       <section aria-labelledby="funnel-h" className="space-y-3">
         <h2 id="funnel-h" className="text-xl font-bold text-navy md:text-2xl">Funnel kohort</h2>
         <p>Kohort tetap: pengguna yang mendaftar pada rentang ini ({fmtCount(f.registered)} orang). Setiap langkah menghitung pengguna unik dari kohort itu, kapan pun langkah itu terjadi. Persentase memakai kohort sebagai penyebut. Filter tidak berlaku di tabel ini.</p>
-        <div className="overflow-x-auto rounded-2xl border border-line bg-white"><table className="w-full border-collapse">
+        <div className="overflow-x-auto rounded-2xl border border-line bg-surface"><table className="w-full border-collapse">
           <caption className="sr-only">Funnel kohort pendaftar</caption>
           <thead><tr><th scope="col" className="border-b border-line p-3 text-left">Langkah</th><th scope="col" className="border-b border-line p-3 text-right">Pengguna</th><th scope="col" className="border-b border-line p-3 text-right">% kohort</th></tr></thead>
           <tbody>{funnel.map(([label, n]) => <tr key={label}><th scope="row" className="border-b border-line p-3 text-left font-normal">{label}</th><td className="border-b border-line p-3 text-right">{fmtCount(n)}</td><td className="border-b border-line p-3 text-right">{f.registered > 0 ? `${Math.round((n / f.registered) * 100)}%` : NO_DATA}</td></tr>)}</tbody>

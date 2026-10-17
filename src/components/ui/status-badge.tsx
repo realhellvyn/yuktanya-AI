@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils";
 
 const TONES = {
-  info: "border-blue-300 bg-blue-50 text-blue-900",
+  info: "border-border-strong bg-tint text-navy",
   success: "border-green-300 bg-green-50 text-green-900",
   warning: "border-amber-400 bg-amber-50 text-amber-900",
   danger: "border-red-300 bg-red-50 text-red-900",
-  neutral: "border-slate-300 bg-slate-100 text-slate-800",
+  neutral: "border-line bg-subtle text-ink",
 } as const;
 const MARK = { info: "ℹ", success: "✓", warning: "!", danger: "✕", neutral: "•" } as const;
 

@@ -27,7 +27,7 @@ export default async function RevenuePage({ searchParams }: { searchParams: Prom
         <KpiCard label="Member aktif akhir rentang" value={fmtCount(o.members.active)} />
       </div>
       {r && (
-        <div className="overflow-x-auto rounded-2xl border border-line bg-white"><table className="w-full border-collapse">
+        <div className="overflow-x-auto rounded-2xl border border-line bg-surface"><table className="w-full border-collapse">
           <caption className="p-3 text-left text-xl font-bold text-navy">Per jenis layanan</caption>
           <thead><tr><th scope="col" className="border-b border-line p-3 text-left">Layanan</th><th scope="col" className="border-b border-line p-3 text-right">Dikumpulkan</th></tr></thead>
           <tbody>{Object.entries(r.collected_by_kind).map(([k, v]) => <tr key={k}><th scope="row" className="border-b border-line p-3 text-left font-normal">{KIND[k] ?? k}</th><td className="border-b border-line p-3 text-right">{fmtIdr(v)}</td></tr>)}</tbody>

@@ -4,7 +4,7 @@ const SEVERITY: Record<NoteView["severity"], string> = { INFO: "Informasi", MINO
 
 export function LegalNoteCard({ note }: { note: NoteView }) {
   return (
-    <article className="space-y-2 rounded-lg border border-line bg-white p-4">
+    <article className="space-y-2 rounded-lg border border-line bg-surface p-4">
       <h3 className="text-lg font-semibold">{note.title}</h3>
       <p><span className="font-medium">Tingkat:</span> {SEVERITY[note.severity]}</p>
       {note.quote && <blockquote className="border-l-4 border-line pl-3">{note.quote}</blockquote>}
@@ -12,7 +12,7 @@ export function LegalNoteCard({ note }: { note: NoteView }) {
       {note.recommendedAction && <p><span className="font-medium">Tindakan yang disarankan:</span> {note.recommendedAction}</p>}
       {note.rationale && <p><span className="font-medium">Alasan:</span> {note.rationale}</p>}
       {note.escalation && <p><span className="font-medium">Langkah lanjutan:</span> {note.escalation}</p>}
-      {note.blockId && <p className="text-slate-700">Lokasi: bagian “{note.blockId}”</p>}
+      {note.blockId && <p className="text-muted">Lokasi: bagian “{note.blockId}”</p>}
     </article>
   );
 }

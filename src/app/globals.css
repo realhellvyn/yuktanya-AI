@@ -1,25 +1,70 @@
 @import "tailwindcss";
 
-/* Token dari docs/DESIGN_SYSTEM.md. Warna status selalu disertai teks/simbol. */
-@theme {
-  --color-navy: #17324d;
-  --color-brand: #2563eb;
-  --color-brand-dark: #1d4ed8;
-  --color-ink: #17212b;
-  --color-muted: #475569;
-  --color-line: #cbd5e1;
-  --color-canvas: #f8fafc;
-  --color-success: #166534;
-  --color-danger: #b91c1c;
+/*
+ * Token brand kit Yuktanya (navy · gold · cream), tema terang saja. Sumber nilai: brand kit yang disetujui pemilik
+ * (tokens.json); ringkasan di docs/DESIGN_SYSTEM.md. Komponen memakai token PERAN (bg, surface, ink, ...), bukan warna
+ * identitas langsung. Kontras pasangan penting diuji di tests/unit/brand-tokens.test.ts.
+ * Aturan emas: `gold` (#D4A66A) hanya untuk logo dan aksen di atas navy; di latar terang kontrasnya ±2:1, jadi tidak
+ * pernah untuk teks, ikon bermakna, atau isi tombol. Teks bernuansa emas di latar terang memakai `gold-ink`.
+ * Warna status selalu disertai teks/simbol.
+ */
+:root {
+  /* Warna identitas */
+  --navy: #0D1B2A;
+  --gold: #D4A66A;
+  --cream: #F8F5EC;
+  --charcoal: #1A1A1A;
+
+  /* Token peran (tema terang) */
+  --bg: #F8F5EC; /* cream: latar halaman */
+  --surface: #FFFFFF; /* kartu, kotak isian, panel */
+  --ink: #1A1A1A; /* charcoal: teks isi */
+  --heading: #0D1B2A; /* navy: judul dan wordmark */
+  --muted: #5B5A55; /* teks pendukung */
+  --gold-ink: #8A6420; /* satu-satunya nuansa emas untuk teks di latar terang */
+  --primary: #0D1B2A; /* isi tombol utama */
+  --primary-hover: #1F3550; /* hover tombol utama, tetap kontras tinggi dengan putih */
+  --on-primary: #FFFFFF; /* teks di atas primary */
+  --link: #0D1B2A; /* tautan: navy dan selalu bergaris bawah */
+  --line: #E4DDCD; /* garis pemisah dan tepi kartu (dekoratif) */
+  --border-strong: #7A7468; /* tepi kotak isian dan tombol sekunder (≥3:1) */
+  --focus: #8A6420; /* cincin fokus 3px padat, offset 2px */
+  --success: #166534;
+  --danger: #B91C1C;
+
+  /* Padanan hangat untuk latar sorotan (pengganti biru muda dan abu kebiruan) */
+  --tint: #F4EBDA; /* sorotan: menu aktif, gelembung pesan pengguna, kartu saran */
+  --subtle: #F2EEE4; /* latar netral: hover, kotak keterangan */
 }
 
-:root {
-  --navy: #17324d;
-  --blue: #2563eb;
-  --offwhite: #f8fafc;
-  --ink: #17212b;
-  --muted: #475569;
-  --border: #cbd5e1;
+@theme inline {
+  --color-navy: var(--navy);
+  --color-gold: var(--gold);
+  --color-cream: var(--cream);
+  --color-charcoal: var(--charcoal);
+  --color-canvas: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-heading: var(--heading);
+  --color-muted: var(--muted);
+  --color-gold-ink: var(--gold-ink);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-link: var(--link);
+  --color-line: var(--line);
+  --color-border-strong: var(--border-strong);
+  --color-focus: var(--focus);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-tint: var(--tint);
+  --color-subtle: var(--subtle);
+}
+
+@theme {
+  /* Font lokal (paket @fontsource, OFL-1.1), disajikan dari origin sendiri; diimpor di src/app/layout.tsx. */
+  --font-sans: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
 }
 
 html {
@@ -27,8 +72,9 @@ html {
 }
 
 body {
-  background: var(--offwhite);
+  background: var(--bg);
   color: var(--ink);
+  font-family: var(--font-sans);
   font-size: 17px;
   line-height: 1.6;
 }
@@ -38,8 +84,9 @@ button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
-summary:focus-visible {
-  outline: 3px solid #93c5fd;
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 

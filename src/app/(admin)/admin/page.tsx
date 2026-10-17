@@ -39,7 +39,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         <nav aria-label="Modul admin">
           <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {ADMIN_NAV.filter((n) => n.href !== "/admin").map((n) => (
-              <li key={n.href}><Link className="flex min-h-12 items-center rounded-xl border border-line bg-white px-4 font-semibold text-brand hover:bg-slate-50" href={n.href}>{n.label}</Link></li>
+              <li key={n.href}><Link className="flex min-h-12 items-center rounded-xl border border-line bg-surface px-4 font-semibold text-link hover:bg-subtle" href={n.href}>{n.label}</Link></li>
             ))}
           </ul>
         </nav>

@@ -153,6 +153,15 @@ export async function journey({ step, base, vp, db, newActor }) {
     const pubText = await pub.innerText("body");
     if (!pubText.includes("Aktif")) throw new Error("tidak Aktif");
     if (!pubText.includes(VERIFIED_LABEL)) throw new Error("label Verified tidak ada di /verify");
+    // Tangkapan layar /verify dan /login (desktop dan HP) untuk tinjauan visual brand (Task 18).
+    const dir = process.env.SHOTS_DIR ?? "/tmp/yk-shots";
+    for (const [w, width, height] of [["desktop", 1280, 800], ["hp", 375, 812]]) {
+      await pub.setViewportSize({ width, height });
+      await pub.goto(base + "/verify/" + code);
+      await pub.screenshot({ path: `${dir}/publik-${w}-verify.png`, fullPage: true });
+      await pub.goto(base + "/login");
+      await pub.screenshot({ path: `${dir}/publik-${w}-login.png`, fullPage: true });
+    }
     await pub.close();
   });
 

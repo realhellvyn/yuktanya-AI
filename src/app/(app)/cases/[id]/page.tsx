@@ -45,9 +45,9 @@ export default async function CasePage({ params, searchParams }: { params: Promi
         <ol aria-label="Tahapan kasus khusus" className="space-y-2">
           {caseTimeline(c.status).map((s) => (
             <li key={s.label} className="flex flex-wrap items-center gap-2">
-              <span aria-hidden="true" className={s.state === "todo" ? "text-slate-500" : "font-bold"}>{s.state === "done" ? "✓" : s.state === "current" ? "●" : "○"}</span>
+              <span aria-hidden="true" className={s.state === "todo" ? "text-muted" : "font-bold"}>{s.state === "done" ? "✓" : s.state === "current" ? "●" : "○"}</span>
               <span className={s.state === "current" ? "font-semibold" : undefined}>{s.label}</span>
-              <span className="text-slate-700">{s.state === "done" ? "— selesai" : s.state === "current" ? "— tahap ini" : "— belum"}</span>
+              <span className="text-muted">{s.state === "done" ? "— selesai" : s.state === "current" ? "— tahap ini" : "— belum"}</span>
             </li>
           ))}
         </ol>
@@ -56,7 +56,7 @@ export default async function CasePage({ params, searchParams }: { params: Promi
       </Card>
 
       {c.quote && (
-        <Card className="space-y-3 border-blue-200">
+        <Card className="space-y-3 border-line">
           <h2 className="text-xl font-semibold">Penawaran firma hukum</h2>
           <dl className="space-y-2">
             <div><dt className="font-semibold">Biaya</dt><dd className="text-2xl font-bold text-navy">{formatIdr(c.quote.amountIdr)}</dd></div>
@@ -91,7 +91,7 @@ export default async function CasePage({ params, searchParams }: { params: Promi
       )}
       {c.status === "CLOSED" && <Card><p className="font-semibold">Kasus ini sudah ditutup{c.closeReason ? `: ${c.closeReason}` : "."}</p></Card>}
 
-      <details className="rounded-2xl border border-line bg-white p-4">
+      <details className="rounded-2xl border border-line bg-surface p-4">
         <summary className="inline-flex min-h-12 cursor-pointer items-center text-lg font-bold text-navy">Ringkasan yang Anda kirim</summary>
         <p className="mt-2 whitespace-pre-wrap break-words">{c.summary}</p>
       </details>
@@ -101,7 +101,7 @@ export default async function CasePage({ params, searchParams }: { params: Promi
         <ButtonLink href="/cases" variant="secondary">Semua kasus khusus</ButtonLink>
         {canWithdraw && (
           <details className="w-full">
-            <summary className="inline-flex min-h-12 cursor-pointer items-center font-semibold text-brand underline underline-offset-4">Tarik permintaan</summary>
+            <summary className="inline-flex min-h-12 cursor-pointer items-center font-semibold text-link underline underline-offset-4">Tarik permintaan</summary>
             <form action={withdrawCaseAction} className="mt-2 space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
               <input type="hidden" name="caseId" value={c.id} />
               <input type="hidden" name="confirm" value="yes" />

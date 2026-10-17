@@ -7,7 +7,7 @@ import { StepIndicator } from "@/components/ui/step-indicator";
 
 export const metadata = { title: "Pratinjau Desain | Yuktanya", robots: { index: false, follow: false } };
 
-const field = "mt-2 block min-h-12 w-full rounded-xl border bg-white px-4 text-lg";
+const field = "mt-2 block min-h-12 w-full rounded-xl border bg-surface px-4 text-lg";
 const TONES = ["info", "success", "warning", "danger", "neutral"] as const;
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
@@ -57,20 +57,20 @@ export default function Page() {
         <Section id="isian" title="Isian formulir">
           <form className="space-y-5" aria-label="Contoh isian">
             <label className="block"><span className="font-semibold">Biasa</span>
-              <input className={`${field} border-slate-400`} placeholder="Ketik di sini" />
+              <input className={`${field} border-border-strong`} placeholder="Ketik di sini" />
             </label>
             <label className="block"><span className="font-semibold">Terisi</span>
-              <input className={`${field} border-slate-400`} defaultValue="Sinta Dewi" />
+              <input className={`${field} border-border-strong`} defaultValue="Sinta Dewi" />
             </label>
             <label className="block"><span className="font-semibold">Nonaktif</span>
-              <input className={`${field} border-slate-300 bg-slate-100`} disabled defaultValue="Tidak dapat diubah" />
+              <input className={`${field} border-line bg-subtle`} disabled defaultValue="Tidak dapat diubah" />
             </label>
             <label className="block"><span className="font-semibold">Salah isi</span>
               <input className={`${field} border-danger`} defaultValue="abc" aria-invalid="true" aria-describedby="err-demo" />
               <span id="err-demo" role="alert" className="mt-1 block font-semibold text-danger">Tanggal belum sesuai. Tulis seperti 16 Oktober 2026.</span>
             </label>
             <label className="block"><span className="font-semibold">Pilihan</span>
-              <select className={`${field} border-slate-400`}><option>Perjanjian Kerahasiaan</option><option>Surat Utang Piutang</option></select>
+              <select className={`${field} border-border-strong`}><option>Perjanjian Kerahasiaan</option><option>Surat Utang Piutang</option></select>
             </label>
             <label className="flex min-h-12 items-center gap-3"><input type="checkbox" className="h-6 w-6" /><span>Saya mengerti</span></label>
           </form>

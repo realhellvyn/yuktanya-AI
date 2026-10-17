@@ -9,7 +9,7 @@ export type ChatLine = { id: string; role: "user" | "assistant"; content: string
 function SendButton({ offline }: { offline: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending || offline} aria-describedby={offline ? "chat-offline" : undefined} className="min-h-[52px] rounded-xl bg-brand px-6 text-lg font-semibold text-white hover:bg-brand-dark disabled:opacity-60">
+    <button type="submit" disabled={pending || offline} aria-describedby={offline ? "chat-offline" : undefined} className="min-h-[52px] rounded-xl bg-primary px-6 text-lg font-semibold text-on-primary hover:bg-primary-hover disabled:opacity-60">
       {pending ? "AI sedang berpikir…" : "Kirim"}
     </button>
   );
@@ -18,7 +18,7 @@ function SendButton({ offline }: { offline: boolean }) {
 function RetryButton() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className="min-h-12 rounded-xl border border-slate-400 bg-white px-5 font-semibold hover:bg-slate-50 disabled:opacity-60">
+    <button type="submit" disabled={pending} className="min-h-12 rounded-xl border border-border-strong bg-surface px-5 font-semibold hover:bg-subtle disabled:opacity-60">
       {pending ? "Mencoba…" : "Coba lagi"}
     </button>
   );
@@ -97,9 +97,9 @@ export function ChatPanel({ documentId, lines, greeting, action, sendKey, retryK
   return (
     <section aria-label="Percakapan dengan AI" className="space-y-4">
       <ol className="space-y-3" aria-live="polite" aria-relevant="additions">
-        <li className="max-w-[92%] rounded-2xl rounded-tl-sm border border-line bg-white p-4"><span className="sr-only">AI: </span>{greeting}</li>
+        <li className="max-w-[92%] rounded-2xl rounded-tl-sm border border-line bg-surface p-4"><span className="sr-only">AI: </span>{greeting}</li>
         {lines.map((m) => (
-          <li key={m.id} className={m.role === "user" ? "ml-auto max-w-[92%] whitespace-pre-wrap rounded-2xl rounded-tr-sm bg-blue-50 p-4 ring-1 ring-blue-200" : "max-w-[92%] whitespace-pre-wrap rounded-2xl rounded-tl-sm border border-line bg-white p-4"}>
+          <li key={m.id} className={m.role === "user" ? "ml-auto max-w-[92%] whitespace-pre-wrap rounded-2xl rounded-tr-sm bg-tint p-4 ring-1 ring-line" : "max-w-[92%] whitespace-pre-wrap rounded-2xl rounded-tl-sm border border-line bg-surface p-4"}>
             <span className="sr-only">{m.role === "user" ? "Anda: " : "AI: "}</span>{m.content}
           </li>
         ))}
@@ -131,7 +131,7 @@ export function ChatPanel({ documentId, lines, greeting, action, sendKey, retryK
               saveDraft(safeLocalStorage(), documentId, e.currentTarget.value);
               setRestored(false);
             }}
-            className="mt-2 block w-full rounded-xl border border-slate-400 bg-white px-4 py-3 text-lg"
+            className="mt-2 block w-full rounded-xl border border-border-strong bg-surface px-4 py-3 text-lg"
           />
         </label>
         {restored && <p role="status" className="text-muted">Tulisan Anda yang belum terkirim sudah dikembalikan.</p>}

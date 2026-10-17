@@ -25,7 +25,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">Tersimpan.</p>}
       {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{fixedText(MSG, q.e) ?? "Terjadi kendala."}</p>}
 
-      <form action={registerFirmAction} className="space-y-3 rounded-2xl border border-line bg-white p-5">
+      <form action={registerFirmAction} className="space-y-3 rounded-2xl border border-line bg-surface p-5">
         <h2 className="text-xl font-bold text-navy md:text-2xl">Daftarkan firma</h2>
         <label className="block"><span className={labelText}>Nama firma (Wajib)</span><input name="name" required minLength={2} maxLength={120} className={fieldClass} /></label>
         <label className="flex min-h-12 items-center gap-3"><input type="checkbox" name="isDefault" value="yes" className="h-6 w-6" /><span>Jadikan firma bawaan untuk permintaan baru</span></label>
@@ -33,7 +33,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: Pro
       </form>
 
       {firms.map((f) => (
-        <section key={f.firmId} aria-label={f.firmName} className="space-y-3 rounded-2xl border border-line bg-white p-5">
+        <section key={f.firmId} aria-label={f.firmName} className="space-y-3 rounded-2xl border border-line bg-surface p-5">
           <h2 className="text-xl font-bold text-navy md:text-2xl">{f.firmName}{f.isDefault ? " (bawaan)" : ""}</h2>
           <ul className="space-y-2">
             {rows.filter((r) => r.firmId === f.firmId && r.userId).map((r) => (

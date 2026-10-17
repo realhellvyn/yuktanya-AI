@@ -1,5 +1,6 @@
 import { LEGAL_DISCLAIMER, QR_NOT_SIGNATURE, VERIFICATION_STATEMENTS, VERIFIED_LABEL } from "@/lib/copy";
 import type { OwnerDeep } from "@/lib/deep/service";
+import { VerificationSeal } from "@/components/verification/verification-seal";
 
 const TITLE: Record<string, string> = {
   ENHANCED_APPROVED: "Selesai — Enhanced disetujui",
@@ -12,7 +13,7 @@ const STATUS: Record<string, string> = { QUEUED: "Dalam antrean", IN_REVIEW: "Se
 
 export function DeepResult({ deep, verifyUrl }: { deep: OwnerDeep; verifyUrl?: string }) {
   if (deep.status !== "COMPLETED") {
-    return <p role="status" className="rounded-lg border border-line bg-white p-4">Pemeriksaan mendalam: {STATUS[deep.status] ?? deep.status}.</p>;
+    return <p role="status" className="rounded-lg border border-line bg-surface p-4">Pemeriksaan mendalam: {STATUS[deep.status] ?? deep.status}.</p>;
   }
   const enhanced = deep.outcome === "ENHANCED_APPROVED" && deep.verification?.status === "ACTIVE";
   const lapsed = deep.outcome === "ENHANCED_APPROVED" && !enhanced;
@@ -29,8 +30,11 @@ export function DeepResult({ deep, verifyUrl }: { deep: OwnerDeep; verifyUrl?: s
         </div>
       )}
       {enhanced && deep.verification && (
-        <div className="space-y-2 rounded-lg border border-line bg-white p-4">
-          <h3 className="text-lg font-semibold">Yuktanya Legal Verified — Enhanced</h3>
+        <div className="space-y-2 rounded-lg border border-line bg-surface p-4">
+          <div className="flex items-center gap-3">
+            {deep.verification.status === "ACTIVE" && <VerificationSeal variant="verified" />}
+            <h3 className="text-lg font-semibold">Yuktanya Legal Verified — Enhanced</h3>
+          </div>
           <p role="status" className="font-semibold">Status: {deep.verification.status === "ACTIVE" ? "Aktif" : deep.verification.status === "SUSPENDED" ? "Ditangguhkan sementara" : "Dicabut"}</p>
           <p>{VERIFICATION_STATEMENTS.LEGAL_ENHANCED}</p>
           <p className="font-semibold">{VERIFIED_LABEL}</p>
@@ -40,7 +44,7 @@ export function DeepResult({ deep, verifyUrl }: { deep: OwnerDeep; verifyUrl?: s
         </div>
       )}
       {lapsed && deep.verification && (
-        <div className="space-y-2 rounded-lg border border-line bg-white p-4">
+        <div className="space-y-2 rounded-lg border border-line bg-surface p-4">
           <h3 className="text-lg font-semibold">Yuktanya Legal Verified — Enhanced tidak berlaku saat ini</h3>
           <p role="status" className="font-semibold">Status: {deep.verification.status === "SUSPENDED" ? "Ditangguhkan sementara" : "Dicabut"}</p>
           <p>Keputusan sebelumnya tercatat, tetapi lencana tidak boleh dipakai sebagai bukti selama statusnya bukan Aktif.</p>

@@ -33,7 +33,7 @@ export function DecisionPanel(props: {
   return (
     <form action={props.action} className="space-y-4">
       <input type="hidden" name="deepId" value={props.deepId} /><input type="hidden" name="revision" value={props.revision} />
-      <dl className="grid gap-x-4 gap-y-2 rounded-xl bg-slate-50 p-4 sm:grid-cols-[auto_1fr]">
+      <dl className="grid gap-x-4 gap-y-2 rounded-xl bg-subtle p-4 sm:grid-cols-[auto_1fr]">
         <dt className="font-semibold">Versi</dt><dd>Versi {props.versionNo}</dd>
         <dt className="font-semibold">Sidik jari (SHA-256)</dt><dd className="break-all font-mono text-sm">{props.sha256}</dd>
         <dt className="font-semibold">Ruang lingkup standar</dt><dd className="break-words">{props.parentScope || "(tidak tercatat)"}</dd>
@@ -55,7 +55,7 @@ export function DecisionPanel(props: {
       </div>
       <Button type="button" disabled={blockers.length > 0} aria-describedby="decision-blockers" onClick={() => dialog.current?.showModal()} className="w-full sm:w-auto">Simpan keputusan</Button>
 
-      <dialog ref={dialog} aria-labelledby="keputusan-konfirmasi-h" className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-line p-0 backdrop:bg-slate-900/50">
+      <dialog ref={dialog} aria-labelledby="keputusan-konfirmasi-h" className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-line p-0 backdrop:bg-navy/50">
         <div className="space-y-4 p-5">
           <h3 id="keputusan-konfirmasi-h" className="text-xl font-bold text-navy">Simpan keputusan Pemeriksaan Mendalam?</h3>
           <dl className="space-y-2">

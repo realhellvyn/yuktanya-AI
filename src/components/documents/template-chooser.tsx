@@ -18,7 +18,7 @@ type Props = {
 function SendButton() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className="min-h-[52px] rounded-xl bg-brand px-6 text-lg font-semibold text-white hover:bg-brand-dark disabled:opacity-60">
+    <button type="submit" disabled={pending} className="min-h-[52px] rounded-xl bg-primary px-6 text-lg font-semibold text-on-primary hover:bg-primary-hover disabled:opacity-60">
       {pending ? "AI sedang berpikir…" : "Kirim"}
     </button>
   );
@@ -40,9 +40,9 @@ export function TemplateChooser({ options, initialKey, chooseAction, createActio
   return (
     <section aria-label="Percakapan memilih dokumen" className="space-y-4">
       <ol className="space-y-3" aria-live="polite" aria-relevant="additions">
-        <li className="max-w-[92%] rounded-2xl rounded-tl-sm border border-line bg-white p-4"><span className="sr-only">AI: </span>{GREETING}</li>
+        <li className="max-w-[92%] rounded-2xl rounded-tl-sm border border-line bg-surface p-4"><span className="sr-only">AI: </span>{GREETING}</li>
         {state.lines.map((m, i) => (
-          <li key={i} className={m.role === "user" ? "ml-auto max-w-[92%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-sm bg-blue-50 p-4 ring-1 ring-blue-200" : "max-w-[92%] whitespace-pre-wrap break-words rounded-2xl rounded-tl-sm border border-line bg-white p-4"}>
+          <li key={i} className={m.role === "user" ? "ml-auto max-w-[92%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-sm bg-tint p-4 ring-1 ring-line" : "max-w-[92%] whitespace-pre-wrap break-words rounded-2xl rounded-tl-sm border border-line bg-surface p-4"}>
             <span className="sr-only">{m.role === "user" ? "Anda: " : "AI: "}</span>{m.content}
           </li>
         ))}
@@ -54,12 +54,12 @@ export function TemplateChooser({ options, initialKey, chooseAction, createActio
         </p>
       )}
       {suggested && (
-        <div data-testid="saran-dokumen" className="space-y-3 rounded-2xl border border-blue-300 bg-blue-50/60 p-5">
+        <div data-testid="saran-dokumen" className="space-y-3 rounded-2xl border border-border-strong bg-tint p-5">
           <p className="text-lg font-bold text-navy">Saran AI: {suggested.title}</p>
           <p>Dokumen ini {suggested.text}. Anda akan bercakap dengan AI untuk mengisinya; setiap pesan tersimpan otomatis.</p>
           <form action={createAction}>
             <input type="hidden" name="category" value={suggested.category} />
-            <button type="submit" className="inline-flex min-h-[52px] items-center justify-center rounded-xl bg-brand px-6 text-lg font-semibold text-white hover:bg-brand-dark">Mulai {suggested.title}</button>
+            <button type="submit" className="inline-flex min-h-[52px] items-center justify-center rounded-xl bg-primary px-6 text-lg font-semibold text-on-primary hover:bg-primary-hover">Mulai {suggested.title}</button>
           </form>
           <p className="text-muted">Bukan ini? Ceritakan lebih banyak di bawah, atau <Link className="inline-flex min-h-12 items-center underline" href="/workspace/new">pilih sendiri</Link>.</p>
         </div>
@@ -68,7 +68,7 @@ export function TemplateChooser({ options, initialKey, chooseAction, createActio
         <div data-testid="saran-kasus-khusus" className="space-y-3 rounded-2xl border border-amber-300 bg-amber-50/60 p-5">
           <p className="text-lg font-bold text-navy">Keperluan Anda mungkin perlu penilaian khusus</p>
           <p>Tiga dokumen Yuktanya tidak cocok untuk keperluan ini. Firma hukum mitra dapat menilainya lebih dulu. {specialCaseNote}</p>
-          <Link href="/cases/new" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-400 bg-white px-5 font-semibold text-navy hover:bg-slate-50">Ajukan penilaian khusus</Link>
+          <Link href="/cases/new" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border-strong bg-surface px-5 font-semibold text-navy hover:bg-subtle">Ajukan penilaian khusus</Link>
         </div>
       )}
       <form action={formAction} className="space-y-3">
@@ -77,7 +77,7 @@ export function TemplateChooser({ options, initialKey, chooseAction, createActio
           <span className="font-semibold text-navy">Pesan Anda</span>
           <textarea key={state.key} name="message" rows={4} required maxLength={2000} defaultValue={state.draft}
             placeholder="Contoh: Saya mau meminjamkan uang Rp5.000.000 ke tetangga."
-            className="mt-2 block w-full rounded-xl border border-slate-400 bg-white px-4 py-3 text-lg" />
+            className="mt-2 block w-full rounded-xl border border-border-strong bg-surface px-4 py-3 text-lg" />
         </label>
         <SendButton />
       </form>
