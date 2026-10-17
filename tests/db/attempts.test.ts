@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
+import { memoryInflight } from "@/lib/ai/inflight";
 import { createPgAttemptLimiter } from "@/lib/ai/attempts";
 import { handleChatTurn, type ChatTurnDeps } from "@/lib/ai/chat-turn";
 import { createPgDocumentsService } from "@/lib/documents/service";
@@ -35,9 +36,9 @@ describe("percakapan dokumen memakai pembatas percobaan", () => {
     const u = await createUser(pool);
     const docs = createPgDocumentsService(pool, { ALLOW_UNAPPROVED_TEMPLATES: "true", NODE_ENV: "test" });
     const id = (await docs.create(u, "NDA", `k-${Math.random().toString(36).slice(2)}-abcdef`)).documentId;
-    const chat = vi.fn(async () => { throw new GatewayError("TIMEOUT"); });
+    const chat = vi.fn(async () => { throw new GatewayError("UPSTREAM_5XX"); });
     const deps: ChatTurnDeps = {
-      getUserId: async () => u, service: docs, store: createPgUsageStore(pool), pool, chat: chat as unknown as ChatTurnDeps["chat"], inflight: new Set(), now: () => NOW,
+      getUserId: async () => u, service: docs, store: createPgUsageStore(pool), pool, chat: chat as unknown as ChatTurnDeps["chat"], inflight: memoryInflight(), now: () => NOW,
       attempts: createPgAttemptLimiter(pool, { chat: { limit: 2, windowSeconds: 600 }, assist: { limit: 1, windowSeconds: 600 } }),
     };
     const call = () => handleChatTurn(deps, new Request("http://t/x", { method: "POST", headers: { "content-type": "application/json", "idempotency-key": `k-${Math.random().toString(36).slice(2)}-abcdef` }, body: JSON.stringify({ message: "Saya Sinta Dewi ingin NDA dengan Budi Santoso." }) }), { id });

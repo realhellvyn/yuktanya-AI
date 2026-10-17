@@ -10,6 +10,7 @@ import { flags } from "@/lib/flags";
 import { verifyUrl } from "@/lib/verification/qr";
 import type { VerificationService } from "@/lib/verification/service";
 import type { AttemptLimiter } from "./attempts";
+import type { InflightGuard } from "./inflight";
 import { GatewayError, type ChatMessage, type chat as gatewayChat } from "./gateway";
 import type { UsageStore } from "./quota";
 import { chatJsonWithinDeadline, turnDeadline } from "./turn";
@@ -23,7 +24,7 @@ export type AiReviewDeps = {
   chat: typeof gatewayChat;
   pool: Pool;
   verification: VerificationService;
-  inflight: Set<string>;
+  inflight: InflightGuard;
   now?: () => Date;
   // Jam dinding untuk tenggat giliran (Task 24); hanya diganti dalam uji.
   clock?: () => number;
@@ -97,8 +98,8 @@ export async function handleAiReview(deps: AiReviewDeps, req: Request, params: {
   // Unggahan berisiko tinggi: tidak dianalisis AI (tanpa hasil palsu, tanpa kuota); arahnya Kasus Hukum Khusus.
   const upload = await deps.pool.query("select risk_level from document_uploads where version_id = $1", [params.versionId]);
   if (upload.rows[0]?.risk_level === "HIGH") return json({ code: "SPECIAL_CASE_REQUIRED" }, 409);
-  if (deps.inflight.has(userId)) return json({ code: "AI_BUSY" }, 429, { "retry-after": "2" });
-  deps.inflight.add(userId);
+  const lease = await deps.inflight.acquire(userId);
+  if (!lease) return json({ code: "AI_BUSY" }, 429, { "retry-after": "2" });
   const now = deps.now?.() ?? new Date();
   try {
     if (deps.attempts && !(await deps.attempts.allow(userId, "assist", now))) return json({ code: "TOO_MANY_ATTEMPTS" }, 429, { "retry-after": "60" });
@@ -160,6 +161,6 @@ export async function handleAiReview(deps: AiReviewDeps, req: Request, params: {
       return json({ code: "INTERNAL" }, 500);
     }
   } finally {
-    deps.inflight.delete(userId);
+    await deps.inflight.release(userId, lease);
   }
 }

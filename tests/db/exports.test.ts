@@ -95,7 +95,10 @@ describe("exportVersion", () => {
 describe("exportVersion dengan verifikasi", () => {
   async function withAi(u: string, versionId: string, versionSha: string) {
     const rep = (await pool.query("insert into ai_review_reports (user_id, logical_request_id, version_ref, sha256, report_json, analyzer_policy_version) values ($1, gen_random_uuid(), $2, $3, '{}', 'p1') returning id", [u, versionId, versionSha])).rows[0].id;
-    return (await pool.query("select * from issue_ai_verification($1, $2, $3)", [u, rep, NOW])).rows[0] as { verification_id: string; code: string };
+    // Rekaman AI ditulis langsung pada versi template (bentuk rekaman lama): sejak migrasi 41 issue_ai_verification hanya
+    // menerbitkan untuk dokumen unggahan; yang diuji di sini adalah blok verifikasi di berkas ekspor.
+    const code = `AIEXP${Math.random().toString(36).slice(2)}`.padEnd(48, "x");
+    return (await pool.query("insert into document_verifications (kind, version_id, sha256, outcome, policy_version, code, ai_report_id, issued_at) values ('AI', $1, $2, 'COMPLETED', 'p1', $3, $4, $5) returning id as verification_id, code", [versionId, versionSha, code, rep, NOW])).rows[0] as { verification_id: string; code: string };
   }
   const xmlOf = async (u: string, versionId: string) => {
     const e = (await svc.exportVersion(u, versionId, "DOCX"))!;

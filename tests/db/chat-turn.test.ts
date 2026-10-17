@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
+import { memoryInflight } from "@/lib/ai/inflight";
 import { createPgAttemptLimiter } from "@/lib/ai/attempts";
 import { handleChatTurn, type ChatTurnDeps } from "@/lib/ai/chat-turn";
 import { GatewayError } from "@/lib/ai/gateway";
@@ -19,7 +20,7 @@ const answer = (fields: Record<string, unknown>, reply = "Baik, berikutnya?") =>
 
 function setup(userId: string | null, impl: (...a: Parameters<Chat>) => ReturnType<Chat>) {
   const chat = vi.fn(impl);
-  const deps: ChatTurnDeps = { getUserId: async () => userId, service: docs, store, pool, chat: chat as unknown as Chat, inflight: new Set(), now: () => NOW, attempts: createPgAttemptLimiter(pool) };
+  const deps: ChatTurnDeps = { getUserId: async () => userId, service: docs, store, pool, chat: chat as unknown as Chat, inflight: memoryInflight(), now: () => NOW, attempts: createPgAttemptLimiter(pool) };
   const call = (id: string, o: { message?: string; retry?: boolean; idem?: string | null } = {}) =>
     handleChatTurn(deps, new Request("http://t/x", {
       method: "POST",

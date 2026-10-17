@@ -1,12 +1,12 @@
 import "server-only";
 import { chat } from "@/lib/ai/gateway";
 import { createPgAttemptLimiter } from "@/lib/ai/attempts";
+import { createPgInflight } from "@/lib/ai/inflight";
 import { createPgUsageStore } from "@/lib/ai/quota";
 import { getPool } from "@/lib/db";
 import { getBlobStore } from "@/lib/documents/runtime";
 import { documentsService } from "@/lib/documents/runtime";
 import { createMockEmailSender, type EmailSender } from "./outbox";
-import { createRateLimiter } from "./rate-limit";
 import { createPgReminderService } from "./reminders";
 import { createPgShareService } from "./share";
 import type { ChatTurnDeps } from "@/lib/ai/chat-turn";
@@ -27,10 +27,7 @@ export const evidenceDeps = () => ({ pool: getPool(), blob: getBlobStore() });
 const mock = createMockEmailSender();
 export const emailSender = (): EmailSender | null => (process.env.NODE_ENV === "production" ? null : mock);
 
-export const publicLimiter = createRateLimiter({ limit: 30, windowMs: 60_000 });
-export const ackLimiter = createRateLimiter({ limit: 10, windowMs: 60_000 });
 
-const chatInflight = new Set<string>();
 export function chatTurnDeps(): ChatTurnDeps {
   return {
     getUserId: async () => {
@@ -43,19 +40,18 @@ export function chatTurnDeps(): ChatTurnDeps {
     store: createPgUsageStore(getPool()),
     pool: getPool(),
     chat,
-    inflight: chatInflight,
+    // Satu panggilan AI aktif per pengguna, lintas instance (sewa DB, Task 24 A23).
+    inflight: createPgInflight(getPool(), "chat"),
     attempts: createPgAttemptLimiter(getPool()),
   };
 }
 
 // Pemilih dokumen "Saya belum tahu" (D-01): sesi, kuota, limiter percobaan, dan gateway sama dengan percakapan dokumen.
-const chooserInflight = new Set<string>();
 export function chooserDeps(): ChooserDeps {
   const base = chatTurnDeps();
-  return { getUserId: base.getUserId, store: base.store, pool: getPool(), chat, inflight: chooserInflight, attempts: base.attempts };
+  return { getUserId: base.getUserId, store: base.store, pool: getPool(), chat, inflight: createPgInflight(getPool(), "chooser"), attempts: base.attempts };
 }
 
-const aiReviewInflight = new Set<string>();
 export function aiReviewDeps(): AiReviewDeps {
   const base = chatTurnDeps();
   return {
@@ -65,7 +61,7 @@ export function aiReviewDeps(): AiReviewDeps {
     chat,
     pool: getPool(),
     verification: createPgVerificationService(getPool()),
-    inflight: aiReviewInflight,
+    inflight: createPgInflight(getPool(), "ai_review"),
     attempts: base.attempts,
   };
 }

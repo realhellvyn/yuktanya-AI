@@ -4,6 +4,7 @@
 // Seleksi smoke di tests/e2e/SCENARIOS.md = E01–E06, E08–E14; E07 tidak dicakup di sini (lihat tests/db/billing.test.ts).
 // Sisi browser dari seleksi itu dicakup oleh tests/e2e/journey*.mjs; pemetaan lengkap ada di tests/e2e/SCENARIOS.md.
 import { afterAll, describe, expect, it, vi } from "vitest";
+import { memoryInflight } from "@/lib/ai/inflight";
 import { handleChatTurn } from "@/lib/ai/chat-turn";
 import { GatewayError } from "@/lib/ai/gateway";
 import { handleAiReview } from "@/lib/ai/prereview";
@@ -57,8 +58,8 @@ async function readyDeep(o: { fail?: string; skipAttestCheck?: boolean } = {}) {
 describe("E01 login sebelum AI", () => {
   it("anonim ditolak di semua pintu AI dan gateway tidak dipanggil; rute AI terlindungi di proxy", async () => {
     const chat = vi.fn(async () => ({ text: "x", requestId: "r" }));
-    const c2 = await handleChatTurn({ getUserId: async () => null, service: kit.docs, store, pool, chat: chat as never, inflight: new Set() }, post({ message: "x".repeat(30) }), { id: ID });
-    const c3 = await handleAiReview({ getUserId: async () => null, service: kit.docs, store, chat: chat as never, pool, verification, inflight: new Set(), enabled: () => true }, post({ consent: true }), { versionId: ID });
+    const c2 = await handleChatTurn({ getUserId: async () => null, service: kit.docs, store, pool, chat: chat as never, inflight: memoryInflight() }, post({ message: "x".repeat(30) }), { id: ID });
+    const c3 = await handleAiReview({ getUserId: async () => null, service: kit.docs, store, chat: chat as never, pool, verification, inflight: memoryInflight(), enabled: () => true }, post({ consent: true }), { versionId: ID });
     expect([c2.status, c3.status]).toEqual([401, 401]);
     expect(chat).not.toHaveBeenCalled();
     expect(guardPath("/api/documents/x/chat", null)).toMatchObject({ allow: false });

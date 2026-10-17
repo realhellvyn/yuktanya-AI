@@ -9,6 +9,7 @@ import type { Data, FieldSpec, Template } from "@/lib/documents/types";
 import { missingRequired } from "@/lib/documents/wizard";
 import type { Pool } from "pg";
 import type { AttemptLimiter } from "./attempts";
+import type { InflightGuard } from "./inflight";
 import { GatewayError, type ChatMessage, type chat as gatewayChat } from "./gateway";
 import { buildSystemPrompt } from "./chat-prompt";
 import { groundSuggestions } from "./grounding";
@@ -22,7 +23,7 @@ export type ChatTurnDeps = {
   store: UsageStore;
   pool: Pool;
   chat: typeof gatewayChat;
-  inflight: Set<string>;
+  inflight: InflightGuard;
   now?: () => Date;
   // Jam dinding untuk tenggat giliran (Task 24); hanya diganti dalam uji.
   clock?: () => number;
@@ -99,8 +100,8 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
     return json({ reply: existing.reply, applied: [], missing, ready: isReady(template, doc.draft.data), replay: true });
   }
 
-  if (deps.inflight.has(userId)) return json({ code: "AI_BUSY" }, 429, { "retry-after": "2" });
-  deps.inflight.add(userId);
+  const lease = await deps.inflight.acquire(userId);
+  if (!lease) return json({ code: "AI_BUSY" }, 429, { "retry-after": "2" });
   const now = deps.now?.() ?? new Date();
   try {
     if (deps.attempts && !(await deps.attempts.allow(userId, "chat", now))) return json({ code: "TOO_MANY_ATTEMPTS" }, 429, { "retry-after": "60" });
@@ -229,6 +230,6 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
       return json({ code: "INTERNAL" }, 500);
     }
   } finally {
-    deps.inflight.delete(userId);
+    await deps.inflight.release(userId, lease);
   }
 }

@@ -14,7 +14,7 @@ export type BillingDeps = {
   deepEnabled?: boolean;
   now?: () => Date;
   // Webhook Midtrans. config null = server key belum diisi (pembayaran belum tersedia).
-  midtrans?: { config: MidtransConfig | null; fetchImpl?: typeof fetch; limiter?: { allow(key: string): boolean } };
+  midtrans?: { config: MidtransConfig | null; fetchImpl?: typeof fetch; limiter?: { allow(key: string): boolean | Promise<boolean> } };
 };
 type Params = Record<string, string>;
 type Handler = (deps: BillingDeps, req: Request, params?: Params) => Promise<Response>;
@@ -176,7 +176,7 @@ export const webhookHandler: Handler = async (deps, req, params = {}) => {
   if (params.provider !== "midtrans") return notFound();
   const mt = deps.midtrans;
   if (!mt?.config) return json({ code: "PROVIDER_UNAVAILABLE" }, 503);
-  if (mt.limiter && !mt.limiter.allow(clientIp(req.headers))) return json({ code: "RATE_LIMITED" }, 429);
+  if (mt.limiter && !(await mt.limiter.allow(clientIp(req.headers)))) return json({ code: "RATE_LIMITED" }, 429);
   let raw: string;
   try {
     raw = await readLimited(req, MAX_WEBHOOK_BYTES);

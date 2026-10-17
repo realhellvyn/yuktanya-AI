@@ -1,7 +1,7 @@
 import { homeFor } from "@/lib/auth/permissions";
 import { getPool } from "@/lib/db";
 import { accountExportHandler, loadAccountExport } from "@/lib/retention/export";
-import { exportLimiter } from "@/lib/retention/runtime";
+import { rateLimiter } from "@/lib/security/limiters";
 import { getSessionRoles } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +14,7 @@ export async function GET(req: Request): Promise<Response> {
       return s && homeFor(s.roles) === "/dashboard" ? s.userId : null;
     },
     load: (userId, now) => loadAccountExport(getPool(), userId, now),
-    allow: (userId) => exportLimiter.allow(userId),
+    // 5 kali per jam per akun, lintas instance (DB); gagal DB = ditolak (fail-closed).
+    allow: (userId) => rateLimiter("account_export").allow(userId),
   }, req);
 }

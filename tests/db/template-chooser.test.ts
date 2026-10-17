@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
+import { memoryInflight } from "@/lib/ai/inflight";
 import { createPgAttemptLimiter } from "@/lib/ai/attempts";
 import { GatewayError } from "@/lib/ai/gateway";
 import { createPgUsageStore } from "@/lib/ai/quota";
@@ -19,7 +20,7 @@ const answer = (o: unknown) => async () => ({ text: typeof o === "string" ? o : 
 
 function setup(userId: string | null, impl: (...a: Parameters<Chat>) => ReturnType<Chat>, over: Partial<ChooserDeps> = {}) {
   const chat = vi.fn(impl);
-  const deps: ChooserDeps = { getUserId: async () => userId, store, pool, chat: chat as unknown as Chat, inflight: new Set(), now: () => NOW, attempts: createPgAttemptLimiter(pool), ...over };
+  const deps: ChooserDeps = { getUserId: async () => userId, store, pool, chat: chat as unknown as Chat, inflight: memoryInflight(), now: () => NOW, attempts: createPgAttemptLimiter(pool), ...over };
   const call = (message: string, o: { key?: string; history?: unknown } = {}) => chooseTemplateTurn(deps, { message, key: o.key ?? key(), history: o.history ?? [] });
   return { call, chat };
 }

@@ -40,6 +40,10 @@ describe("B-32: rekonsiliasi Deep Review setelah pencabutan induk", () => {
       "select actor_id, metadata_safe from audit_events where event_type = 'deep_cancelled' and entity_type = 'deep_request' and entity_id = $1", [deep.id]);
     expect(audit.actor_id).toBe(c.f.admin);
     expect(audit.metadata_safe).toMatchObject({ action: "REFUND_RECORDED", order_id: b.order_id, from_status: "ON_HOLD" });
+    // Bawaan review Task 23 (migrasi 41): waktu audit dari jam database (default now()), p_now hanya di metadata.
+    const when = await one("select now() - created_at < interval '1 minute' as fresh, metadata_safe ->> 'at' as at from audit_events where event_type = 'deep_cancelled' and entity_id = $1", [deep.id]);
+    expect(when.fresh).toBe(true);
+    expect(new Date(when.at).toISOString()).toBe(at(5).toISOString());
     // Pemilik melihat status akhir lewat layanan owner.
     expect((await one("select status from get_deep_for_owner($1, $2)", [c.owner, deep.id])).status).toBe("CANCELLED");
   });

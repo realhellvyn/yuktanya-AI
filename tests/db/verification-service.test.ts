@@ -11,7 +11,7 @@ const svc = createPgVerificationService(pool);
 describe("layanan verifikasi", () => {
   it("lookup: format kode salah dan kode tak dikenal → NOT_FOUND tanpa menyentuh DB; aktif → bidang minimal; dicabut → REVOKED", async () => {
     const u = await createUser(pool);
-    const v = await kit.frozen(u);
+    const v = await kit.uploaded(u);
     const sha = (await pool.query("select sha256 from document_versions where id = $1", [v.versionId])).rows[0].sha256;
     const rep = (await pool.query("insert into ai_review_reports (user_id, logical_request_id, version_ref, sha256, report_json, analyzer_policy_version) values ($1, gen_random_uuid(), $2, $3, '{}', 'p1') returning id", [u, v.versionId, sha])).rows[0].id;
     const { verificationId, code } = await svc.issueAi(u, rep, NOW);
@@ -20,7 +20,8 @@ describe("layanan verifikasi", () => {
     const ok = await svc.lookup(code);
     expect(ok).toMatchObject({ status: "ACTIVE", kind: "AI", sha256: sha, scopeSummary: null });
     expect(Object.keys(ok).sort()).toEqual(["issuedAt", "kind", "outcome", "scopeSummary", "sha256", "status", "textExtracted"]);
-    expect(ok.status === "ACTIVE" && ok.textExtracted).toBe(false);
+    // AI Verified hanya untuk dokumen unggahan (migrasi 41), jadi rekaman ini menyatakan teks hasil pembacaan berkas.
+    expect(ok.status === "ACTIVE" && ok.textExtracted).toBe(true);
     const admin = await kit.admin();
     await expect(svc.revoke(u, verificationId, "ERROR", null, NOW)).rejects.toBeInstanceOf(VerificationError);
     await svc.revoke(admin, verificationId, "ERROR", "privat", NOW);
@@ -31,5 +32,13 @@ describe("layanan verifikasi", () => {
 
   it("issueAi: laporan orang lain → NOT_FOUND", async () => {
     await expect(svc.issueAi(await createUser(pool), "00000000-0000-4000-8000-000000000000", NOW)).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("issueAi: dokumen template → NOT_UPLOAD (Task 24, A24 M5)", async () => {
+    const u = await createUser(pool);
+    const v = await kit.frozen(u);
+    const sha = (await pool.query("select sha256 from document_versions where id = $1", [v.versionId])).rows[0].sha256;
+    const rep = (await pool.query("insert into ai_review_reports (user_id, logical_request_id, version_ref, sha256, report_json, analyzer_policy_version) values ($1, gen_random_uuid(), $2, $3, '{}', 'p1') returning id", [u, v.versionId, sha])).rows[0].id;
+    await expect(svc.issueAi(u, rep, NOW)).rejects.toMatchObject({ code: "NOT_UPLOAD" });
   });
 });

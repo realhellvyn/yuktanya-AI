@@ -16,14 +16,14 @@ export const EXPORT_MAX_BYTES = 20 * 1024 * 1024;
 export async function accountExportHandler(deps: {
   getUserId: () => Promise<string | null>;
   load: (userId: string, now: Date) => Promise<Record<string, unknown>>;
-  allow: (userId: string) => boolean;
+  allow: (userId: string) => boolean | Promise<boolean>;
   maxBytes?: number;
   now?: () => Date;
 }, req: Request): Promise<Response> {
   const to = (path: string) => Response.redirect(new URL(path, req.url), 303);
   const userId = await deps.getUserId();
   if (!userId) return to("/login?returnTo=%2Fsettings");
-  if (!deps.allow(userId)) return to("/settings?notice=export-limit");
+  if (!(await deps.allow(userId))) return to("/settings?notice=export-limit");
   const now = deps.now?.() ?? new Date();
   const body = JSON.stringify(await deps.load(userId, now), null, 2);
   if (Buffer.byteLength(body) > (deps.maxBytes ?? EXPORT_MAX_BYTES)) return to("/settings?notice=export-large");

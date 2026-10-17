@@ -1,18 +1,18 @@
 import { headers } from "next/headers";
 import { SiteHeader } from "@/components/site-header";
 import { PublicVerification } from "@/components/verification/public-verification";
-import { createRateLimiter } from "@/lib/vault/rate-limit";
+import { clientIp } from "@/lib/auth/rate-limit";
+import { rateLimiter } from "@/lib/security/limiters";
 import { verificationService } from "@/lib/verification/runtime";
 
 // Halaman publik tanpa login dan tanpa cache: status dicabut harus terlihat seketika. Tidak ada daftar atau pencarian kode.
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false, follow: false } };
-const limiter = createRateLimiter({ limit: 30, windowMs: 60_000 });
 
 export default async function VerifyPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const ip = ((await headers()).get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
-  if (!limiter.allow(ip)) {
+  // 30 permintaan/menit per IP, lintas instance (DB); gagal DB = tetap dilayani (fail-open, dicatat).
+  if (!(await rateLimiter("verify_page").allow(clientIp(await headers())))) {
     return (
       <>
         <SiteHeader />

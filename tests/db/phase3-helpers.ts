@@ -1,6 +1,9 @@
 import type { Pool } from "pg";
 import { createPgDocumentsService } from "@/lib/documents/service";
 import type { Data } from "@/lib/documents/types";
+import { canonicalize } from "@/lib/documents/render";
+import { uploadedDoc } from "@/lib/uploads/document";
+import { createPgUploadRepo } from "@/lib/uploads/repo";
 import { createUser } from "./helpers";
 
 export const NOW = new Date("2026-10-16T05:00:00Z");
@@ -30,6 +33,17 @@ export function makeKit(pool: Pool) {
       const r = await docs.freeze(u, documentId, key(), NOW);
       if (!r.ok) throw new Error("freeze gagal");
       return { documentId, versionId: r.versionId };
+    },
+    // Dokumen unggahan sintetis (versi beku kategori UPLOAD) lewat create_upload, untuk AI Verified (Task 24 M5: hanya unggahan).
+    async uploaded(u: string, paragraphs: string[] = ["Perjanjian Sewa Gerobak (sintetis)", "Pasal 1 Sewa Rp300.000 per bulan."]) {
+      const k = key();
+      const r = await createPgUploadRepo(pool).save({
+        userId: u, key: k, title: "Sewa Gerobak", canonical: canonicalize(uploadedDoc("Sewa Gerobak", paragraphs)), kind: "TXT",
+        filename: "sewa.txt", byteSize: 100, originalSha256: "c".repeat(64), path: `${u}/uploads/${k}.txt`, pages: null,
+        chars: paragraphs.join("").length, risk: { level: "NORMAL", reasons: [] }, now: NOW,
+      });
+      if (r.status !== "CREATED") throw new Error("unggah gagal: " + r.status);
+      return { documentId: r.documentId, versionId: r.versionId };
     },
     async order(u: string, kind: string, ref: string | null, now: Date = NOW, k: string = key()) {
       const { rows } = await pool.query("select * from create_order($1, $2, $3, $4, $5)", [u, kind, ref, k, now]);

@@ -2,13 +2,16 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ackLimiter, shareService } from "@/lib/vault/runtime";
+import { clientIp } from "@/lib/auth/rate-limit";
+import { rateLimiter } from "@/lib/security/limiters";
+import { shareService } from "@/lib/vault/runtime";
 import { ackEmailAvailable } from "@/lib/vault/email-config";
 import { InvalidEmailError } from "@/lib/vault/share";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "");
-async function ip(): Promise<string> {
-  return ((await headers()).get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
+// 10 permintaan/menit per IP untuk kedua langkah konfirmasi baca, lintas instance (DB); gagal DB = ditolak (fail-closed).
+async function ackAllowed(): Promise<boolean> {
+  return rateLimiter("share_ack").allow(clientIp(await headers()));
 }
 
 export async function requestAckAction(formData: FormData): Promise<void> {
@@ -17,7 +20,7 @@ export async function requestAckAction(formData: FormData): Promise<void> {
   const back = (q: string): never => redirect(`/s/${encodeURIComponent(token)}?${q}`);
   // Tanpa layanan email tidak ada tantangan kode yang dibuat (kode tidak akan pernah sampai).
   if (!ackEmailAvailable()) back("error=unavailable");
-  if (!ackLimiter.allow(await ip())) back("error=busy");
+  if (!(await ackAllowed())) back("error=busy");
   try {
     const r = await shareService().requestAck(token, email);
     if (r === "RATE_LIMITED") back("error=rate");
@@ -34,7 +37,7 @@ export async function verifyAckAction(formData: FormData): Promise<void> {
   const email = str(formData, "email");
   const back = (q: string): never => redirect(`/s/${encodeURIComponent(token)}?${q}`);
   if (!ackEmailAvailable()) back("error=unavailable");
-  if (!ackLimiter.allow(await ip())) back(`step=kode&e=${encodeURIComponent(email)}&error=busy`);
+  if (!(await ackAllowed())) back(`step=kode&e=${encodeURIComponent(email)}&error=busy`);
   try {
     const r = await shareService().verifyAck(token, email, str(formData, "code"));
     back(r === "VERIFIED" ? "result=VERIFIED" : `step=kode&e=${encodeURIComponent(email)}&result=${r}`);

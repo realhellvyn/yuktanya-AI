@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
+import { memoryInflight } from "@/lib/ai/inflight";
 import { handleAiReview, type AiReviewDeps } from "@/lib/ai/prereview";
 import { GatewayError } from "@/lib/ai/gateway";
 import { createPgUsageStore } from "@/lib/ai/quota";
@@ -17,7 +18,7 @@ function setup(userId: string | null, over: Partial<AiReviewDeps> = {}, chatImpl
   const chat = vi.fn(chatImpl ?? (async () => ({ text: REPORT, requestId: "r1" })));
   const deps: AiReviewDeps = {
     getUserId: async () => userId, service: kit.docs, store, chat: chat as unknown as AiReviewDeps["chat"], pool,
-    verification: createPgVerificationService(pool), inflight: new Set(), now: () => NOW, enabled: () => true, baseUrl: "https://y.example", ...over,
+    verification: createPgVerificationService(pool), inflight: memoryInflight(), now: () => NOW, enabled: () => true, baseUrl: "https://y.example", ...over,
   };
   const call = (versionId: string, o: { body?: unknown; idem?: string | null } = {}) =>
     handleAiReview(deps, new Request("http://t/x", {

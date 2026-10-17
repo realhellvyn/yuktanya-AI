@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
+import { memoryInflight } from "@/lib/ai/inflight";
 import { handleChatTurn, type ChatTurnDeps } from "@/lib/ai/chat-turn";
 import { createPgUsageStore } from "@/lib/ai/quota";
 import { renderPartial } from "@/lib/documents/render";
@@ -30,7 +31,7 @@ async function replay(category: Category, turns: Turn[]) {
   const id = (await docs.create(u, category, key())).documentId;
   let i = 0;
   const chat = vi.fn(async () => ({ text: JSON.stringify({ reply: turns[i].reply, fields: turns[i].fields }), requestId: "r" }));
-  const deps: ChatTurnDeps = { getUserId: async () => u, service: docs, store, pool, chat: chat as unknown as ChatTurnDeps["chat"], inflight: new Set(), now: () => NOW };
+  const deps: ChatTurnDeps = { getUserId: async () => u, service: docs, store, pool, chat: chat as unknown as ChatTurnDeps["chat"], inflight: memoryInflight(), now: () => NOW };
   const out: { reply: string; ready: boolean; applied: string[]; missing: string[] }[] = [];
   for (; i < turns.length; i++) {
     const res = await handleChatTurn(deps, new Request("http://t/x", { method: "POST", headers: { "content-type": "application/json", "idempotency-key": key() }, body: JSON.stringify({ message: turns[i].user }) }), { id });
@@ -200,7 +201,7 @@ describe("kota pengadilan: pengadilan selain Pengadilan Negeri (review Task 16)"
     const u = await createUser(pool);
     const id = (await docs.create(u, "UTANG_PIUTANG", key())).documentId;
     const chat = vi.fn(async () => ({ text: JSON.stringify({ reply: "Baik.", fields: { disputeCity: "Pengadilan Agama Semarang" } }), requestId: "r" }));
-    const deps: ChatTurnDeps = { getUserId: async () => u, service: docs, store, pool, chat: chat as unknown as ChatTurnDeps["chat"], inflight: new Set(), now: () => NOW };
+    const deps: ChatTurnDeps = { getUserId: async () => u, service: docs, store, pool, chat: chat as unknown as ChatTurnDeps["chat"], inflight: memoryInflight(), now: () => NOW };
     const res = await handleChatTurn(deps, new Request("http://t/x", { method: "POST", headers: { "content-type": "application/json", "idempotency-key": key() }, body: JSON.stringify({ message: "kalau ribut di Pengadilan Agama Semarang" }) }), { id });
     const b = await res.json();
     expect(b.applied).toEqual([]);

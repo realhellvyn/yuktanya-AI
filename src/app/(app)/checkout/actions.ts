@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { BillingError } from "@/lib/billing/service";
 import { MidtransError, midtransConfig } from "@/lib/billing/midtrans";
 import { billingService } from "@/lib/billing/runtime";
-import { createRateLimiter } from "@/lib/vault/rate-limit";
+import { rateLimiter } from "@/lib/security/limiters";
 import { requireUserId } from "@/lib/documents/session";
 import { flags } from "@/lib/flags";
 
@@ -66,15 +66,15 @@ export async function payAction(formData: FormData): Promise<void> {
 }
 
 // "Perbarui status": bertanya ke API status Midtrans untuk pembayaran PENDING milik pengguna (sumber yang sama dengan
-// webhook). Dibatasi per pengguna agar tidak membanjiri API.
-const refreshLimiter = createRateLimiter({ limit: 6, windowMs: 60_000 });
+// webhook). Dibatasi 6 kali/menit per pengguna, lintas instance (DB), agar tidak membanjiri API; gagal DB = fail-open
+// (jalur ini sendiri membaca pembayaran dari DB sebelum memanggil Midtrans).
 export async function refreshPaymentAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
   const orderId = str(formData, "orderId");
   if (!UUID.test(orderId)) redirect("/dashboard");
   const cfg = midtransConfig();
   if (!cfg) redirect(`/checkout/${orderId}?notice=PROVIDER_UNAVAILABLE`);
-  if (!refreshLimiter.allow(userId)) redirect(`/checkout/${orderId}?notice=RATE_LIMITED`);
+  if (!(await rateLimiter("payment_refresh").allow(userId))) redirect(`/checkout/${orderId}?notice=RATE_LIMITED`);
   try {
     await billingService().refreshHosted(userId, orderId, cfg);
   } catch (e) {

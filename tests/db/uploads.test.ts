@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { Document, Packer, Paragraph } from "docx";
 import { afterAll, describe, expect, it, vi } from "vitest";
+import { memoryInflight } from "@/lib/ai/inflight";
 import { createFsBlobStore } from "@/lib/documents/blob";
 import { sha256Hex } from "@/lib/documents/export";
 import { parseCanonical } from "@/lib/documents/render";
@@ -48,7 +49,7 @@ function review(userId: string, chatImpl?: AiReviewDeps["chat"]) {
   const chat = vi.fn(chatImpl ?? (async () => ({ text: JSON.stringify(REPORT), requestId: "r1" })));
   const deps: AiReviewDeps = {
     getUserId: async () => userId, service: kit.docs, store, chat: chat as unknown as AiReviewDeps["chat"], pool,
-    verification: createPgVerificationService(pool), inflight: new Set(), now: () => NOW, enabled: () => true, baseUrl: "https://y.example",
+    verification: createPgVerificationService(pool), inflight: memoryInflight(), now: () => NOW, enabled: () => true, baseUrl: "https://y.example",
   };
   const call = (versionId: string) => handleAiReview(deps, new Request("http://t/x", {
     method: "POST", headers: { "content-type": "application/json", "idempotency-key": key() }, body: JSON.stringify({ consent: true }),

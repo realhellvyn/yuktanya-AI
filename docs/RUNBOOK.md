@@ -20,7 +20,7 @@ Sumber kebenaran: `supabase/migrations/20261016000034_data_rights.sql` (fungsi `
 - `/settings` → tombol **Unduh data saya** → `GET /settings/export` (hanya akun pemilik yang masuk). Kegagalan tidak pernah menjadi berkas: tanpa sesi → 303 ke `/login?returnTo=/settings`; staf/admin dialihkan proxy ke dashboard-nya; batas laju → 303 ke `/settings?notice=export-limit`; terlalu besar → `/settings?notice=export-large` (pesan tampil di Pengaturan). Tautan tidak memakai atribut `download`; unduhan dipicu `Content-Disposition` hanya pada respons sukses.
 - Isi: profil, keanggotaan, dokumen + setiap versi (teks kanonik, SHA-256, isian), draf, percakapan, metadata unggahan, tautan bagikan (tanggal saja), kode verifikasi milik sendiri, pengingat, laporan analisis awal AI, pesanan + pembayaran, Review Standar (laporan FINAL & catatan PUBLISHED yang memang terlihat pemilik), status Pemeriksaan Mendalam, Kasus Hukum Khusus (ringkasan, penawaran, alasan tutup).
 - Tidak pernah ikut: data pengguna lain, identitas reviewer/koordinator/firma/admin, laporan/catatan draf, kolom triase internal (`triaged_by`, `quoted_by`, `closed_by`), jalur penyimpanan, hash token tautan, kunci idempoten, alasan privat pencabutan.
-- Batas: 5 unduhan per jam per akun (dalam memori per proses); respons > 20 MB ditolak.
+- Batas: 5 unduhan per jam per akun (pembatas DB lintas instance, cakupan `account_export`, migrasi 41; gagal DB = ditolak); respons > 20 MB ditolak.
 
 ## 3. Penghapusan akun
 Alur pengguna: `/settings` → **Hapus akun** → `/settings/hapus-akun` (daftar yang dihapus/disimpan, ketik `HAPUS`) → `/akun-dihapus` (publik). Draf pesan lokal di perangkat ikut dibersihkan.
@@ -61,7 +61,7 @@ Gerbang kekekalan: trigger `forbid_immutable_change` (versi, ekspor, unggahan) h
 - Berkas yang gagal dihapus tidak tercatat ulang (jalurnya sudah tidak ada di DB). Sapu manual: daftar objek bucket `documents` yang tidak dirujuk `document_exports`, `evidence_packs`, atau `document_uploads`. Belum ada pekerjaan otomatis.
 
 ### Celah yang diketahui
-- Pembatas laju ekspor ada di memori per proses (sama seperti pembatas publik lain).
+- Pembatas laju ekspor dan pembatas publik/billing berbasis DB (`rate_limit_hits`, migrasi 41); baris > 2 hari dibersihkan job retensi.
 - Draf pesan percakapan disimpan di `localStorage` perangkat (maksimal 7 hari). Dibuang saat terkirim, saat menekan Keluar, saat akun lain membuka percakapan di perangkat yang sama (penanda pemilik draf), dan setelah akun dihapus. Sesi yang berakhir sendiri tanpa menekan Keluar meninggalkan draf sampai akun lain masuk atau 7 hari lewat.
 - Permintaan pesanan baru yang berlangsung bersamaan dengan penghapusan tidak dikunci terhadap `erase_account`; jendela sangat kecil.
 

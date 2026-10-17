@@ -224,7 +224,8 @@ describe("kewenangan dan integritas", () => {
     const pub = (await publish(c, rev, "WITHIN_SCOPE", { noNotes: true })).rows[0];
     const sha = (await pool.query("select sha256 from document_versions where id = $1", [c.v.versionId])).rows[0].sha256;
     const rep = (await pool.query("insert into ai_review_reports (user_id, logical_request_id, version_ref, sha256, report_json, analyzer_policy_version) values ($1, gen_random_uuid(), $2, $3, '{}', 'p1') returning id", [c.owner, c.v.versionId, sha])).rows[0].id;
-    const ai = (await pool.query("select * from issue_ai_verification($1, $2, now())", [c.owner, rep])).rows[0];
+    // Rekaman AI lama pada versi template (sejak migrasi 41 issue_ai_verification hanya untuk unggahan); yang diuji: ekspor memuat kode LEGAL, bukan AI.
+    const ai = (await pool.query("insert into document_verifications (kind, version_id, sha256, outcome, policy_version, code, ai_report_id, issued_at) values ('AI', $1, $2, 'COMPLETED', 'p1', $3, $4, now()) returning code", [c.v.versionId, sha, `AIPUB${Math.random().toString(36).slice(2)}`.padEnd(48, "x"), rep])).rows[0];
     const e = (await svc.exportVersion(c.owner, c.v.versionId, "DOCX"))!;
     const row = (await pool.query("select storage_path from document_exports where id = $1", [e.exportId])).rows[0];
     const xml = await (await JSZip.loadAsync((await blob.get(row.storage_path))!)).file("word/document.xml")!.async("string");

@@ -5,7 +5,7 @@ import { flags } from "@/lib/flags";
 import { ForbiddenError } from "@/lib/documents/handlers";
 import { getSessionRoles } from "@/lib/supabase/server";
 import { appOrigin } from "@/lib/app-url";
-import { createRateLimiter } from "@/lib/vault/rate-limit";
+import { rateLimiter } from "@/lib/security/limiters";
 import { createManualAdapter, createMidtransAdapter, createMockAdapter } from "./adapters";
 import { midtransConfig } from "./midtrans";
 import type { BillingDeps } from "./handlers";
@@ -24,8 +24,6 @@ export const billingService = (): BillingService => {
     ...(mt ? [createMidtransAdapter(mt, () => appOrigin())] : []),
   ]));
 };
-// Per proses: notifikasi Midtrans sah jauh di bawah batas ini; pembatas mencegah banjir permintaan ke API status.
-const webhookLimiter = createRateLimiter({ limit: 120, windowMs: 60_000 });
 
 export function billingDeps(): BillingDeps {
   return {
@@ -44,6 +42,8 @@ export function billingDeps(): BillingDeps {
     service: billingService(),
     production: production(),
     deepEnabled: flags.deepReviewPurchase,
-    midtrans: { config: midtransConfig(), limiter: webhookLimiter },
+    // 120/menit per IP, lintas instance (DB). Notifikasi sah jauh di bawah batas ini; pembatas mencegah banjir permintaan ke
+    // API status. Gagal DB = fail-open: notifikasi sah tidak boleh ditolak hanya karena pembatas gagal.
+    midtrans: { config: midtransConfig(), limiter: rateLimiter("midtrans_webhook") },
   };
 }

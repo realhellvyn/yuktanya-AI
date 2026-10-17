@@ -5,6 +5,7 @@ import { ForbiddenError } from "@/lib/documents/handlers";
 import { TEMPLATES } from "@/lib/documents/templates/registry";
 import type { Category } from "@/lib/documents/types";
 import type { AttemptLimiter } from "./attempts";
+import type { InflightGuard } from "./inflight";
 import { GatewayError, type ChatMessage, type chat as gatewayChat } from "./gateway";
 import { normalizeSpecialCaseTerm } from "./reply-guard";
 import type { QuotaCode, UsageStore } from "./quota";
@@ -20,7 +21,7 @@ export type ChooserDeps = {
   store: UsageStore;
   pool: Pick<Pool, "query">;
   chat: typeof gatewayChat;
-  inflight: Set<string>;
+  inflight: InflightGuard;
   now?: () => Date;
   // Jam dinding untuk tenggat giliran (Task 24); hanya diganti dalam uji.
   clock?: () => number;
@@ -82,8 +83,8 @@ export async function chooseTemplateTurn(deps: ChooserDeps, raw: { message: unkn
   const { message, key } = parsed.data;
   const history = parsed.data.history.slice(-HISTORY);
 
-  if (deps.inflight.has(userId)) return { ok: false, code: "AI_BUSY" };
-  deps.inflight.add(userId);
+  const lease = await deps.inflight.acquire(userId);
+  if (!lease) return { ok: false, code: "AI_BUSY" };
   const now = deps.now?.() ?? new Date();
   try {
     if (deps.attempts && !(await deps.attempts.allow(userId, "chat", now))) return { ok: false, code: "TOO_MANY_ATTEMPTS" };
@@ -129,6 +130,6 @@ export async function chooseTemplateTurn(deps: ChooserDeps, raw: { message: unkn
       return { ok: false, code: "INTERNAL" };
     }
   } finally {
-    deps.inflight.delete(userId);
+    await deps.inflight.release(userId, lease);
   }
 }

@@ -1,6 +1,5 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
-import { createRateLimiter } from "@/lib/vault/rate-limit";
 import type { AuthAdmin } from "./erasure";
 
 // Supabase Admin API (service role, hanya server). Soft delete: identitas/email dihapus dan login mati, sementara ID
@@ -17,6 +16,3 @@ export function supabaseAuthAdmin(): AuthAdmin {
     },
   };
 }
-
-// Batas unduh data: 5 kali per jam per akun (dalam memori per proses, sama seperti pembatas publik lain).
-export const exportLimiter = createRateLimiter({ limit: 5, windowMs: 3_600_000 });

@@ -2,7 +2,9 @@ import { headers } from "next/headers";
 import { PublicShare } from "@/components/vault/public-share";
 import { SiteHeader } from "@/components/site-header";
 import { ackEmailAvailable } from "@/lib/vault/email-config";
-import { publicLimiter, shareService } from "@/lib/vault/runtime";
+import { clientIp } from "@/lib/auth/rate-limit";
+import { rateLimiter } from "@/lib/security/limiters";
+import { shareService } from "@/lib/vault/runtime";
 import { requestAckAction, verifyAckAction } from "./actions";
 
 // Halaman publik tanpa login. Tidak pernah di-cache, dan hanya menampilkan isi satu versi yang dibagikan.
@@ -12,8 +14,8 @@ export const metadata = { robots: { index: false, follow: false } };
 export default async function SharePage({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ step?: string; e?: string; result?: string; error?: string }> }) {
   const { token } = await params;
   const q = await searchParams;
-  const ip = ((await headers()).get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
-  if (!publicLimiter.allow(ip)) {
+  // 30 permintaan/menit per IP, lintas instance (DB); gagal DB = tetap dilayani (fail-open, dicatat).
+  if (!(await rateLimiter("share_page").allow(clientIp(await headers())))) {
     return (
       <>
         <SiteHeader />

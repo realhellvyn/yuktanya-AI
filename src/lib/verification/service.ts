@@ -11,7 +11,7 @@ export type VerificationView = {
   sha256: string; issuedAt: string; scopeSummary: string | null;
 };
 export class VerificationError extends Error {
-  constructor(readonly code: "NOT_FOUND" | "FORBIDDEN" | "INVALID_REASON" | "VERSION_MISMATCH") {
+  constructor(readonly code: "NOT_FOUND" | "FORBIDDEN" | "INVALID_REASON" | "VERSION_MISMATCH" | "NOT_UPLOAD") {
     super(code);
     this.name = "VerificationError";
   }
@@ -66,7 +66,7 @@ export function createPgVerificationService(pool: Pool): VerificationService {
         return { verificationId: rows[0].verification_id, code: rows[0].code };
       } catch (e) {
         const m = e instanceof Error ? e.message : "";
-        for (const c of ["NOT_FOUND", "VERSION_MISMATCH"] as const) if (m.includes(c)) throw new VerificationError(c);
+        for (const c of ["NOT_FOUND", "VERSION_MISMATCH", "NOT_UPLOAD"] as const) if (m.includes(c)) throw new VerificationError(c);
         throw e;
       }
     },
