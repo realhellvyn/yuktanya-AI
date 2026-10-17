@@ -22,9 +22,12 @@ export type SaveUploadResult =
 export type UploadDeps = {
   enabled?: () => boolean;
   getUserId: () => Promise<string | null>;
-  plan: (userId: string, now: Date) => Promise<{ plan: PlanKey; documentsRemaining: number; resetAt?: string }>;
+  plan: (userId: string, now: Date) => Promise<{ plan: PlanKey; documentsRemaining: number; aiReviewsRemaining: number; messagesRemaining: number; resetAt?: string }>;
   blob: BlobStore;
   save: (input: SaveUploadInput) => Promise<SaveUploadResult>;
+  // Pembaca teks berkas. Runtime memakai worker terisolasi (parse-isolated.ts, Task 24 A05); bawaan = fungsi murni di proses
+  // (hanya untuk uji).
+  parse?: typeof extractUploadText;
   // Pencatat event produk aman (tanpa isi). Opsional agar uji unit tanpa DB tetap sederhana.
   record?: (e: { name: string; actorUserId: string; entityType: string; entityId: string; dedupeKey: string; metadata: Record<string, string> }) => Promise<void>;
   now?: () => Date;
@@ -51,8 +54,13 @@ export async function handleUpload(deps: UploadDeps, input: { filename: string; 
   const entitlement = await deps.plan(userId, now);
   // Pemeriksaan cepat sebelum membaca/menyimpan; keputusan akhir tetap atomik di DB (create_upload).
   if (entitlement.documentsRemaining <= 0) return { ok: false, code: "DOCUMENT_DAILY_QUOTA_REACHED", resetAt: entitlement.resetAt };
+  // Task 24 (A24 M2): unggahan di halaman ini selalu untuk analisis awal AI (yang memakai 1 analisis + 1 pesan). Bila salah
+  // satunya habis, unggahan ditolak SEBELUM berkas dibaca/disimpan, sehingga slot dokumen baru harian tidak terpakai untuk
+  // dokumen yang tidak dapat dianalisis. Menyimpan tanpa memakai slot dokumen tidak dipilih: setiap dokumen baru tersimpan
+  // memakai satu unit dokumen (docs/AI_FAIR_USAGE.md), dan unggahan bebas-slot membuka penyimpanan tanpa batas.
+  if (entitlement.aiReviewsRemaining <= 0 || entitlement.messagesRemaining <= 0) return { ok: false, code: "AI_REVIEW_QUOTA_REACHED", resetAt: entitlement.resetAt };
 
-  const parsed = await extractUploadText(detected.kind, input.bytes, UPLOAD_LIMITS[entitlement.plan]);
+  const parsed = await (deps.parse ?? extractUploadText)(detected.kind, input.bytes, UPLOAD_LIMITS[entitlement.plan]);
   if (!parsed.ok) return { ok: false, code: parsed.code };
   const risk = triageText(parsed.paragraphs);
   const title = titleFromFilename(input.filename);

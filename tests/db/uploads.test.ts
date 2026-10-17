@@ -33,7 +33,7 @@ function uploadDeps(userId: string | null, over: Partial<UploadDeps> = {}): Uplo
   return {
     enabled: () => true,
     getUserId: async () => userId,
-    plan: async (u, now) => { const s = await store.snapshot(u, now); return { plan: s.plan, documentsRemaining: s.documentsRemaining, resetAt: s.resetAt }; },
+    plan: async (u, now) => { const s = await store.snapshot(u, now); return { plan: s.plan, documentsRemaining: s.documentsRemaining, aiReviewsRemaining: s.aiReviewsRemaining, messagesRemaining: s.messagesRemaining, resetAt: s.resetAt }; },
     blob,
     save: repo.save,
     now: () => NOW,
@@ -111,7 +111,7 @@ describe("unggah dokumen → versi beku milik pengguna", () => {
     expect(puts).toEqual([]);
     // Jalur atomik DB: pemeriksaan cepat dilewati, create_upload tetap menolak dan berkas yatim dihapus.
     const r2 = await upload(u, "a.txt", enc(TXT), key(), {
-      plan: async () => ({ plan: "FREE", documentsRemaining: 1 }),
+      plan: async () => ({ plan: "FREE", documentsRemaining: 1, aiReviewsRemaining: 2, messagesRemaining: 20 }),
       blob: { ...blob, put: async (p, b) => { puts.push(p); await blob.put(p, b); } },
     });
     expect(r2.ok).toBe(false);
@@ -119,6 +119,41 @@ describe("unggah dokumen → versi beku milik pengguna", () => {
     expect(puts).toHaveLength(1);
     expect(await blob.get(puts[0])).toBeNull();
     expect((await pool.query("select count(*)::int as n from documents where owner_id = $1 and category = 'UPLOAD'", [u])).rows[0].n).toBe(0);
+  });
+
+  it("Task 24 (A24 M2): kuota analisis AI (atau pesan AI) habis → unggahan ditolak sebelum dibaca/disimpan; slot dokumen tidak terpakai", async () => {
+    const u = await createUser(pool);
+    const puts: string[] = [];
+    const watch = { blob: { ...blob, put: async (p: string, b: Uint8Array) => { puts.push(p); await blob.put(p, b); } } };
+    // Habiskan 2 analisis AI hari ini (Free) lewat ledger yang sama dengan analisis sungguhan.
+    for (let i = 0; i < 2; i++) {
+      const r = await store.reserve(u, "AI_REVIEW", key(), NOW);
+      if (!r.ok) throw new Error("reservasi gagal");
+      await store.finalize(r.groupId, NOW);
+    }
+    const before = await store.snapshot(u, NOW);
+    expect(before.aiReviewsRemaining).toBe(0);
+    expect(before.documentsRemaining).toBe(1);
+    const parse = vi.fn();
+    const r = await upload(u, "a.txt", enc(TXT), key(), { ...watch, parse });
+    expect(r).toEqual({ ok: false, code: "AI_REVIEW_QUOTA_REACHED", resetAt: expect.any(String) });
+    expect(UPLOAD_MESSAGES.AI_REVIEW_QUOTA_REACHED).toContain("kuota dokumen baru Anda tidak terpakai");
+    expect(parse).not.toHaveBeenCalled();
+    expect(puts).toEqual([]);
+    const after = await store.snapshot(u, NOW);
+    expect(after.documentsUsed).toBe(before.documentsUsed);
+    expect((await pool.query("select count(*)::int as n from documents where owner_id = $1 and category = 'UPLOAD'", [u])).rows[0].n).toBe(0);
+    // Pesan AI habis (analisis masih ada) juga ditolak dengan kode yang sama.
+    const m = await upload(u, "a.txt", enc(TXT), key(), { plan: async () => ({ plan: "FREE", documentsRemaining: 1, aiReviewsRemaining: 2, messagesRemaining: 0 }) });
+    expect(m.ok === false && m.code).toBe("AI_REVIEW_QUOTA_REACHED");
+  });
+
+  it("pembaca berkas yang disuntikkan (worker terisolasi di runtime) yang dipakai handler", async () => {
+    const u = await createUser(pool);
+    const parse = vi.fn(async () => ({ ok: false as const, code: "TIMEOUT" as const }));
+    expect(await upload(u, "a.txt", enc(TXT), key(), { parse })).toEqual({ ok: false, code: "TIMEOUT" });
+    expect(parse).toHaveBeenCalledWith("TXT", enc(TXT), expect.objectContaining({ maxPages: 10 }));
+    expect((await store.snapshot(u, NOW)).documentsUsed).toBe(0);
   });
 
   it("penolakan validasi tidak menyimpan apa pun dan tidak memakai kuota", async () => {

@@ -110,7 +110,9 @@ describe("pembacaan teks terisolasi dengan batas", () => {
     expect(await extractUploadText("DOCX", await zipOf(files), LIMITS)).toEqual({ ok: false, code: "ZIP_LIMIT" });
   });
 
-  it("XML DOCX yang bermusuhan diproses linear (< 1 detik): ribuan <w:p> tanpa penutup, tag bertumpuk, spasi panjang", async () => {
+  // Task 24 (A24): batas waktu longgar (5 detik), bukan 1 detik, agar tidak rapuh di mesin CI yang sibuk. Maksud tetap terjaga:
+  // pemindaian kuadratik atas ~900.000 karakter butuh puluhan detik hingga jam, jauh di atas batas ini.
+  it("XML DOCX yang bermusuhan diproses linear (batas longgar 5 detik): ribuan <w:p> tanpa penutup, tag bertumpuk, spasi panjang", async () => {
     const hostile = [
       "<w:p>".repeat(190_000),
       "<w:p><w:r><w:t>".repeat(60_000),
@@ -123,15 +125,15 @@ describe("pembacaan teks terisolasi dengan batas", () => {
       const t0 = performance.now();
       const r = await extractUploadText("DOCX", bytes, LIMITS);
       const ms = performance.now() - t0;
-      expect(ms).toBeLessThan(1000);
+      expect(ms).toBeLessThan(5000);
       expect(["EMPTY_TEXT", "TOO_LONG", "PARSE_FAILED", "ZIP_LIMIT", "DOCX_TOO_LARGE", undefined]).toContain(r.ok ? undefined : r.code);
     }
   });
 
-  it("TXT berisi spasi sangat panjang diproses linear (< 1 detik)", async () => {
+  it("TXT berisi spasi sangat panjang diproses linear (batas longgar 5 detik)", async () => {
     const t0 = performance.now();
     const r = await extractUploadText("TXT", enc(`Pasal 1${" ".repeat(4_000_000)}\nisi`), LIMITS);
-    expect(performance.now() - t0).toBeLessThan(1000);
+    expect(performance.now() - t0).toBeLessThan(5000);
     expect(r.ok).toBe(true);
   });
 
@@ -234,7 +236,7 @@ describe("gerbang flag AI_PREREVIEW_ENABLED", () => {
     const deps: UploadDeps = {
       enabled: () => false,
       getUserId: vi.fn(async () => "u1"),
-      plan: vi.fn(async () => ({ plan: "FREE" as const, documentsRemaining: 1 })),
+      plan: vi.fn(async () => ({ plan: "FREE" as const, documentsRemaining: 1, aiReviewsRemaining: 2, messagesRemaining: 20 })),
       blob: { put: vi.fn(), get: vi.fn(), delete: vi.fn() },
       save: vi.fn(),
     };

@@ -9,7 +9,8 @@ import type { UploadKind } from "./validate";
 // pembacaan TIDAK PERNAH dicatat ke log (tidak ada console.* di modul ini; pdf.js dijalankan dengan verbosity 0).
 // Batas: ukuran berkas (validate.ts), jumlah halaman dan karakter per paket, pengaman ZIP bom, XML DOCX ≤ 2 MB, dan batas waktu.
 // Semua pemindaian teks linear (tanpa regex yang dapat backtracking kuadratik) karena batas waktu tidak dapat memotong kerja
-// sinkron. Risiko sisa: satu halaman PDF yang sangat berat di dalam pdf.js tidak dapat dihentikan di tengah (tanpa worker).
+// sinkron di dalam proses. Di runtime, fungsi ini dijalankan di worker_threads (parse-isolated.ts, Task 24 A05) sehingga satu
+// halaman PDF yang sangat berat di dalam pdf.js tetap dihentikan keras (terminate) pada batas waktu.
 // PDF: hanya PDF berlapis teks. PDF hasil pindai (gambar) ditolak; OCR tidak tersedia.
 
 export type ParseLimits = { maxPages: number; maxChars: number; timeoutMs?: number };

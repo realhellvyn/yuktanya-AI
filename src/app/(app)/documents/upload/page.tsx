@@ -62,6 +62,10 @@ export default async function UploadPage() {
           <p role="status" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold text-amber-900">
             Kuota dokumen baru hari ini sudah habis. Kuota diperbarui pukul 00.00 WIB.
           </p>
+        ) : usage.aiReviewsRemaining <= 0 || usage.messagesRemaining <= 0 ? (
+          <p role="status" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold text-amber-900">
+            Kuota analisis AI atau pesan AI hari ini sudah habis, jadi berkas belum dapat diunggah. Kuota dokumen baru Anda tidak terpakai. Kuota diperbarui pukul 00.00 WIB.
+          </p>
         ) : (
           <UploadForm action={uploadAction} idempotencyKey={randomUUID()} />
         )}
