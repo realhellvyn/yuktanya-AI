@@ -8,7 +8,7 @@ const OWNER = [
   "/api/documents", "/api/orders", "/api/payments/mock", "/api/reviews", "/api/deep", "/api/usage", "/api/ai",
 ] as const;
 const PROTECTED = [...OWNER, "/partner", "/admin", "/api/admin", "/api/partner"] as const;
-// API tanpa sesi pengguna: job terjadwal (rahasia CRON_SECRET) dan webhook penyedia pembayaran (saat ini selalu 404).
+// API tanpa sesi pengguna: job terjadwal (rahasia CRON_SECRET) dan webhook penyedia pembayaran (Midtrans; tanda tangan + konfirmasi API status).
 // API lain yang tidak terdaftar di atas tetap butuh login (tertutup bawaan) dan mengikuti aturan permukaan pemilik.
 const PUBLIC_API = ["/api/jobs", "/api/payments/webhook"] as const;
 

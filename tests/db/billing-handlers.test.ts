@@ -93,10 +93,12 @@ describe("handler penagihan", () => {
     expect((await mockSettleHandler(deps(await createUser(pool)), post({}), { id: pay.paymentId })).status).toBe(404);
   });
 
-  it("konfirmasi manual: non-admin 403, admin menyelesaikan; instruksi manual muncul", async () => {
+  it("konfirmasi manual (pembayaran manual lama): pengguna tidak dapat lagi memilih manual; non-admin 403, admin menyelesaikan", async () => {
     const u = await createUser(pool);
     const o = await (await createOrderHandler(deps(u), post({ kind: "MEMBERSHIP_MONTHLY" }))).json();
-    const pay = await (await payHandler(deps(u), post({ provider: "manual" }), { id: o.orderId })).json();
+    expect((await payHandler(deps(u), post({ provider: "manual" }), { id: o.orderId })).status).toBe(400);
+    // Data lama: pembayaran manual yang sudah ada sebelum Task 21 (dibuat langsung lewat layanan).
+    const pay = await service.startPayment(u, o.orderId, "manual", NOW);
     expect(pay.instructions).toBe("Transfer ke rekening uji");
     const body = { bankRef: "BANK-777", amountIdr: 19000 };
     expect((await confirmManualHandler(deps(u), post(body), { id: pay.paymentId })).status).toBe(403);
@@ -106,8 +108,10 @@ describe("handler penagihan", () => {
     expect((await pool.query("select plan from resolve_entitlement($1, $2)", [u, NOW])).rows[0].plan).toBe("MEMBER");
   });
 
-  it("webhook penyedia selain mock → 404", async () => {
-    expect((await webhookHandler(deps(null), post({}), { provider: "midtrans" })).status).toBe(404);
+  it("webhook: penyedia selain midtrans → 404; midtrans tanpa server key → 503", async () => {
+    for (const provider of ["mock", "manual", "xendit"]) expect((await webhookHandler(deps(null), post({}), { provider })).status).toBe(404);
+    expect((await webhookHandler(deps(null), post({}), { provider: "midtrans" })).status).toBe(503);
+    expect((await webhookHandler(deps(null, { midtrans: { config: null } }), post({}), { provider: "midtrans" })).status).toBe(503);
   });
 
   it("instruksi manual kosong → pesan belum tersedia", async () => {
@@ -120,14 +124,14 @@ describe("handler penagihan", () => {
   it("konfirmasi manual menerima receivedAt; resolve rekonsiliasi hanya admin dan butuh catatan", async () => {
     const u = await createUser(pool);
     const o = await (await createOrderHandler(deps(u), post({ kind: "MEMBERSHIP_MONTHLY" }))).json();
-    const pay = await (await payHandler(deps(u), post({ provider: "manual" }), { id: o.orderId })).json();
+    const pay = await service.startPayment(u, o.orderId, "manual", NOW);
     const admin = await kit.admin();
     const d = deps(u, { getAdminId: async () => admin, now: () => new Date(NOW.getTime() + 3 * 24 * 3600_000) });
     const ok = await confirmManualHandler(d, post({ bankRef: "BANK-5", amountIdr: 19000, receivedAt: NOW.toISOString() }), { id: pay.paymentId });
     expect((await ok.json()).result).toBe("SETTLED");
 
     const o2 = await (await createOrderHandler(deps(u, { now: () => NOW }), post({ kind: "MEMBERSHIP_MONTHLY" }))).json();
-    const pay2 = await (await payHandler(deps(u), post({ provider: "manual" }), { id: o2.orderId })).json();
+    const pay2 = await service.startPayment(u, o2.orderId, "manual", NOW);
     const late = deps(u, { getAdminId: async () => admin, now: () => new Date(NOW.getTime() + 5 * 24 * 3600_000) });
     expect((await (await confirmManualHandler(late, post({ bankRef: "BANK-6", amountIdr: 19000 }), { id: pay2.paymentId })).json()).result).toBe("RECONCILIATION_REQUIRED");
     expect((await resolveReconciliationHandler(deps(u), post({ action: "CLOSE", note: "tutup" }), { id: o2.orderId })).status).toBe(403);

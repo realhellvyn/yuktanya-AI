@@ -3,7 +3,9 @@
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { BillingError } from "@/lib/billing/service";
+import { MidtransError, midtransConfig } from "@/lib/billing/midtrans";
 import { billingService } from "@/lib/billing/runtime";
+import { createRateLimiter } from "@/lib/vault/rate-limit";
 import { requireUserId } from "@/lib/documents/session";
 import { flags } from "@/lib/flags";
 
@@ -31,17 +33,47 @@ export async function requestReviewAction(formData: FormData): Promise<void> {
   }
 }
 
+// Pengguna hanya membayar lewat Midtrans; mock hanya di luar produksi. Transfer manual tidak lagi diterima dari formulir.
 export async function payAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
   const orderId = str(formData, "orderId");
+  if (!UUID.test(orderId)) redirect("/dashboard");
   const provider = str(formData, "provider");
+  const allowed = provider === "midtrans" || (provider === "mock" && process.env.NODE_ENV !== "production");
+  if (!allowed) redirect(`/checkout/${orderId}?notice=PROVIDER_UNAVAILABLE`);
+  let target: string | undefined;
   try {
-    await billingService().startPayment(userId, orderId, provider);
+    target = (await billingService().startPayment(userId, orderId, provider)).redirectUrl;
   } catch (e) {
     if (e instanceof BillingError) redirect(`/checkout/${orderId}?notice=${e.code}`);
     throw e;
   }
+  // Hanya halaman bayar Midtrans (asal divalidasi sekali lagi terhadap konfigurasi server) yang menjadi tujuan redirect.
+  const cfg = midtransConfig();
+  if (target && cfg && cfg.redirectOrigins.includes(new URL(target).origin)) redirect(target);
   redirect(`/checkout/${orderId}`);
+}
+
+// "Perbarui status": bertanya ke API status Midtrans untuk pembayaran PENDING milik pengguna (sumber yang sama dengan
+// webhook). Dibatasi per pengguna agar tidak membanjiri API.
+const refreshLimiter = createRateLimiter({ limit: 6, windowMs: 60_000 });
+export async function refreshPaymentAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+  const orderId = str(formData, "orderId");
+  if (!UUID.test(orderId)) redirect("/dashboard");
+  const cfg = midtransConfig();
+  if (!cfg) redirect(`/checkout/${orderId}?notice=PROVIDER_UNAVAILABLE`);
+  if (!refreshLimiter.allow(userId)) redirect(`/checkout/${orderId}?notice=RATE_LIMITED`);
+  try {
+    await billingService().refreshHosted(userId, orderId, cfg);
+  } catch (e) {
+    if (e instanceof MidtransError) {
+      console.error("perbarui status Midtrans gagal", e.code);
+      redirect(`/checkout/${orderId}?notice=STATUS_UNAVAILABLE`);
+    }
+    throw e;
+  }
+  redirect(`/checkout/${orderId}?notice=REFRESHED`);
 }
 
 // Hanya non-produksi: adapter mock tidak terdaftar di produksi sehingga pembayaran mock tidak pernah ada.

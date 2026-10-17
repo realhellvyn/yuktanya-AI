@@ -8,7 +8,12 @@
 //   progres) dan Next/React dapat menyisipkan <style> inline; nonce tidak berlaku untuk atribut style, dan bila nonce ada di
 //   style-src, browser mengabaikan 'unsafe-inline'. Risiko gaya inline jauh lebih kecil daripada skrip (tidak menjalankan kode).
 // - Hanya di luar produksi (next dev/E2E): 'unsafe-eval' (React dev memakai eval untuk jejak galat) dan ws: untuk HMR.
-export type CspOptions = { nonce: string; production: boolean; supabaseUrl?: string; googleAuth?: boolean };
+// - form-action Midtrans (Task 21): tombol "Bayar dengan Midtrans" adalah server action yang mengalihkan (303) ke halaman bayar
+//   Snap. Dengan JS, Next.js berpindah halaman lewat location (tidak diatur form-action); tanpa JS, browser menerapkan
+//   form-action pada tujuan redirect, jadi HANYA dua asal halaman bayar Midtrans ditambahkan. script-src tidak berubah
+//   (tanpa skrip Snap/popup di halaman kita).
+export type CspOptions = { nonce: string; production: boolean; supabaseUrl?: string; googleAuth?: boolean; midtrans?: boolean };
+export const MIDTRANS_FORM_ACTION_ORIGINS = ["https://app.midtrans.com", "https://app.sandbox.midtrans.com"] as const;
 
 function originOf(url: string | undefined): string | null {
   if (!url) return null;
@@ -19,9 +24,9 @@ function originOf(url: string | undefined): string | null {
   }
 }
 
-export function buildCsp({ nonce, production, supabaseUrl, googleAuth }: CspOptions): string {
+export function buildCsp({ nonce, production, supabaseUrl, googleAuth, midtrans }: CspOptions): string {
   const supabase = originOf(supabaseUrl);
-  const formAction = ["'self'", ...(googleAuth && supabase ? [supabase, "https://accounts.google.com"] : [])];
+  const formAction = ["'self'", ...(googleAuth && supabase ? [supabase, "https://accounts.google.com"] : []), ...(midtrans ? MIDTRANS_FORM_ACTION_ORIGINS : [])];
   const directives: [string, string[]][] = [
     ["default-src", ["'self'"]],
     ["script-src", ["'self'", `'nonce-${nonce}'`, "'strict-dynamic'", ...(production ? [] : ["'unsafe-eval'"])]],

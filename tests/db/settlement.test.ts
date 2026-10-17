@@ -85,10 +85,10 @@ describe("settlement", () => {
     await expect(kit.pay(owner, o.order_id, "mock", at(25 * 60))).rejects.toThrow(/ORDER_NOT_PAYABLE/);
   });
 
-  it("provider di luar mock/manual ditolak", async () => {
+  it("provider di luar mock/manual/midtrans ditolak", async () => {
     const u = await createUser(pool);
     const o = await kit.order(u, "MEMBERSHIP_MONTHLY", null);
-    await expect(kit.pay(u, o.order_id, "midtrans")).rejects.toThrow();
+    await expect(kit.pay(u, o.order_id, "xendit")).rejects.toThrow();
   });
 
   it("membership tanpa settlement tidak memberi kuota Member", async () => {

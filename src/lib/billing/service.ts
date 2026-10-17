@@ -1,5 +1,6 @@
 import type { Pool } from "pg";
 import type { PaymentAdapter } from "./adapters";
+import { confirmAndApply, type GatewayAction, type MidtransConfig } from "./midtrans";
 
 export type OrderKind = "MEMBERSHIP_MONTHLY" | "MEMBERSHIP_ANNUAL" | "BUNDLE" | "STANDARD_REVIEW" | "DEEP_REVIEW";
 export const ORDER_KINDS: readonly OrderKind[] = ["MEMBERSHIP_MONTHLY", "MEMBERSHIP_ANNUAL", "BUNDLE", "STANDARD_REVIEW", "DEEP_REVIEW"];
@@ -14,7 +15,7 @@ export type ManualPending = { paymentId: string; orderId: string; kind: string; 
 export type ReconciliationItem = { orderId: string; paymentId: string | null; status: string; amountIdr: number; createdAt: string; extraPayment: boolean };
 
 export class BillingError extends Error {
-  constructor(readonly code: "NOT_ELIGIBLE" | "NOTE_REQUIRED" | "NOT_RECONCILIATION" | "AMOUNT_MISMATCH" | "CONFLICT" | "INVALID_ACTION" | "NOT_FOUND" | "ALREADY_REVIEWED" | "PRODUCT_UNAVAILABLE" | "ORDER_NOT_PAYABLE" | "INVALID_KIND" | "FORBIDDEN" | "PROVIDER_UNAVAILABLE" | "SPECIAL_CASE_OPEN" | "DISCOUNT_TAKEN", readonly reason?: string) {
+  constructor(readonly code: "NOT_ELIGIBLE" | "NOTE_REQUIRED" | "NOT_RECONCILIATION" | "AMOUNT_MISMATCH" | "CONFLICT" | "INVALID_ACTION" | "NOT_FOUND" | "ALREADY_REVIEWED" | "PRODUCT_UNAVAILABLE" | "ORDER_NOT_PAYABLE" | "INVALID_KIND" | "FORBIDDEN" | "PROVIDER_UNAVAILABLE" | "PROVIDER_ERROR" | "SPECIAL_CASE_OPEN" | "DISCOUNT_TAKEN", readonly reason?: string) {
     super(reason ? `${code}: ${reason}` : code);
     this.name = "BillingError";
   }
@@ -31,7 +32,13 @@ function mapError(e: unknown): never {
 export interface BillingService {
   preview(userId: string, kind: OrderKind, refId: string | null, now?: Date): Promise<Quote>;
   createOrder(userId: string, kind: OrderKind, refId: string | null, key: string, now?: Date): Promise<OrderResult>;
-  startPayment(userId: string, orderId: string, provider: string, now?: Date): Promise<{ paymentId: string; instructions: string }>;
+  // Adaptor hosted (Midtrans): redirectUrl = halaman bayar penyedia; klik ulang selama masih PENDING memakai URL yang sama.
+  startPayment(userId: string, orderId: string, provider: string, now?: Date): Promise<{ paymentId: string; instructions: string; redirectUrl?: string }>;
+  // Status penyedia yang SUDAH dikonfirmasi lewat API penyedia → fungsi DB (settle/fail/record). Idempoten per eventId.
+  // amountIdr null = jumlah tidak terbaca → diperlakukan sebagai tidak cocok (rekonsiliasi).
+  applyProviderStatus(provider: "midtrans", providerRef: string, eventId: string, action: GatewayAction, amountIdr: number | null, now?: Date): Promise<string>;
+  // Tombol "Perbarui status": konfirmasi ulang ke API Midtrans untuk pembayaran PENDING milik pengguna pada pesanan ini.
+  refreshHosted(userId: string, orderId: string, cfg: MidtransConfig, fetchImpl?: typeof fetch, now?: Date): Promise<string[]>;
   getOrder(userId: string, orderId: string): Promise<OrderView | null>;
   listOrders(userId: string): Promise<OrderView[]>;
   // Hanya non-produksi: mensimulasikan webhook gateway untuk pembayaran milik pengguna.
@@ -67,7 +74,7 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
       console.error("audit penolakan kelayakan Deep gagal", err instanceof Error ? err.message : err);
     }
   }
-  return {
+  const svc: BillingService = {
     async preview(userId, kind, refId, now = new Date()) {
       try {
         const { rows } = await pool.query("select * from preview_price($1, $2, $3, $4)", [userId, kind, refId, now]);
@@ -88,17 +95,64 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
       }
     },
     async startPayment(userId, orderId, provider, now = new Date()) {
-      const adapter = byName.get(provider as "mock" | "manual");
+      const adapter = byName.get(provider as PaymentAdapter["name"]);
       if (!adapter) throw new BillingError("PROVIDER_UNAVAILABLE");
-      const { rows: o } = await pool.query("select id, amount_idr from orders where id = $1 and user_id = $2", [orderId, userId]);
+      const { rows: o } = await pool.query("select id, amount_idr, kind, status, expires_at from orders where id = $1 and user_id = $2", [orderId, userId]);
       if (!o[0]) throw new BillingError("NOT_FOUND");
-      const charge = await adapter.createCharge({ id: o[0].id, amountIdr: o[0].amount_idr });
+      if (adapter.hosted) {
+        // Pra-periksa sebelum memanggil penyedia (create_payment tetap pemeriksa akhir di DB): pesanan yang tidak dapat dibayar
+        // tidak membuat transaksi di Midtrans, dan pembayaran PENDING yang ada dipakai ulang beserta URL-nya.
+        if (o[0].status !== "PENDING_PAYMENT" || (o[0].expires_at as Date).getTime() <= now.getTime() || o[0].amount_idr <= 0) throw new BillingError("ORDER_NOT_PAYABLE");
+        const { rows: ex } = await pool.query(
+          "select id, checkout_url from payments where order_id = $1 and provider = $2 and status = 'PENDING' and checkout_url is not null order by created_at limit 1",
+          [orderId, provider],
+        );
+        if (ex[0]) return { paymentId: ex[0].id, instructions: "", redirectUrl: ex[0].checkout_url };
+      }
+      let charge;
       try {
+        charge = await adapter.createCharge({ id: o[0].id, amountIdr: o[0].amount_idr, kind: o[0].kind, expiresAt: o[0].expires_at, now });
+      } catch (e) {
+        // Galat penyedia: belum ada baris pembayaran apa pun. Log hanya kode/nama galat (tanpa kunci, tanpa data pengguna).
+        console.error("pembuatan transaksi penyedia gagal", provider, e instanceof Error ? e.message.slice(0, 300) : "unknown");
+        throw new BillingError("PROVIDER_ERROR");
+      }
+      try {
+        if (charge.redirectUrl) {
+          const { rows } = await pool.query("select * from create_hosted_payment($1, $2, $3, $4, $5, $6)", [userId, orderId, provider, charge.providerRef, charge.redirectUrl, now]);
+          return { paymentId: rows[0].payment_id, instructions: charge.instructions, redirectUrl: rows[0].checkout_url };
+        }
         const { rows } = await pool.query("select create_payment($1, $2, $3, $4, $5) as id", [userId, orderId, provider, charge.providerRef, now]);
         return { paymentId: rows[0].id, instructions: charge.instructions };
       } catch (e) {
         return mapError(e);
       }
+    },
+    async applyProviderStatus(provider, providerRef, eventId, action, amountIdr, now = new Date()) {
+      if (action.kind === "SETTLE") {
+        if (amountIdr === null) console.error("jumlah penyedia tidak terbaca; pembayaran masuk rekonsiliasi", provider, providerRef);
+        const { rows } = await pool.query("select settle_payment($1, $2, $3, $4, 0, $5) as r", [provider, providerRef, eventId, amountIdr ?? 0, now]);
+        return rows[0].r;
+      }
+      if (action.kind === "FAIL") {
+        const { rows } = await pool.query("select fail_payment($1, $2, $3, $4, $5) as r", [provider, providerRef, eventId, action.status, now]);
+        return rows[0].r;
+      }
+      const { rows } = await pool.query("select record_payment_event($1, $2, $3, $4) as r", [provider, providerRef, eventId, now]);
+      return rows[0].r;
+    },
+    async refreshHosted(userId, orderId, cfg, fetchImpl = fetch, now = new Date()) {
+      const { rows } = await pool.query(
+        `select p.provider_ref from payments p join orders o on o.id = p.order_id
+          where o.id = $1 and o.user_id = $2 and p.provider = 'midtrans' and p.status = 'PENDING' order by p.created_at`,
+        [orderId, userId],
+      );
+      const out: string[] = [];
+      for (const r of rows) {
+        const res = await confirmAndApply(cfg, r.provider_ref, (a, ev, amt) => svc.applyProviderStatus("midtrans", r.provider_ref, ev, a, amt, now), fetchImpl);
+        out.push(res ?? "NOT_FOUND");
+      }
+      return out;
     },
     async getOrder(userId, orderId) {
       const { rows } = await pool.query("select * from orders where id = $1 and user_id = $2", [orderId, userId]);
@@ -176,4 +230,5 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
       }));
     },
   };
+  return svc;
 }

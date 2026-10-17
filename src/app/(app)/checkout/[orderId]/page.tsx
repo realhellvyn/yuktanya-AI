@@ -2,12 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isPastDue, OrderStatus } from "@/components/billing/order-status";
 import { PriceBreakdown } from "@/components/billing/price-breakdown";
+import { PaymentOptions } from "@/components/billing/payment-options";
 import { orderSubject } from "@/lib/billing/checkout-subject";
+import { midtransConfig } from "@/lib/billing/midtrans";
 import { getPool } from "@/lib/db";
 import { billingService } from "@/lib/billing/runtime";
 import { requireUserId } from "@/lib/documents/session";
-import { paymentReference } from "@/lib/reviews/paths";
-import { mockSettleAction, payAction } from "../actions";
+import { mockSettleAction, payAction, refreshPaymentAction } from "../actions";
 import { fixedText } from "@/lib/query-text";
 import { EnhancedRubricNotice } from "@/components/deep/enhanced-availability";
 import { deepService } from "@/lib/deep/runtime";
@@ -15,10 +16,16 @@ import { deepService } from "@/lib/deep/runtime";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pembayaran | Yuktanya" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const NOTICE: Record<string, string> = { PROVIDER_UNAVAILABLE: "Metode pembayaran ini belum tersedia. Pilih metode lain.", ORDER_NOT_PAYABLE: "Pesanan ini sudah tidak dapat dibayar. Buat pesanan baru dari halaman dokumen atau halaman Membership.",
+// Status lunas TIDAK PERNAH dibaca dari alamat (Midtrans menambahkan parameter status ke URL kembali); hanya kode
+// pemberitahuan tetap ini yang dipetakan ke kalimat, sisanya diabaikan.
+const NOTICE: Record<string, string> = { PROVIDER_UNAVAILABLE: "Pembayaran belum tersedia. Silakan coba lagi nanti.",
+  PROVIDER_ERROR: "Midtrans belum dapat dihubungi, sehingga pembayaran belum dibuat dan tidak ada uang yang ditarik. Coba lagi beberapa saat lagi.",
+  STATUS_UNAVAILABLE: "Status pembayaran belum dapat diperiksa ke Midtrans. Coba lagi beberapa saat lagi.",
+  RATE_LIMITED: "Anda baru saja memeriksa status. Tunggu satu menit, lalu coba lagi.",
+  ORDER_NOT_PAYABLE: "Pesanan ini sudah tidak dapat dibayar. Buat pesanan baru dari halaman dokumen atau halaman Membership.",
   SPECIAL_CASE_OPEN: "Dokumen ini sedang diajukan sebagai Special Legal Case, sehingga Legal Review belum dapat dibayar. Lihat statusnya di menu Special Legal Case, atau tarik pengajuan tersebut bila tidak jadi." };
 const LABEL: Record<string, string> = { MEMBERSHIP_MONTHLY: "Membership Yuktanya (1 periode)", MEMBERSHIP_ANNUAL: "Membership Yuktanya (1 tahun)", BUNDLE: "Paket kredit Legal Review", STANDARD_REVIEW: "Legal Review oleh pengacara", DEEP_REVIEW: "Deep Review oleh pengacara (tambahan)" };
-const btn = "min-h-12 rounded-lg px-5 font-semibold";
+const INFO: Record<string, string> = { REFRESHED: "Status sudah diperiksa ulang ke Midtrans. Bila pembayaran belum tercatat, tunggu beberapa menit lalu periksa lagi." };
 
 export default async function CheckoutPage({ params, searchParams }: { params: Promise<{ orderId: string }>; searchParams: Promise<{ notice?: string }> }) {
   const { orderId } = await params;
@@ -27,7 +34,6 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
   if (!UUID.test(orderId)) notFound();
   const order = await billingService().getOrder(userId, orderId);
   if (!order) notFound();
-  const pending = order.payments.find((p) => p.status === "PENDING");
   const manualText = process.env.MANUAL_PAYMENT_INSTRUCTIONS?.trim() || null;
   const subject = await orderSubject(getPool(), userId, order);
   const pastDue = isPastDue(order);
@@ -61,40 +67,10 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
       <PriceBreakdown service={LABEL[order.kind] ?? "Layanan Yuktanya"} quote={{ amountIdr: order.amountIdr, variant: order.variant ?? "", usesCredit: order.variant === "CREDIT" }} kind={order.kind} />
       {fixedText(NOTICE, q.notice) && <p role="alert" className="font-semibold text-danger">{fixedText(NOTICE, q.notice)}</p>}
       <OrderStatus order={order} />
+      {fixedText(INFO, q.notice) && <p role="status" className="font-semibold">{fixedText(INFO, q.notice)}</p>}
       {order.status === "PENDING_PAYMENT" && !pastDue && (
-        <section className="space-y-4" aria-label="Cara membayar">
-          {pending?.provider === "manual" && (
-            <div className="space-y-2 rounded-lg border border-line bg-surface p-4">
-              <h2 className="text-xl font-semibold">Transfer bank</h2>
-              {manualText ? <p className="whitespace-pre-line">{manualText}</p> : (
-                <p>Instruksi transfer belum tersedia. Jangan melakukan transfer sekarang. <Link className="inline-flex min-h-12 items-center underline" href="/bantuan">Lihat halaman Bantuan</Link></p>
-              )}
-              <p>Tulis kode berikut pada berita transfer: <strong className="font-mono text-xl">{paymentReference(pending.id)}</strong></p>
-              <p>Setelah Anda mentransfer, tim kami mengonfirmasi pembayaran secara manual. Status di halaman ini akan berubah setelah dikonfirmasi.</p>
-            </div>
-          )}
-          {!pending && (
-            <form action={payAction} className="space-y-3">
-              <input type="hidden" name="orderId" value={order.id} />
-              <input type="hidden" name="provider" value="manual" />
-              <button type="submit" className={`${btn} bg-primary hover:bg-primary-hover text-on-primary`}>Bayar dengan transfer bank</button>
-            </form>
-          )}
-          {!production && !pending && (
-            <form action={payAction}>
-              <input type="hidden" name="orderId" value={order.id} />
-              <input type="hidden" name="provider" value="mock" />
-              <button type="submit" className={`${btn} border border-border-strong bg-surface`}>Pembayaran simulasi (hanya uji)</button>
-            </form>
-          )}
-          {!production && pending?.provider === "mock" && (
-            <form action={mockSettleAction}>
-              <input type="hidden" name="orderId" value={order.id} />
-              <input type="hidden" name="paymentId" value={pending.id} />
-              <button type="submit" className={`${btn} border border-border-strong bg-surface`}>Simulasikan pembayaran berhasil</button>
-            </form>
-          )}
-        </section>
+        <PaymentOptions orderId={order.id} payments={order.payments} midtransAvailable={midtransConfig() !== null} production={production}
+          manualText={manualText} payAction={payAction} refreshAction={refreshPaymentAction} mockSettleAction={mockSettleAction} />
       )}
       <nav className="flex flex-wrap gap-3">
         {order.kind === "DEEP_REVIEW" && order.status === "PAID" && <Link className="inline-flex min-h-12 items-center underline" href="/reviews">Buka Legal Review Saya</Link>}

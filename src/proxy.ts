@@ -16,6 +16,7 @@ export async function proxy(request: NextRequest) {
     production: process.env.NODE_ENV === "production",
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     googleAuth: googleAuthEnabled(process.env),
+    midtrans: Boolean(process.env.MIDTRANS_SERVER_KEY?.trim()),
   });
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("content-security-policy", csp);

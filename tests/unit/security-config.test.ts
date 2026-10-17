@@ -43,6 +43,16 @@ describe("Content-Security-Policy (audit C22)", () => {
     expect(g["connect-src"]).toEqual(["'self'", "https://proj.supabase.co"]);
   });
 
+  it("Midtrans aktif (Task 21): form-action hanya menambah dua asal halaman bayar Midtrans; script-src/connect-src tidak berubah", () => {
+    const m = directives(buildCsp({ nonce: "abc123", production: true, supabaseUrl: "https://proj.supabase.co", midtrans: true }));
+    expect(m["form-action"]).toEqual(["'self'", "https://app.midtrans.com", "https://app.sandbox.midtrans.com"]);
+    expect(m["script-src"]).toEqual(prod["script-src"]);
+    expect(m["connect-src"]).toEqual(prod["connect-src"]);
+    expect(m["frame-ancestors"]).toEqual(["'none'"]);
+    const both = directives(buildCsp({ nonce: "n", production: true, supabaseUrl: "https://proj.supabase.co", googleAuth: true, midtrans: true }));
+    expect(both["form-action"]).toEqual(["'self'", "https://proj.supabase.co", "https://accounts.google.com", "https://app.midtrans.com", "https://app.sandbox.midtrans.com"]);
+  });
+
   it("nonce acak per permintaan (base64, ≥ 128 bit)", () => {
     const a = cspNonce();
     expect(a).toMatch(/^[A-Za-z0-9+/]{22,}={0,2}$/);

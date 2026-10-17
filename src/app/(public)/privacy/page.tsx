@@ -44,6 +44,7 @@ export default function Page() {
               <li>Pemeriksa dari mitra hukum hanya dapat membuka dokumen yang ditugaskan kepadanya untuk pemeriksaan yang Anda minta.</li>
               <li>Tautan berbagi dibuat atas kehendak Anda, memiliki waktu kedaluwarsa, dan dapat Anda cabut.</li>
               <li>Halaman pengecekan verifikasi publik hanya menampilkan status, jenis, lingkup, dan sidik jari versi, tanpa isi dokumen.</li>
+              <li>Pembayaran diproses oleh Midtrans. Kami hanya mengirim kode pesanan, jumlah, dan nama layanan, tanpa isi dokumen, nama, atau email Anda. Data yang Anda isi di halaman Midtrans (misalnya data kartu) diproses oleh Midtrans dan tidak disimpan oleh Yuktanya.</li>
             </ul>
           ),
         },

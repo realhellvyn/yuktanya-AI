@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ForbiddenError } from "@/lib/documents/handlers";
+import { confirmAndApply, MIDTRANS_REF, MidtransError, verifyNotificationSignature, type MidtransConfig } from "./midtrans";
 import { BillingError, ORDER_KINDS, type BillingService } from "./service";
 
 export type BillingDeps = {
@@ -11,6 +12,8 @@ export type BillingDeps = {
   // Pembelian Deep Review hanya bila flag aktif; selain itu jalur API generik juga menolak.
   deepEnabled?: boolean;
   now?: () => Date;
+  // Webhook Midtrans. config null = server key belum diisi (pembayaran belum tersedia).
+  midtrans?: { config: MidtransConfig | null; fetchImpl?: typeof fetch; limiter?: { allow(key: string): boolean } };
 };
 type Params = Record<string, string>;
 type Handler = (deps: BillingDeps, req: Request, params?: Params) => Promise<Response>;
@@ -34,6 +37,8 @@ function mapError(e: unknown): Response {
       case "ALREADY_REVIEWED": return json({ code: "ALREADY_REVIEWED" }, 409);
       case "PRODUCT_UNAVAILABLE": return json({ code: "PRODUCT_UNAVAILABLE" }, 409);
       case "ORDER_NOT_PAYABLE": return json({ code: "ORDER_NOT_PAYABLE" }, 409);
+      case "PROVIDER_UNAVAILABLE": return json({ code: "PROVIDER_UNAVAILABLE" }, 409);
+      case "PROVIDER_ERROR": return json({ code: "PROVIDER_ERROR" }, 503);
       case "NOTE_REQUIRED": case "INVALID_ACTION": return invalid();
       case "NOT_RECONCILIATION": case "AMOUNT_MISMATCH": case "CONFLICT": return json({ code: e.code }, 409);
       default: return invalid();
@@ -82,7 +87,9 @@ export const getOrderHandler = userGuard(["id"], async (userId, deps, _req, p) =
   return o ? json(o) : notFound();
 });
 
-const payBody = z.object({ provider: z.enum(["mock", "manual"]) });
+// Pengguna hanya membayar lewat Midtrans (mock hanya non-produksi). Transfer manual tidak lagi diterima dari pengguna;
+// pembayaran manual lama tetap dapat dikonfirmasi admin (confirmManualHandler).
+const payBody = z.object({ provider: z.enum(["mock", "midtrans"]) });
 export const payHandler = userGuard(["id"], async (userId, deps, req, p) => {
   const body = payBody.safeParse(await readJson(req));
   if (!body.success) return invalid();
@@ -137,5 +144,68 @@ export const resolveReconciliationHandler: Handler = async (deps, req, params = 
   }
 };
 
-// Gateway nyata (Midtrans/Xendit) belum diputuskan: semua penyedia selain tidak ada → 404.
-export const webhookHandler: Handler = async () => notFound();
+const MAX_WEBHOOK_BYTES = 16 * 1024;
+class TooLarge extends Error {}
+async function readLimited(req: Request, max: number): Promise<string> {
+  const declared = Number(req.headers.get("content-length") ?? "0");
+  if (declared > max) throw new TooLarge();
+  if (!req.body) return "";
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel().catch(() => {});
+      throw new TooLarge();
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+const clientIp = (req: Request) => (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || req.headers.get("x-real-ip") || "unknown";
+
+// HTTP Notification Midtrans. Urutan: tanda tangan (SHA-512, waktu-konstan) → konfirmasi Get Status API dengan server key
+// → pemetaan status → fungsi DB idempoten. Badan notifikasi hanya dipakai untuk order_id; status dan jumlah dari API.
+// 200 = diproses/sudah diproses/diabaikan; 401 tanda tangan salah; 404 transaksi tidak dikenal Midtrans; 5xx hanya untuk
+// galat sementara (Midtrans mengulang). Pelunasan hanya membuka pesanan; tidak ada efek persetujuan profesional.
+export const webhookHandler: Handler = async (deps, req, params = {}) => {
+  if (params.provider !== "midtrans") return notFound();
+  const mt = deps.midtrans;
+  if (!mt?.config) return json({ code: "PROVIDER_UNAVAILABLE" }, 503);
+  if (mt.limiter && !mt.limiter.allow(clientIp(req))) return json({ code: "RATE_LIMITED" }, 429);
+  let raw: string;
+  try {
+    raw = await readLimited(req, MAX_WEBHOOK_BYTES);
+  } catch (e) {
+    if (e instanceof TooLarge) return json({ code: "PAYLOAD_TOO_LARGE" }, 413);
+    return invalid();
+  }
+  let body: unknown;
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    return invalid();
+  }
+  if (!verifyNotificationSignature(body, mt.config.serverKey)) return json({ code: "INVALID_SIGNATURE" }, 401);
+  const orderId = (body as { order_id: string }).order_id;
+  // Transaksi lain di akun Midtrans yang sama (bukan buatan Yuktanya): diterima agar tidak diulang, tanpa efek.
+  if (!MIDTRANS_REF.test(orderId)) return json({ result: "IGNORED" });
+  const now = deps.now?.() ?? new Date();
+  try {
+    const result = await confirmAndApply(mt.config, orderId, (action, eventId, amount) => deps.service.applyProviderStatus("midtrans", orderId, eventId, action, amount, now), mt.fetchImpl);
+    if (result === null) return json({ code: "NOT_FOUND" }, 404);
+    // Dana masuk untuk referensi Yuktanya tanpa baris pembayaran: perlu ditangani manual (cek dashboard Midtrans).
+    if (result === "NOT_FOUND") console.error("notifikasi Midtrans terkonfirmasi tanpa pembayaran Yuktanya", orderId);
+    return json({ result });
+  } catch (e) {
+    if (e instanceof MidtransError) {
+      console.error("konfirmasi status Midtrans gagal", e.code);
+      return json({ code: "PROVIDER_ERROR" }, e.code === "UNAVAILABLE" ? 503 : 502);
+    }
+    console.error("pemrosesan notifikasi Midtrans gagal", e instanceof Error ? e.message.slice(0, 200) : "unknown");
+    return json({ code: "INTERNAL" }, 500);
+  }
+};
