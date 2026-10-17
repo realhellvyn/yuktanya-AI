@@ -36,8 +36,26 @@ function loopbackOrigin(raw: string | undefined): string | null {
   }
 }
 
+// Server key Midtrans tidak pernah berisi spasi, kutip, atau "=". Salah salin yang tidak terlihat di kolom Sensitive Vercel
+// (kutip pembungkus, baris baru, karakter lebar-nol/BOM, atau "MIDTRANS_SERVER_KEY=" ikut tertempel) dibersihkan di sini.
+function cleanKey(raw: string | undefined): string {
+  let k = (raw ?? "").replace(/[\s\u200B-\u200D\u2060\uFEFF]/g, "");
+  for (let i = 0; i < 2; i++) {
+    const quoted = k.match(/^(["'`])(.*)\1$/);
+    if (quoted) k = quoted[2];
+    if (k.startsWith("MIDTRANS_SERVER_KEY=")) k = k.slice("MIDTRANS_SERVER_KEY=".length);
+  }
+  return k;
+}
+
+// Bentuk kunci untuk diagnosis di log: jenis awalan + panjang saja, tidak pernah isi kunci.
+export function keyShape(key: string): string {
+  const kind = ["SB-Mid-server", "SB-Mid-client", "Mid-server", "Mid-client"].find((p) => key.startsWith(`${p}-`)) ?? "lain";
+  return `${kind} len=${key.length}`;
+}
+
 export function midtransConfig(env: Env = process.env): MidtransConfig | null {
-  const serverKey = (env.MIDTRANS_SERVER_KEY ?? "").trim();
+  const serverKey = cleanKey(env.MIDTRANS_SERVER_KEY);
   if (!serverKey) return null;
   const mode = (env.MIDTRANS_ENV ?? "").trim() === "production" ? "production" : "sandbox";
   const onVercel = Boolean(env.VERCEL || env.VERCEL_ENV);
@@ -98,7 +116,8 @@ export async function createSnapTransaction(cfg: MidtransConfig, input: SnapInpu
   const data = await readJson(res);
   if (res.status >= 400) {
     const msgs = Array.isArray(data?.error_messages) ? (data.error_messages as unknown[]).map(String).join("; ").slice(0, 300) : "";
-    throw new MidtransError("REJECTED", `snap http ${res.status} ${msgs}`);
+    const diag = res.status === 401 ? ` [mode=${cfg.mode} key=${keyShape(cfg.serverKey)}]` : "";
+    throw new MidtransError("REJECTED", `snap http ${res.status}${diag} ${msgs}`);
   }
   const token = data?.token, redirect = data?.redirect_url;
   if (typeof token !== "string" || typeof redirect !== "string") throw new MidtransError("BAD_RESPONSE", "snap tanpa token/redirect_url");

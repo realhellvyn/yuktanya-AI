@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
-  MIDTRANS_FORM_ACTION_ORIGINS, MIN_PAYMENT_MINUTES, MidtransError, createSnapTransaction, eventIdFor, getTransactionStatus, mapStatus, midtransConfig,
-  parseAmount, verifyNotificationSignature,
+  MIDTRANS_FORM_ACTION_ORIGINS, MIN_PAYMENT_MINUTES, MidtransError, createSnapTransaction, eventIdFor, getTransactionStatus, keyShape, mapStatus,
+  midtransConfig, parseAmount, verifyNotificationSignature,
 } from "@/lib/billing/midtrans";
 
 const KEY = "SB-Mid-server-UJI-rahasia-123";
@@ -62,6 +62,22 @@ describe("midtransConfig", () => {
     }
   });
 
+  it("salah salin yang tidak terlihat dibersihkan: kutip pembungkus, spasi/baris baru di tengah, karakter lebar-nol, awalan NAMA=", () => {
+    for (const raw of [`"${KEY}"`, `'${KEY}'`, `${KEY.slice(0, 10)}\n${KEY.slice(10)}`, `\uFEFF${KEY}\u200B`, `MIDTRANS_SERVER_KEY=${KEY}`, ` "MIDTRANS_SERVER_KEY=${KEY}" `]) {
+      expect(midtransConfig({ MIDTRANS_SERVER_KEY: raw })!.serverKey, JSON.stringify(raw)).toBe(KEY);
+    }
+    expect(midtransConfig({ MIDTRANS_SERVER_KEY: `""` })).toBeNull();
+  });
+
+  it("keyShape hanya menyebut jenis awalan dan panjang, tidak pernah isi kunci", () => {
+    expect(keyShape(KEY)).toBe(`SB-Mid-server len=${KEY.length}`);
+    expect(keyShape("Mid-server-abcdefghijkl")).toBe("Mid-server len=23");
+    expect(keyShape("SB-Mid-client-abcdefgh")).toBe("SB-Mid-client len=22");
+    expect(keyShape("Mid-client-abcdefgh")).toBe("Mid-client len=19");
+    expect(keyShape("abcdefghijklmnop")).toBe("lain len=16");
+    expect(keyShape(KEY)).not.toContain("UJI");
+  });
+
   it("MIDTRANS_TEST_BASE_URL diabaikan di Vercel (VERCEL atau VERCEL_ENV ada), walau loopback; harness lokal tetap memakainya", () => {
     const local = { MIDTRANS_SERVER_KEY: KEY, MIDTRANS_TEST_BASE_URL: "http://127.0.0.1:54997", NODE_ENV: "production" };
     expect(midtransConfig(local)!.apiBase).toBe("http://127.0.0.1:54997");
@@ -115,6 +131,10 @@ describe("createSnapTransaction", () => {
   it("galat Midtrans: 4xx → REJECTED, 5xx/jaringan → UNAVAILABLE, redirect ke domain lain → BAD_RESPONSE; pesan tanpa server key", async () => {
     expect(await errCode(createSnapTransaction(cfg, input, fakeFetch(json({ error_messages: ["transaction_details.order_id sudah digunakan"] }, 400)).impl))).toBe("REJECTED");
     expect(await errCode(createSnapTransaction(cfg, input, fakeFetch(json({ error_messages: ["Access denied"] }, 401)).impl))).toBe("REJECTED");
+    // 401: pesan menyebut mode dan bentuk kunci (bukan isinya) agar salah pasang kunci/mode terlihat di log.
+    const denied = await createSnapTransaction(cfg, input, fakeFetch(json({ error_messages: ["Access denied"] }, 401)).impl).catch((e: Error) => e.message);
+    expect(denied).toContain(`mode=sandbox key=SB-Mid-server len=${KEY.length}`);
+    expect(denied).not.toContain(KEY);
     expect(await errCode(createSnapTransaction(cfg, input, fakeFetch(new Response("x", { status: 503 })).impl))).toBe("UNAVAILABLE");
     expect(await errCode(createSnapTransaction(cfg, input, fakeFetch(new TypeError("fetch failed")).impl))).toBe("UNAVAILABLE");
     expect(await errCode(createSnapTransaction(cfg, input, fakeFetch(new DOMException("timeout", "TimeoutError")).impl))).toBe("UNAVAILABLE");
