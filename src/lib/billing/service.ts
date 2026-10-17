@@ -5,6 +5,7 @@ import { confirmAndApply, MIN_PAYMENT_MINUTES, type GatewayAction, type Midtrans
 export type OrderKind = "MEMBERSHIP_MONTHLY" | "MEMBERSHIP_ANNUAL" | "BUNDLE" | "STANDARD_REVIEW" | "DEEP_REVIEW";
 export const ORDER_KINDS: readonly OrderKind[] = ["MEMBERSHIP_MONTHLY", "MEMBERSHIP_ANNUAL", "BUNDLE", "STANDARD_REVIEW", "DEEP_REVIEW"];
 export type Quote = { amountIdr: number; variant: string; usesCredit: boolean };
+export type ActiveStandardReview = { orderId: string; status: "PENDING_PAYMENT" | "PAID"; requestId: string | null };
 export type OrderResult = { orderId: string; status: string; amountIdr: number; duplicate: boolean };
 export type OrderView = {
   id: string; kind: OrderKind; refId: string | null; status: string; amountIdr: number; variant: string | null;
@@ -32,6 +33,9 @@ function mapError(e: unknown): never {
 export interface BillingService {
   preview(userId: string, kind: OrderKind, refId: string | null, now?: Date): Promise<Quote>;
   createOrder(userId: string, kind: OrderKind, refId: string | null, key: string, now?: Date): Promise<OrderResult>;
+  // Pesanan Legal Review aktif untuk versi ini (menunggu bayar dan belum lewat batas, atau sudah dibayar) milik pengguna;
+  // null bila tidak ada. Syarat sama dengan penolakan ALREADY_REVIEWED di create_order/preview_price.
+  activeStandardReview(userId: string, versionId: string, now?: Date): Promise<ActiveStandardReview | null>;
   // Adaptor hosted (Midtrans): redirectUrl = halaman bayar penyedia; klik ulang selama masih PENDING memakai URL yang sama.
   startPayment(userId: string, orderId: string, provider: string, now?: Date): Promise<{ paymentId: string; instructions: string; redirectUrl?: string }>;
   // Status penyedia yang SUDAH dikonfirmasi lewat API penyedia → fungsi DB (settle/fail/record). Idempoten per eventId.
@@ -83,6 +87,11 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
       } catch (e) {
         return mapError(e);
       }
+    },
+    async activeStandardReview(userId, versionId, now = new Date()) {
+      const { rows } = await pool.query("select * from standard_review_order_for_version($1, $2, $3)", [userId, versionId, now]);
+      const r = rows[0];
+      return r ? { orderId: r.order_id, status: r.order_status, requestId: r.request_id ?? null } : null;
     },
     async createOrder(userId, kind, refId, key, now = new Date()) {
       try {

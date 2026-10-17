@@ -25,10 +25,11 @@ export async function journey({ page, step, shot, base, vp, db, newActor, midtra
   const orderRow = async (id) => (await db.query("select status from orders where id = $1", [id])).rows[0].status;
   const pays = async (id) => (await db.query("select provider, status, provider_ref from payments where order_id = $1 order by created_at", [id])).rows;
   let reviewOrder = "";
+  let docUrl = "";
 
   await step(tag("checkout Legal Review: hanya 'Bayar dengan Midtrans' (tanpa transfer bank), tanpa overflow/target kecil"), async () => {
     await register(page, base, `midtrans+${n}@example.com`);
-    await createNdaVersion(page, base);
+    docUrl = await createNdaVersion(page, base);
     await page.click("button:has-text('Ajukan Legal Review')");
     await page.waitForURL(/\/checkout\/[0-9a-f-]{36}$/, { timeout: 30000 });
     reviewOrder = orderOf();
@@ -37,6 +38,17 @@ export async function journey({ page, step, shot, base, vp, db, newActor, midtra
     if (!t.includes("Bayar dengan Midtrans") || !t.includes("tidak menyimpan data kartu")) throw new Error("opsi Midtrans tidak lengkap: " + t.slice(0, 500));
     await layoutOk();
     await shot("midtrans-01-checkout");
+  });
+
+  await step(tag("Task 23: halaman dokumen untuk versi yang sudah dipesan: 'Lanjutkan pembayaran', tanpa harga dan tanpa 'Ajukan Legal Review'"), async () => {
+    await page.goto(docUrl);
+    const link = page.locator(`main a[href="/checkout/${reviewOrder}"]`, { hasText: "Lanjutkan pembayaran" });
+    if ((await link.count()) !== 1) throw new Error("tautan Lanjutkan pembayaran tidak tampil");
+    if (await page.locator("button:has-text('Ajukan Legal Review')").count()) throw new Error("tombol Ajukan Legal Review masih tampil");
+    const t = await page.innerText("main");
+    if (/Biaya Legal Review oleh pengacara untuk versi ini/.test(t)) throw new Error("harga Legal Review masih ditawarkan");
+    await layoutOk();
+    await Promise.all([page.waitForURL(new RegExp(`/checkout/${reviewOrder}$`), { timeout: 30000 }), link.click()]);
   });
 
   await step(tag("Snap menerima jumlah dan finish dari server, tanpa data pribadi; transaksi dibiarkan kedaluwarsa → bisa bayar ulang"), async () => {
@@ -100,6 +112,15 @@ export async function journey({ page, step, shot, base, vp, db, newActor, midtra
     await page.waitForURL(/\/reviews/);
     if (!(await page.innerText("main")).includes("Perjanjian Kerahasiaan")) throw new Error("Legal Review tidak tampil di daftar");
     await shot("midtrans-04-lunas");
+  });
+
+  await step(tag("Task 23: halaman dokumen setelah lunas: 'Lihat Legal Review' ke pemeriksaan terkait, tanpa harga"), async () => {
+    const req = (await db.query("select id from review_requests where order_id = $1", [reviewOrder])).rows[0].id;
+    await page.goto(docUrl);
+    const link = page.locator(`main a[href="/reviews/${req}"]`, { hasText: "Lihat Legal Review" });
+    if ((await link.count()) !== 1) throw new Error("tautan Lihat Legal Review tidak tampil");
+    if (await page.locator("button:has-text('Ajukan Legal Review')").count()) throw new Error("tombol Ajukan Legal Review masih tampil");
+    await Promise.all([page.waitForURL(new RegExp(`/reviews/${req}$`), { timeout: 30000 }), link.click()]);
   });
 
   await step(tag("Membership: parameter status di URL kembali tidak melunasi; 'Perbarui status' melunasi bila webhook tidak datang"), async () => {

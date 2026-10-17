@@ -62,6 +62,19 @@ describe("halaman Deep Review pemilik", () => {
     const s2 = await loadDeepStatusPage(service, c.owner, deep);
     expect(s2.kind === "ok" && s2.assigned).toBe(true);
   });
+  it("Task 23: Deep Review dibatalkan setelah induk dicabut dan dikembalikan → pemilik tetap menemukan status akhirnya (CANCELLED)", async () => {
+    const c = await kit.completedStandard();
+    const b = await kit.buy(c.owner, "DEEP_REVIEW", c.req);
+    const deep = (await pool.query("select id from deep_requests where order_id = $1", [b.order_id])).rows[0].id as string;
+    await pool.query("select revoke_verification($1, $2, 'ERROR', 'uji', now())", [c.f.admin, c.verificationId]);
+    await pool.query("select admin_resolve_reconciliation($1, $2, 'REFUND_RECORDED', 'dikembalikan via bank', now())", [c.f.admin, b.order_id]);
+    expect(await service.forParent(c.owner, c.req)).toEqual({ deepId: deep });
+    expect(await loadDeepOfferPage(on, c.owner, c.req)).toEqual({ kind: "redirect", to: `/deep-reviews/${deep}` });
+    const s = await loadDeepStatusPage(service, c.owner, deep);
+    expect(s.kind === "ok" && s.deep.status).toBe("CANCELLED");
+    expect(await service.forParent(await createUser(pool), c.req)).toBeNull();
+  });
+
   it("tidak layak: induk tanpa catatan yang perlu ditindaklanjuti menampilkan alasan, bukan tawaran", async () => {
     const c = await kit.completedStandard({ severity: "MINOR", actionable: false });
     const r = await loadDeepOfferPage(on, c.owner, c.req);

@@ -70,7 +70,10 @@ export function createPgDeepService(pool: Pool): DeepService {
     },
 
     async forParent(userId, parent) {
-      const { rows } = await pool.query("select id from deep_requests where parent_request_id = $1 and owner_id = $2 and status <> 'CANCELLED'", [parent, userId]);
+      // Deep yang masih hidup diutamakan; bila hanya ada yang dibatalkan (Task 23: induk dicabut lalu pesanan ditutup lewat
+      // rekonsiliasi), yang terbaru tetap dikembalikan agar pemilik melihat status akhirnya, bukan kehilangan jejaknya.
+      const { rows } = await pool.query(
+        "select id from deep_requests where parent_request_id = $1 and owner_id = $2 order by (status = 'CANCELLED'), created_at desc limit 1", [parent, userId]);
       return rows[0] ? { deepId: rows[0].id } : null;
     },
 

@@ -10,7 +10,7 @@ const TITLE: Record<string, string> = {
   REFERRED_SPECIAL_CASE: "Dirujuk sebagai Special Legal Case",
 };
 const DISP: Record<string, string> = { RESOLVED: "Sudah diselesaikan", ACCEPTED_RISK: "Risiko diterima", UNRESOLVED: "Belum diselesaikan", OUT_OF_SCOPE: "Di luar ruang lingkup" };
-const STATUS: Record<string, string> = { QUEUED: "Dalam antrean", IN_REVIEW: "Sedang diperiksa", READY_FOR_DECISION: "Menunggu keputusan", ON_HOLD: "Ditahan karena verifikasi Legal Review dicabut", CANCELLED: "Dibatalkan" };
+const STATUS: Record<string, string> = { QUEUED: "Dalam antrean", IN_REVIEW: "Sedang diperiksa", READY_FOR_DECISION: "Menunggu keputusan", ON_HOLD: "Ditahan karena verifikasi Legal Review dicabut", CANCELLED: "Dibatalkan karena verifikasi Legal Review dicabut; pemeriksaan tidak dilanjutkan" };
 
 export function DeepResult({ deep, verifyUrl }: { deep: OwnerDeep; verifyUrl?: string }) {
   if (deep.status !== "COMPLETED") {

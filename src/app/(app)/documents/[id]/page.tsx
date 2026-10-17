@@ -10,8 +10,8 @@ import { documentsService } from "@/lib/documents/runtime";
 import { requireUserId } from "@/lib/documents/session";
 import { getPool } from "@/lib/db";
 import { VerificationPanel } from "@/components/verification/verification-panel";
+import { ReviewRequestCard } from "@/components/reviews/review-request-card";
 import { billingService } from "@/lib/billing/runtime";
-import { formatIdr } from "@/lib/pricing/catalog";
 import { flags } from "@/lib/flags";
 import { qrPng, verifyUrl } from "@/lib/verification/qr";
 import { verificationService } from "@/lib/verification/runtime";
@@ -69,7 +69,11 @@ export default async function DocumentPage({ params, searchParams }: { params: P
   const aiReport = selected ? await latestAiReport(pool, userId, selected.id) : null;
   const aiVerified = verifications.some((v) => v.kind === "AI" && v.status === "ACTIVE");
   const aiStatus = fixedText(AI_REVIEW_STATUS_TEXT, q.ai) ? (q.ai as AiReviewStatus) : null;
-  const quote = selected && !openCase && !highRisk ? await billingService().preview(userId, "STANDARD_REVIEW", selected.id).catch(() => null) : null;
+  // Versi yang sudah punya pesanan Legal Review aktif (menunggu bayar atau sudah dibayar) tidak ditawari harga lagi;
+  // pratinjau harga di DB juga menolaknya (ALREADY_REVIEWED). Kartu menautkan ke pembayaran atau ke Legal Review itu.
+  const reviewable = Boolean(selected && !openCase && !highRisk);
+  const activeReview = reviewable && selected ? await billingService().activeStandardReview(userId, selected.id) : null;
+  const quote = reviewable && selected && !activeReview ? await billingService().preview(userId, "STANDARD_REVIEW", selected.id).catch(() => null) : null;
   const changes = selected && against ? diffRendered(against.doc, selected.doc).filter((c) => c.change !== "same") : null;
 
   const when = (iso: string) => new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(iso));
@@ -158,15 +162,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
                 <ButtonLink href={`/cases/${openCase}`} variant="secondary">Lihat status Special Legal Case</ButtonLink>
               </Card>
             )}
-            {quote && (
-              <Card className="space-y-3 border-line bg-tint">
-                <form action={requestReviewAction} className="space-y-3">
-                  <input type="hidden" name="versionId" value={selected.id} />
-                  <p>Biaya Legal Review oleh pengacara untuk versi ini: <strong>{formatIdr(quote.amountIdr)}</strong>. Pembayaran adalah biaya pemeriksaan. Pembayaran tidak menjamin hasil positif.</p>
-                  <Button type="submit">Ajukan Legal Review</Button>
-                </form>
-              </Card>
-            )}
+            {reviewable && <ReviewRequestCard versionId={selected.id} active={activeReview} quote={quote} action={requestReviewAction} />}
             {!openCase && !highRisk && (
               <div className="flex flex-wrap items-center gap-x-2 text-muted"><span>Dokumen rumit atau berisiko tinggi dapat diajukan sebagai Kasus Hukum Khusus (Special Legal Case).</span><ButtonLink href={`/cases/new?document=${id}`} variant="quiet" className="!px-0">Ajukan Special Legal Case</ButtonLink></div>
             )}

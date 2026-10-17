@@ -15,7 +15,7 @@ export const metadata = { title: "Deep Review | Yuktanya" };
 export const dynamic = "force-dynamic";
 const HOLD: Record<string, string> = {
   ON_HOLD: "Deep Review ditahan karena verifikasi Legal Review dicabut atau ditangguhkan. Anda akan diberi tahu bila pemeriksaan berlanjut.",
-  CANCELLED: "Deep Review ini dibatalkan.",
+  CANCELLED: "Deep Review ini dibatalkan karena verifikasi Legal Review dicabut. Pemeriksaan tidak dilanjutkan dan tidak ada lencana baru. Untuk pertanyaan tentang pembayaran Deep Review, hubungi tim Yuktanya.",
 };
 
 export default async function DeepStatusPage({ params }: { params: Promise<{ id: string }> }) {
@@ -28,7 +28,7 @@ export default async function DeepStatusPage({ params }: { params: Promise<{ id:
   const completed = deep.status === "COMPLETED";
   const why = enhancedExplanation(deep.outcome, deep.decisionReason, deep.verification?.status ?? null);
   // Selama Deep Review belum selesai, pemilik diberi tahu bila Enhanced saat ini belum dapat terbit (rubrik belum disetujui).
-  const rubricApproved = completed ? true : await deepService().rubricApproved();
+  const rubricApproved = completed || deep.status === "CANCELLED" ? true : await deepService().rubricApproved();
   return (
     <main className="max-w-3xl space-y-6">
       <PageHeading title="Deep Review" lead="Pemeriksaan tambahan oleh profesional hukum atas Legal Note dari Legal Review Anda." />
@@ -54,6 +54,12 @@ export default async function DeepStatusPage({ params }: { params: Promise<{ id:
           </Card>
           <DeepResult deep={deep} verifyUrl={deep.verification ? verifyUrl(deep.verification.code) : undefined} />
         </>
+      ) : deep.status === "CANCELLED" ? (
+        // Status akhir (Task 23): tidak ada hasil yang akan menyusul, jadi kalimat "hasil akan tampil" tidak ditampilkan.
+        <Card className="space-y-2">
+          <p>Hasil Legal Review Anda tetap tercatat sesuai statusnya di halaman Legal Review.</p>
+          <p>{LEGAL_DISCLAIMER}</p>
+        </Card>
       ) : (
         <Card className="space-y-2">
           <p>Hasil akan tampil di halaman ini setelah profesional hukum selesai memeriksa.</p>
