@@ -102,13 +102,15 @@ async function readBody(res: Response): Promise<{ data: Record<string, unknown> 
 const keyDiag = (cfg: MidtransConfig) => ` [mode=${cfg.mode} key=${keyShape(cfg.serverKey)}]`;
 
 // Detail galat Midtrans untuk log: error_messages (array), atau error/status_message/message (string), atau 200 karakter
-// pertama teks mentah bila bukan JSON. Dipotong ≤300 karakter; server key yang terpantul di badan disensor.
+// pertama teks mentah bila bukan JSON. Dipotong ≤300 karakter; server key yang terpantul di badan disensor SEBELUM dipotong,
+// sehingga kunci yang melintasi batas potong tidak pernah bocor sebagian.
 function errorDetail(cfg: MidtransConfig, data: Record<string, unknown> | null, text: string): string {
+  const redact = (s: string) => s.split(cfg.serverKey).join("[server key]");
   let d = "";
   if (Array.isArray(data?.error_messages)) d = (data.error_messages as unknown[]).map(String).join("; ");
   else if (data) d = [data.error, data.status_message, data.message].find((v): v is string => typeof v === "string") ?? "";
-  else d = text.slice(0, 200);
-  return d.split(cfg.serverKey).join("[server key]").slice(0, 300);
+  else d = redact(text).slice(0, 200);
+  return redact(d).slice(0, 300);
 }
 
 // "yyyy-MM-dd HH:mm:ss +0700" (format expiry.start_time Snap), selalu WIB.

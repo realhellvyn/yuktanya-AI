@@ -3,12 +3,17 @@ import { createServerClient } from "@supabase/ssr";
 import { guardPath } from "@/lib/auth/permissions";
 import { attributionCookieOptions, parseAttribution } from "@/lib/auth/attribution";
 import { googleAuthEnabled } from "@/lib/auth/google";
+import { oversizedActionBody } from "@/lib/security/body-limit";
 import { buildCsp, cspNonce } from "@/lib/security/headers";
 import { supabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import { fetchSessionRoles, hasSupabaseEnv, type SessionRoles } from "@/lib/supabase/roles";
 
 export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
+  // Badan server action > 1 MB hanya diterima di halaman unggahan (Task 24, A24 M1).
+  if (oversizedActionBody(request.method, pathname, request.headers.get("content-length"))) {
+    return NextResponse.json({ code: "PAYLOAD_TOO_LARGE" }, { status: 413 });
+  }
   // CSP dengan nonce per permintaan (audit C22): Next.js membaca nonce dari header CSP permintaan dan menempelkannya ke
   // skripnya sendiri; header yang sama dikirim ke browser.
   const csp = buildCsp({

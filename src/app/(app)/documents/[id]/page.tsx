@@ -31,6 +31,7 @@ import { uploadRepo } from "@/lib/uploads/runtime";
 import { ackEmailAvailable } from "@/lib/vault/email-config";
 import { versionStatuses, versionStatusText, wasReviewed } from "@/lib/documents/version-status";
 import { fixedText, isUuid } from "@/lib/query-text";
+import { orNull } from "@/lib/or-null";
 
 // Task 24 (A04): fungsi tidak boleh dipotong sebelum tenggat giliran AI 75 detik (+ baca berkas/DB); harus literal untuk Next.
 export const maxDuration = 120;
@@ -75,7 +76,9 @@ export default async function DocumentPage({ params, searchParams }: { params: P
   // Versi yang sudah punya pesanan Legal Review aktif (menunggu bayar atau sudah dibayar) tidak ditawari harga lagi;
   // pratinjau harga di DB juga menolaknya (ALREADY_REVIEWED). Kartu menautkan ke pembayaran atau ke Legal Review itu.
   const reviewable = Boolean(selected && !openCase && !highRisk);
-  const activeReview = reviewable && selected ? await billingService().activeStandardReview(userId, selected.id) : null;
+  // Bawaan review Task 23: galat lookup tidak menjatuhkan halaman (kartu kembali ke pratinjau harga); preview_price di DB tetap
+  // menolak ALREADY_REVIEWED, jadi pemesanan ganda tetap tertolak di server.
+  const activeReview = reviewable && selected ? await orNull(billingService().activeStandardReview(userId, selected.id), "active_standard_review_lookup_failed") : null;
   const quote = reviewable && selected && !activeReview ? await billingService().preview(userId, "STANDARD_REVIEW", selected.id).catch(() => null) : null;
   const changes = selected && against ? diffRendered(against.doc, selected.doc).filter((c) => c.change !== "same") : null;
 

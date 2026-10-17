@@ -180,6 +180,14 @@ describe("createSnapTransaction", () => {
     const echoedRaw = await snapMsg(new Response(`kunci ${KEY} ditolak`, { status: 400 }));
     expect(echoedRaw).not.toContain(KEY);
   });
+
+  it("bawaan review Task 23: kunci yang melintasi batas 200 karakter teks mentah disensor SEBELUM dipotong (tidak bocor sebagian)", async () => {
+    for (const pad of [185, 190, 195, 199]) {
+      const m = await snapMsg(new Response(`${"a".repeat(pad)}${KEY} ekor`, { status: 400 }));
+      for (let n = 4; n <= KEY.length; n++) expect(m, `pad ${pad}, ${n} karakter`).not.toContain(KEY.slice(0, n));
+      expect(m).toContain("a".repeat(pad));
+    }
+  });
 });
 
 describe("getTransactionStatus", () => {
