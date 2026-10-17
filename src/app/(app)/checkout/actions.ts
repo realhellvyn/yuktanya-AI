@@ -79,7 +79,8 @@ export async function refreshPaymentAction(formData: FormData): Promise<void> {
     await billingService().refreshHosted(userId, orderId, cfg);
   } catch (e) {
     if (e instanceof MidtransError) {
-      console.error("perbarui status Midtrans gagal", e.code);
+      // Pesan galat Midtrans sudah tanpa kunci (hanya mode dan bentuk kunci); dicatat utuh agar penyebab terlihat di log.
+      console.error("perbarui status Midtrans gagal", e.message.slice(0, 400));
       redirect(`/checkout/${orderId}?notice=STATUS_UNAVAILABLE`);
     }
     throw e;

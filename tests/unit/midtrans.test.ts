@@ -141,6 +141,45 @@ describe("createSnapTransaction", () => {
     expect(await errCode(createSnapTransaction(cfg, input, fakeFetch(json({ token: "t", redirect_url: "https://evil.example/pay" }, 201)).impl))).toBe("BAD_RESPONSE");
     expect(await errCode(createSnapTransaction(cfg, input, fakeFetch(new Response("bukan json", { status: 201 })).impl))).toBe("BAD_RESPONSE");
   });
+
+  const snapMsg = (res: Response) => createSnapTransaction(cfg, input, fakeFetch(res).impl).then(() => "NO_ERROR", (e: Error) => e.message);
+
+  it("401 dengan badan {\"error\":\"Unauthorized\"} (respons Midtrans untuk kunci salah) → pesan memuat detail dan diagnosis", async () => {
+    const m = await snapMsg(json({ error: "Unauthorized" }, 401));
+    expect(m).toContain("MIDTRANS_REJECTED");
+    expect(m).toContain("snap http 401");
+    expect(m).toContain("Unauthorized");
+    expect(m).toContain(`[mode=sandbox key=SB-Mid-server len=${KEY.length}]`);
+    expect(m).not.toContain(KEY);
+  });
+
+  it("4xx dengan status_message atau message (string) → detail dimuat; tanpa diagnosis kunci di luar 401", async () => {
+    const a = await snapMsg(json({ status_message: "gross_amount tidak sama dengan jumlah item_details" }, 400));
+    expect(a).toContain("snap http 400");
+    expect(a).toContain("gross_amount tidak sama dengan jumlah item_details");
+    expect(a).not.toContain("mode=");
+    const b = await snapMsg(json({ message: "Pesan lain" }, 422));
+    expect(b).toContain("Pesan lain");
+    expect(a + b).not.toContain(KEY);
+  });
+
+  it("4xx bukan JSON → 200 karakter pertama teks mentah; detail selalu ≤300 karakter dan tanpa server key", async () => {
+    const raw = `<html>Bad Request ${"x".repeat(400)}</html>`;
+    const m = await snapMsg(new Response(raw, { status: 400 }));
+    expect(m).toContain("<html>Bad Request");
+    expect(m).toContain(raw.slice(0, 200));
+    expect(m).not.toContain(raw.slice(0, 201));
+    const long = await snapMsg(json({ error_messages: ["y".repeat(500)] }, 400));
+    expect(long).toContain("y".repeat(300));
+    expect(long).not.toContain("y".repeat(301));
+    const longStr = await snapMsg(json({ error: "z".repeat(500) }, 401));
+    expect(longStr).not.toContain("z".repeat(301));
+    // Kunci yang terpantul di badan respons tidak pernah ikut ke pesan.
+    const echoed = await snapMsg(json({ error: `kunci ${KEY} ditolak` }, 401));
+    expect(echoed).not.toContain(KEY);
+    const echoedRaw = await snapMsg(new Response(`kunci ${KEY} ditolak`, { status: 400 }));
+    expect(echoedRaw).not.toContain(KEY);
+  });
 });
 
 describe("getTransactionStatus", () => {
@@ -170,6 +209,22 @@ describe("getTransactionStatus", () => {
     expect(await errCode(getTransactionStatus(cfg, REF, fakeFetch(new Response("<html>", { status: 200 })).impl))).toBe("BAD_RESPONSE");
     expect(await errCode(getTransactionStatus(cfg, REF, fakeFetch(json({ ...settled, order_id: "ytk-lain" })).impl))).toBe("BAD_RESPONSE");
     expect(await errCode(getTransactionStatus(cfg, REF, fakeFetch(json({ ...settled, transaction_id: undefined })).impl))).toBe("BAD_RESPONSE");
+  });
+
+  it("401/403 → UNAVAILABLE dengan diagnosis mode dan bentuk kunci (bukan isinya); 5xx tanpa diagnosis", async () => {
+    const msg = (res: Response) => getTransactionStatus(cfg, REF, fakeFetch(res).impl).then(() => "NO_ERROR", (e: Error) => e.message);
+    for (const status of [401, 403]) {
+      const m = await msg(json({ error: "Unauthorized" }, status));
+      expect(m).toContain("MIDTRANS_UNAVAILABLE");
+      expect(m).toContain(`status http ${status}`);
+      expect(m).toContain(`[mode=sandbox key=SB-Mid-server len=${KEY.length}]`);
+      expect(m).not.toContain(KEY);
+    }
+    // status_code 401 di badan HTTP 200 juga dianggap kunci ditolak.
+    const inBody = await msg(json({ status_code: "401", status_message: "Unauthorized" }));
+    expect(inBody).toContain("status_code 401");
+    expect(inBody).toContain(`[mode=sandbox key=SB-Mid-server len=${KEY.length}]`);
+    expect(await msg(new Response("x", { status: 502 }))).not.toContain("mode=");
   });
 
   it("order_id dikodekan di URL", async () => {

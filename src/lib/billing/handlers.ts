@@ -208,7 +208,8 @@ export const webhookHandler: Handler = async (deps, req, params = {}) => {
     return json({ result });
   } catch (e) {
     if (e instanceof MidtransError) {
-      console.error("konfirmasi status Midtrans gagal", e.code);
+      // Pesan galat Midtrans sudah tanpa kunci (hanya mode dan bentuk kunci); dicatat utuh agar penyebab terlihat di log.
+      console.error("konfirmasi status Midtrans gagal", e.message.slice(0, 400));
       return json({ code: "PROVIDER_ERROR" }, e.code === "UNAVAILABLE" ? 503 : 502);
     }
     console.error("pemrosesan notifikasi Midtrans gagal", e instanceof Error ? e.message.slice(0, 200) : "unknown");

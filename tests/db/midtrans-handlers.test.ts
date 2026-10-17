@@ -1,6 +1,6 @@
 // Task 21: adaptor, layanan, dan webhook Midtrans terhadap DB uji, dengan Snap/Status API palsu (fetch tiruan).
 import { createHash } from "node:crypto";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { createManualAdapter, createMidtransAdapter, createMockAdapter } from "@/lib/billing/adapters";
 import { payHandler, webhookHandler, type BillingDeps } from "@/lib/billing/handlers";
 import { midtransConfig } from "@/lib/billing/midtrans";
@@ -94,6 +94,18 @@ describe("adaptor + layanan Midtrans", () => {
     await expect(service.startPayment(u, o.order_id, "midtrans", NOW)).rejects.toMatchObject({ code: "PROVIDER_ERROR" });
     expect((await pool.query("select count(*)::int as n from payments where order_id = $1", [o.order_id])).rows[0].n).toBe(0);
     mt.setSnapDown(false);
+    // Task 23: Snap 401 {"error":"Unauthorized"} → log memuat detail lengkap dan diagnosis kunci (tidak terpotong), tanpa kunci.
+    const unauthorized = (async () => Response.json({ error: "Unauthorized" }, { status: 401 })) as unknown as typeof fetch;
+    const svc401 = createPgBillingService(pool, [createMidtransAdapter(midtransConfig({ MIDTRANS_SERVER_KEY: KEY, MIDTRANS_ENV: "production" })!, () => "https://yuktanya.com", unauthorized)]);
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(svc401.startPayment(u, o.order_id, "midtrans", NOW)).rejects.toMatchObject({ code: "PROVIDER_ERROR" });
+      const logged = spy.mock.calls.map((c) => c.map(String).join(" ")).join("\n");
+      expect(logged).toContain(`snap http 401 [mode=production key=SB-Mid-server len=${KEY.length}] Unauthorized`);
+      expect(logged).not.toContain(KEY);
+    } finally {
+      spy.mockRestore();
+    }
     await expect(service.startPayment(u, o.order_id, "midtrans", at(25 * 60))).rejects.toBeInstanceOf(BillingError);
     expect(mt.snapBodies).toHaveLength(0);
   });
@@ -307,6 +319,23 @@ describe("webhook Midtrans", () => {
     const other = await webhookHandler(t.deps(null), hook(notification("order-lain-123", "10000.00")), { provider: "midtrans" });
     expect([other.status, (await other.json()).result]).toEqual([200, "IGNORED"]);
     expect(t.mt.statusCalls).toBe(0);
+  });
+
+  it("Task 23: API status menolak kunci (401 {\"error\":\"Unauthorized\"}) → 503; log memuat pesan detail dan bentuk kunci, bukan kunci", async () => {
+    const t = await pendingPayment();
+    const unauthorized = (async () => Response.json({ error: "Unauthorized" }, { status: 401 })) as unknown as typeof fetch;
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await webhookHandler(t.deps(null, { midtrans: { config: cfg, fetchImpl: unauthorized } }), hook(notification(t.ref, "19000.00")), { provider: "midtrans" });
+      expect(res.status).toBe(503);
+      const logged = spy.mock.calls.map((c) => c.map(String).join(" ")).join("\n");
+      expect(logged).toContain("status http 401");
+      expect(logged).toContain(`mode=sandbox key=SB-Mid-server len=${KEY.length}`);
+      expect(logged).not.toContain(KEY);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await orderStatus(t.o.order_id)).toBe("PENDING_PAYMENT");
   });
 
   it("API status sedang gangguan → 503 (Midtrans mengulang), pesanan tidak berubah; batas laju → 429", async () => {

@@ -128,8 +128,9 @@ export function createPgBillingService(pool: Pool, adapters: PaymentAdapter[]): 
       try {
         charge = await adapter.createCharge({ id: o[0].id, amountIdr: o[0].amount_idr, kind: o[0].kind, expiresAt: o[0].expires_at, now });
       } catch (e) {
-        // Galat penyedia: belum ada baris pembayaran apa pun. Log hanya kode/nama galat (tanpa kunci, tanpa data pengguna).
-        console.error("pembuatan transaksi penyedia gagal", provider, e instanceof Error ? e.message.slice(0, 300) : "unknown");
+        // Galat penyedia: belum ada baris pembayaran apa pun. Log pesan galat (detail Midtrans + mode/bentuk kunci, tanpa kunci,
+        // tanpa data pengguna); batas 400 karakter cukup untuk awalan, diagnosis, dan detail ≤300 karakter.
+        console.error("pembuatan transaksi penyedia gagal", provider, e instanceof Error ? e.message.slice(0, 400) : "unknown");
         throw new BillingError("PROVIDER_ERROR");
       }
       try {

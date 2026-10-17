@@ -83,13 +83,32 @@ async function call(fetchImpl: typeof fetch, url: string, init: RequestInit): Pr
     throw new MidtransError("UNAVAILABLE", e instanceof Error ? e.name : "network");
   }
 }
-async function readJson(res: Response): Promise<Record<string, unknown> | null> {
+async function readBody(res: Response): Promise<{ data: Record<string, unknown> | null; text: string }> {
+  let text = "";
   try {
-    const v = await res.json();
-    return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+    text = await res.text();
   } catch {
-    return null;
+    return { data: null, text: "" };
   }
+  try {
+    const v = JSON.parse(text);
+    return { data: v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null, text };
+  } catch {
+    return { data: null, text };
+  }
+}
+
+// Diagnosis kunci ditolak: mode dan bentuk kunci saja, tidak pernah isinya.
+const keyDiag = (cfg: MidtransConfig) => ` [mode=${cfg.mode} key=${keyShape(cfg.serverKey)}]`;
+
+// Detail galat Midtrans untuk log: error_messages (array), atau error/status_message/message (string), atau 200 karakter
+// pertama teks mentah bila bukan JSON. Dipotong ≤300 karakter; server key yang terpantul di badan disensor.
+function errorDetail(cfg: MidtransConfig, data: Record<string, unknown> | null, text: string): string {
+  let d = "";
+  if (Array.isArray(data?.error_messages)) d = (data.error_messages as unknown[]).map(String).join("; ");
+  else if (data) d = [data.error, data.status_message, data.message].find((v): v is string => typeof v === "string") ?? "";
+  else d = text.slice(0, 200);
+  return d.split(cfg.serverKey).join("[server key]").slice(0, 300);
 }
 
 // "yyyy-MM-dd HH:mm:ss +0700" (format expiry.start_time Snap), selalu WIB.
@@ -113,11 +132,10 @@ export async function createSnapTransaction(cfg: MidtransConfig, input: SnapInpu
   };
   const res = await call(fetchImpl, cfg.snapUrl, { method: "POST", headers: headers(cfg.serverKey), body: JSON.stringify(body) });
   if (res.status >= 500) throw new MidtransError("UNAVAILABLE", `snap http ${res.status}`);
-  const data = await readJson(res);
+  const { data, text } = await readBody(res);
   if (res.status >= 400) {
-    const msgs = Array.isArray(data?.error_messages) ? (data.error_messages as unknown[]).map(String).join("; ").slice(0, 300) : "";
-    const diag = res.status === 401 ? ` [mode=${cfg.mode} key=${keyShape(cfg.serverKey)}]` : "";
-    throw new MidtransError("REJECTED", `snap http ${res.status}${diag} ${msgs}`);
+    const diag = res.status === 401 ? keyDiag(cfg) : "";
+    throw new MidtransError("REJECTED", `snap http ${res.status}${diag} ${errorDetail(cfg, data, text)}`);
   }
   const token = data?.token, redirect = data?.redirect_url;
   if (typeof token !== "string" || typeof redirect !== "string") throw new MidtransError("BAD_RESPONSE", "snap tanpa token/redirect_url");
@@ -139,12 +157,14 @@ export type MidtransStatus = {
 export async function getTransactionStatus(cfg: MidtransConfig, orderId: string, fetchImpl: typeof fetch = fetch): Promise<MidtransStatus | null> {
   const res = await call(fetchImpl, `${cfg.apiBase}/v2/${encodeURIComponent(orderId)}/status`, { method: "GET", headers: headers(cfg.serverKey) });
   if (res.status === 404) return null;
-  if (res.status >= 500 || res.status === 401 || res.status === 403) throw new MidtransError("UNAVAILABLE", `status http ${res.status}`);
-  const data = await readJson(res);
+  if (res.status >= 500) throw new MidtransError("UNAVAILABLE", `status http ${res.status}`);
+  if (res.status === 401 || res.status === 403) throw new MidtransError("UNAVAILABLE", `status http ${res.status}${keyDiag(cfg)}`);
+  const { data } = await readBody(res);
   if (!data) throw new MidtransError("BAD_RESPONSE", `status http ${res.status} bukan JSON`);
   const code = String(data.status_code ?? "");
   if (code === "404") return null;
-  if (code === "401" || code === "403" || code.startsWith("5")) throw new MidtransError("UNAVAILABLE", `status_code ${code}`);
+  if (code === "401" || code === "403") throw new MidtransError("UNAVAILABLE", `status_code ${code}${keyDiag(cfg)}`);
+  if (code.startsWith("5")) throw new MidtransError("UNAVAILABLE", `status_code ${code}`);
   const s = (k: string) => (typeof data[k] === "string" ? (data[k] as string) : null);
   const out = { orderId: s("order_id"), transactionId: s("transaction_id"), transactionStatus: s("transaction_status"), grossAmount: s("gross_amount") };
   if (res.status >= 400 || out.orderId !== orderId || !out.transactionId || !out.transactionStatus || !out.grossAmount) {
