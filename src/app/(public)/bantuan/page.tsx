@@ -44,7 +44,7 @@ const TOPICS: { id: string; title: string; body: React.ReactNode }[] = [
       <>
         <ol className="list-decimal space-y-1.5 pl-6">
           <li>Buka dokumen Anda, lalu tekan Ajukan Legal Review.</li>
-          <li>Periksa biayanya, lalu lakukan pembayaran. Biaya untuk akun gratis {formatIdr(PRICING.standard.free)}. Member aktif membayar {formatIdr(PRICING.standard.memberFirst)} untuk Legal Review pertama dalam satu periode, lalu {formatIdr(PRICING.standard.memberLater)} untuk berikutnya.</li>
+          <li>Periksa biayanya, lalu lakukan pembayaran. Biaya untuk akun gratis {formatIdr(PRICING.standard.free)}. Member aktif membayar {formatIdr(PRICING.standard.memberFirst)} untuk Legal Review pertama dalam setiap periode, lalu {formatIdr(PRICING.standard.memberLater)} untuk berikutnya.</li>
           <li>Setelah pembayaran dikonfirmasi, pengacara dari mitra hukum memeriksa dokumen Anda. Hasilnya tampil di Legal Review Saya.</li>
         </ol>
         <p>Pembayaran adalah biaya pemeriksaan. Pembayaran tidak menjamin hasil tertentu.</p>

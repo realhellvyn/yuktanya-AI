@@ -87,7 +87,7 @@ export async function journey({ step, base, db, newActor }) {
     const p = actors.pemilik.page;
     await p.goto(docUrl);
     const t = await p.innerText("main");
-    if (!t.includes("Dokumen ini sedang diajukan sebagai Special Legal Case")) throw new Error("pesan penilaian khusus tidak tampil di halaman dokumen");
+    if (!t.includes("Dokumen ini sedang diajukan sebagai Kasus Hukum Khusus (Special Legal Case)")) throw new Error("pesan penilaian khusus tidak tampil di halaman dokumen");
     if (await p.locator("button:has-text('Ajukan Legal Review')").count()) throw new Error("tombol Review Standar masih tampil");
   });
 
@@ -150,11 +150,11 @@ export async function journey({ step, base, db, newActor }) {
     await submit(p, p.locator("button:has-text('Kirim pengajuan')"));
     const id = /\/cases\/([0-9a-f-]{36})/.exec(p.url())?.[1];
     if (!id || id === caseId) throw new Error("kasus kedua tidak dibuat: " + p.url());
-    if (await p.locator("button:has-text('Ya, tarik permintaan')").isVisible()) throw new Error("tombol konfirmasi tarik terlihat sebelum langkah pertama");
-    await p.click("summary:has-text('Tarik permintaan')");
-    await submit(p, p.locator("button:has-text('Ya, tarik permintaan')"));
+    if (await p.locator("button:has-text('Ya, tarik pengajuan')").isVisible()) throw new Error("tombol konfirmasi tarik terlihat sebelum langkah pertama");
+    await p.click("summary:has-text('Tarik pengajuan')");
+    await submit(p, p.locator("button:has-text('Ya, tarik pengajuan')"));
     const t = await p.innerText("main");
-    if (!t.includes("Permintaan ditarik") || !t.includes("Ditutup")) throw new Error("tarik permintaan gagal: " + t.slice(0, 300));
+    if (!t.includes("Pengajuan ditarik") || !t.includes("Ditutup")) throw new Error("tarik permintaan gagal: " + t.slice(0, 300));
     const st = (await db.query("select status from special_cases where id = $1", [id])).rows[0].status;
     if (st !== "CLOSED") throw new Error("status DB " + st);
   });

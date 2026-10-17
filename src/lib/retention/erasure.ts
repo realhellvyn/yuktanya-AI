@@ -22,7 +22,7 @@ export const ERASE_BLOCK_MESSAGES: Record<EraseBlocker, string> & Record<string,
   STAFF_ACCOUNT: "Akun ini terdaftar sebagai mitra hukum atau admin, sehingga tidak dapat dihapus sendiri. Hubungi admin platform agar akses Anda dicabut lebih dulu.",
   STANDARD_IN_PROGRESS: "Legal Review Anda masih dikerjakan pengacara. Tunggu sampai hasilnya terbit di Legal Review Saya, lalu coba lagi.",
   DEEP_IN_PROGRESS: "Deep Review Anda masih berjalan atau sedang ditahan. Tunggu sampai selesai. Bila pemeriksaan ditahan dan Anda ingin berhenti, hubungi tim Yuktanya (lihat halaman Bantuan) agar pembayarannya diselesaikan lebih dulu.",
-  SPECIAL_CASE_OPEN: "Special Legal Case Anda masih terbuka. Tarik permintaan dari halaman kasus, atau tunggu sampai kasus ditutup, lalu coba lagi.",
+  SPECIAL_CASE_OPEN: "Special Legal Case Anda masih terbuka. Tarik pengajuan dari halaman kasus, atau tunggu sampai kasus ditutup, lalu coba lagi.",
   PAYMENT_RECONCILIATION: "Ada pembayaran yang sedang dicocokkan tim kami. Tunggu sampai pencocokan selesai, atau hubungi tim Yuktanya (lihat halaman Bantuan).",
   PAYMENT_PENDING: "Ada pesanan yang menunggu pembayaran. Selesaikan pembayarannya, atau tunggu sampai batas waktu pembayaran lewat (pesanan batal otomatis), lalu coba lagi.",
 };

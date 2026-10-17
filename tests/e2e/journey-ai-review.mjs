@@ -140,7 +140,7 @@ export async function journey({ step, base, db, llm, newActor }) {
     const before = llm.control.prereview ?? 0;
     await uploadAndAnalyze(p, { name: "akta-tanah.txt", mimeType: "text/plain", buffer: Buffer.from(RISKY) });
     const t = await p.innerText("main");
-    if (!t.includes("Dokumen ini perlu diajukan sebagai Special Legal Case")) throw new Error("pesan penilaian khusus tidak tampil");
+    if (!t.includes("Dokumen ini perlu diajukan sebagai Kasus Hukum Khusus (Special Legal Case)")) throw new Error("pesan penilaian khusus tidak tampil");
     for (const s of GROUPS) if (t.includes(s)) throw new Error("hasil AI palsu tampil untuk dokumen berisiko tinggi");
     if ((llm.control.prereview ?? 0) !== before) throw new Error("AI dipanggil untuk dokumen berisiko tinggi");
     if (await p.locator("button:has-text('Ajukan Legal Review')").count()) throw new Error("tombol Review Standar tampil");

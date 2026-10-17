@@ -17,7 +17,7 @@ export default function Page() {
               <li>Dokumen: isi dokumen, setiap versinya, dan sidik jari digital (SHA-256) untuk mengecek apakah isinya berubah.</li>
               <li>Percakapan pengisian dokumen dan jawaban yang Anda ketik.</li>
               <li>Pemakaian harian (jumlah pesan, dokumen, dan analisis AI) untuk menerapkan kuota harian.</li>
-              <li>Pesanan dan status pembayaran, permintaan Legal Review, serta hasil pemeriksaan dan verifikasinya.</li>
+              <li>Pesanan dan status pembayaran, permintaan Legal Review dan Deep Review, serta hasil pemeriksaan dan verifikasinya.</li>
               <li>Catatan kejadian (audit) untuk tindakan penting seperti penerbitan dan pencabutan verifikasi.</li>
               <li>Peristiwa penggunaan yang bersifat ringkas (nama kejadian, tanpa isi dokumen), disimpan di basis data.</li>
               <li>Sumber iklan, bila Anda datang lewat tautan iklan: disimpan sementara di cookie browser hingga 30 hari, lalu dicatat pada akun saat Anda mendaftar.</li>

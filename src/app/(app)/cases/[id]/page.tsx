@@ -18,7 +18,7 @@ const OK: Record<string, string> = {
   dikirim: "✓ Pengajuan terkirim. Firma hukum mitra akan menilainya lebih dulu.",
   diterima: "✓ Anda menerima penawaran. Belum ada tagihan yang dibuat; firma akan menghubungi Anda untuk perjanjian kerja dan pembayaran.",
   ditolak: "✓ Anda menolak penawaran. Tidak ada biaya.",
-  ditarik: "✓ Permintaan ditarik dan ditutup.",
+  ditarik: "✓ Pengajuan ditarik dan ditutup.",
 };
 
 export default async function CasePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; e?: string }> }) {
@@ -30,7 +30,7 @@ export default async function CasePage({ params, searchParams }: { params: Promi
   const { c } = page;
   const expired = quoteExpired(c.quote?.expiresAt);
   const error = q.e === "CONFIRM_REQUIRED" ? "Penawaran belum diterima. Centang pernyataan bahwa Anda sudah membaca penawaran, lalu tekan Terima penawaran."
-    : q.e === "WITHDRAW_CONFIRM" ? "Permintaan belum ditarik. Tekan “Ya, tarik permintaan” untuk mengonfirmasi." : caseErrorText(q.e);
+    : q.e === "WITHDRAW_CONFIRM" ? "Pengajuan belum ditarik. Tekan “Ya, tarik pengajuan” untuk mengonfirmasi." : caseErrorText(q.e);
   const canWithdraw = ["SUBMITTED", "TRIAGED", "QUOTED"].includes(c.status);
   return (
     <main className="max-w-3xl space-y-6">
@@ -51,7 +51,7 @@ export default async function CasePage({ params, searchParams }: { params: Promi
             </li>
           ))}
         </ol>
-        <p className="text-muted">Diajukan {formatWib(c.createdAt)}. Persetujuan berbagi ringkasan diberikan {formatWib(c.consentAt)}.</p>
+        <p className="text-muted">Diajukan {formatWib(c.createdAt)}. Persetujuan berbagi {c.documentId ? "ringkasan dan informasi jenis dokumen" : "ringkasan"} diberikan {formatWib(c.consentAt)}.</p>
         <p>{SPECIAL_CASE_NOTE}</p>
       </Card>
 
@@ -101,12 +101,12 @@ export default async function CasePage({ params, searchParams }: { params: Promi
         <ButtonLink href="/cases" variant="secondary">Semua Special Legal Case</ButtonLink>
         {canWithdraw && (
           <details className="w-full">
-            <summary className="inline-flex min-h-12 cursor-pointer items-center font-semibold text-link underline underline-offset-4">Tarik permintaan</summary>
+            <summary className="inline-flex min-h-12 cursor-pointer items-center font-semibold text-link underline underline-offset-4">Tarik pengajuan</summary>
             <form action={withdrawCaseAction} className="mt-2 space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
               <input type="hidden" name="caseId" value={c.id} />
               <input type="hidden" name="confirm" value="yes" />
-              <p>Tarik permintaan ini? Kasus akan ditutup dan tidak dapat dibuka kembali. Anda tetap dapat mengajukan permintaan baru nanti.</p>
-              <Button type="submit" variant="secondary">Ya, tarik permintaan</Button>
+              <p>Tarik pengajuan ini? Kasus akan ditutup dan tidak dapat dibuka kembali. Anda tetap dapat membuat pengajuan baru nanti.</p>
+              <Button type="submit" variant="secondary">Ya, tarik pengajuan</Button>
             </form>
           </details>
         )}

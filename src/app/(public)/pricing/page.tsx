@@ -9,7 +9,7 @@ const ROWS: { item: string; price: string; note?: string }[] = [
   { item: "Pembuatan dokumen dengan AI", price: "Gratis", note: "Sesuai kuota harian. Anda perlu mendaftar atau masuk lebih dulu." },
   { item: "Membership (opsional)", price: `${formatIdr(PRICING.membershipMonthlyIdr)} per periode`, note: "Kuota harian lebih besar dan biaya Legal Review lebih rendah." },
   { item: "Legal Review oleh pengacara, akun gratis", price: formatIdr(PRICING.standard.free) },
-  { item: "Legal Review, Member aktif, pertama dalam satu periode", price: formatIdr(PRICING.standard.memberFirst) },
+  { item: "Legal Review, Member aktif, pertama dalam setiap periode", price: formatIdr(PRICING.standard.memberFirst) },
   { item: "Legal Review, Member aktif, berikutnya", price: formatIdr(PRICING.standard.memberLater) },
   {
     item: "Deep Review (tambahan), akun gratis",

@@ -146,15 +146,15 @@ export default async function DocumentPage({ params, searchParams }: { params: P
             <VerificationPanel verifications={verifications} qrDataUrls={qrs} urls={urls} />
             {highRisk && !openCase && (
               <Card className="space-y-3 border-amber-300 bg-amber-50/60">
-                <p className="text-lg font-semibold text-navy">Dokumen ini perlu diajukan sebagai Special Legal Case</p>
-                <p>Topik dokumen ini berisiko tinggi ({upload!.riskReasons.join(", ").toLowerCase()}). Karena itu, dokumen ini tidak dianalisis AI dan tidak dapat diajukan untuk Legal Review. Ajukan sebagai Kasus Hukum Khusus (Special Legal Case). {SPECIAL_CASE_NOTE}</p>
+                <p className="text-lg font-semibold text-navy">Dokumen ini perlu diajukan sebagai Kasus Hukum Khusus (Special Legal Case)</p>
+                <p>Topik dokumen ini berisiko tinggi ({upload!.riskReasons.join(", ").toLowerCase()}). Karena itu, dokumen ini tidak dianalisis AI dan tidak dapat diajukan untuk Legal Review. {SPECIAL_CASE_NOTE}</p>
                 <ButtonLink href={`/cases/new?document=${id}`}>Ajukan Special Legal Case</ButtonLink>
               </Card>
             )}
             {openCase && (
               <Card className="space-y-3 border-amber-300 bg-amber-50/60">
-                <p className="text-lg font-semibold text-navy">Dokumen ini sedang diajukan sebagai Special Legal Case</p>
-                <p>Legal Review tidak tersedia selama Kasus Hukum Khusus (Special Legal Case) untuk dokumen ini masih berjalan. {SPECIAL_CASE_NOTE}</p>
+                <p className="text-lg font-semibold text-navy">Dokumen ini sedang diajukan sebagai Kasus Hukum Khusus (Special Legal Case)</p>
+                <p>Legal Review tidak tersedia selama Special Legal Case untuk dokumen ini masih berjalan. {SPECIAL_CASE_NOTE}</p>
                 <ButtonLink href={`/cases/${openCase}`} variant="secondary">Lihat status Special Legal Case</ButtonLink>
               </Card>
             )}
@@ -168,7 +168,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
               </Card>
             )}
             {!openCase && !highRisk && (
-              <div className="flex flex-wrap items-center gap-x-2 text-muted"><span>Dokumen Anda rumit atau berisiko tinggi?</span><ButtonLink href={`/cases/new?document=${id}`} variant="quiet" className="!px-0">Ajukan Special Legal Case</ButtonLink></div>
+              <div className="flex flex-wrap items-center gap-x-2 text-muted"><span>Dokumen rumit atau berisiko tinggi dapat diajukan sebagai Kasus Hukum Khusus (Special Legal Case).</span><ButtonLink href={`/cases/new?document=${id}`} variant="quiet" className="!px-0">Ajukan Special Legal Case</ButtonLink></div>
             )}
             <div id="analisis-ai" className="space-y-3">
               {aiStatus && <p role="status" className="rounded-xl border border-line bg-surface p-3 font-semibold">{AI_REVIEW_STATUS_TEXT[aiStatus]}</p>}

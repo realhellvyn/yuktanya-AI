@@ -265,7 +265,9 @@ describe("admin_analytics (tren harian, filter, kualitas, peringatan)", () => {
   it("angka dari tabel sumber, bukan event: event palsu tidak menambah pendapatan/review dibayar; pendapatan ikut filter jenis", async () => {
     const admin = await kit.admin();
     const W1 = new Date(NOW.getTime() - 86_400_000);
-    const W2 = new Date(NOW.getTime() + 86_400_000);
+    // Order dan pembayaran di bawah dibuat dengan jam DB (now()), bukan NOW: jendela harus mencakup hari ini juga,
+    // agar tes tidak gagal setelah jam nyata melewati NOW + 1 hari.
+    const W2 = new Date(Math.max(NOW.getTime(), Date.now()) + 86_400_000);
     const before = await analytics(admin, W1, W2);
     await pool.query("insert into product_events (event_name, entity_id, dedupe_key, occurred_at, metadata_safe) values ('review_payment_verified', 'palsu', $1, $2, '{\"amount_idr\": 999999}')", [`palsu-${Math.random()}`, NOW]);
     const mid = await analytics(admin, W1, W2);

@@ -280,6 +280,7 @@ describe("special_cases: pembayaran order Review Standar yang sudah ada", () => 
     const o = await kit.order(owner, "STANDARD_REVIEW", v.versionId);
     await submit(owner, v.documentId);
     const billing = createPgBillingService(pool, [{ name: "mock", createCharge: async () => ({ providerRef: `ref-${key()}`, instructions: "" }) } as never]);
-    await expect(billing.startPayment(owner, o.order_id, "mock")).rejects.toMatchObject({ code: "SPECIAL_CASE_OPEN" });
+    // Waktu sama dengan pembuatan order (NOW); dengan jam nyata order sudah kedaluwarsa dan kodenya menjadi ORDER_NOT_PAYABLE.
+    await expect(billing.startPayment(owner, o.order_id, "mock", NOW)).rejects.toMatchObject({ code: "SPECIAL_CASE_OPEN" });
   });
 });

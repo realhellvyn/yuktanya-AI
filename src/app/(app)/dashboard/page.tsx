@@ -155,7 +155,7 @@ export default async function DashboardPage() {
             <>
               <h2 className="text-xl font-bold text-navy">Akun gratis</h2>
               <p>Buat dokumen dengan AI: <strong>Gratis</strong></p>
-              <p>Legal Review: <strong>{formatIdr(PRICING.standard.free)}</strong> per dokumen</p>
+              <p>Legal Review: <strong>{formatIdr(PRICING.standard.free)}</strong> per dokumen standar</p>
               <ButtonLink href="/membership" variant="quiet">Lihat Membership (opsional)</ButtonLink>
             </>
           )}

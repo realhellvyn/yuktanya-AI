@@ -55,7 +55,7 @@ export default async function UploadPage() {
       <Card className="space-y-4">
         <h2 className="text-xl font-bold text-navy">Privasi</h2>
         <p>Hanya teks hasil pembacaan berkas yang dikirim ke AI, dan hanya setelah Anda mencentang persetujuan di bawah. Selama masa uji coba, gunakan dokumen contoh tanpa data pribadi asli.</p>
-        <p className="font-semibold text-amber-900">{AI_PREREVIEW_LABEL} Hasil AI bukan Legal Review.</p>
+        <p className="font-semibold text-amber-900">{AI_PREREVIEW_LABEL} Hasil AI bukan pemeriksaan oleh pengacara.</p>
         {usage.documentsRemaining <= 0 ? (
           <p role="status" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold text-amber-900">
             Kuota dokumen baru hari ini sudah habis. Kuota diperbarui pukul 00.00 WIB.

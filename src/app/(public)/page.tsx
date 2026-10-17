@@ -75,7 +75,7 @@ export default function Home() {
               <Card className="space-y-3">
                 <h3 className="text-xl font-bold text-navy">Akun gratis</h3>
                 <p>Buat dokumen dengan AI: <strong>Gratis</strong></p>
-                <p>Legal Review: <strong>{formatIdr(PRICING.standard.free)}</strong> per dokumen</p>
+                <p>Legal Review: <strong>{formatIdr(PRICING.standard.free)}</strong> per dokumen standar</p>
               </Card>
               <Card className="space-y-3">
                 <h3 className="text-xl font-bold text-navy">Member ({formatIdr(PRICING.membershipMonthlyIdr)} per periode tagihan)</h3>

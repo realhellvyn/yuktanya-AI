@@ -47,7 +47,7 @@ export default async function DeleteAccountPage({ searchParams }: { searchParams
           <ul className="list-disc space-y-1.5 pl-6">
             <li>Catatan pesanan dan pembayaran: dibutuhkan untuk pencocokan keuangan. Catatan ini tidak lagi terhubung dengan email Anda.</li>
             <li>Catatan audit sistem (tanpa isi dokumen): agar riwayat tindakan penting tetap dapat dipercaya.</li>
-            <li>Dokumen yang sudah diperiksa pengacara atau memiliki kode verifikasi: kode verifikasinya tetap dapat dicek orang lain di halaman pengecekan (hanya status dan sidik jari), tetapi judul dan isi dokumennya dikosongkan. Laporan Legal Review tetap disimpan sebagai catatan kerja pengacara.</li>
+            <li>Dokumen yang sudah diperiksa pengacara atau memiliki kode verifikasi: kode verifikasinya tetap dapat dicek orang lain di halaman pengecekan (hanya status dan sidik jari), tetapi judul dan isi dokumennya dikosongkan. Laporan Legal Review dan Deep Review tetap disimpan sebagai catatan kerja pengacara.</li>
           </ul>
           <p className="text-muted">Aturan ini adalah pengaturan awal sistem dan menunggu persetujuan mitra hukum.</p>
           <p>Ingin menyimpan salinan? <a className={link} href="/settings/export">Unduh data saya lebih dulu</a></p>
