@@ -2,6 +2,8 @@
 // sama seperti keputusan pemilik 17 Okt 2026 untuk produksi): unggah TXT sintetis → analisis awal AI (LLM palsu) → rekaman
 // AI Verified terbit → laporan AI pemilik dan /verify rekaman itu tampil dengan medali bronze (tanpa kata Legal di medali) →
 // tanpa pageerror, error konsol, atau halaman galat. Juga memastikan tombol unggah tampil di dasbor dan daftar dokumen.
+import { Document, Packer, Paragraph } from "docx";
+import { PDFDocument, StandardFonts } from "pdf-lib";
 import { register } from "./helpers.mjs";
 
 export const onlyViewport = "desktop";
@@ -63,4 +65,33 @@ export async function journey({ page, step, shot, base, db, issues, newActor }) 
     if (anon.issues.length) throw new Error("/verify error konsol: " + anon.issues.join(" | "));
     await anon.shot("prod-ai-verify");
   });
+
+  // Task 24 (A05): pembacaan berkas berjalan di worker_threads yang dibundel terpisah oleh Next; PDF (pdf.js/unpdf) dan DOCX
+  // (jszip) harus terbaca di build produksi, bukan hanya TXT. Setiap jenis memakai akun Free baru (kuota 1 dokumen/hari).
+  const pdfBytes = async () => {
+    const d = await PDFDocument.create();
+    const f = await d.embedFont(StandardFonts.Helvetica);
+    const p = d.addPage();
+    ["Perjanjian Sewa Etalase (sintetis)", "Pasal 1 Pihak Pertama menyewakan satu etalase.", "Pasal 2 Sewa Rp150.000 per bulan."].forEach((l, i) => p.drawText(l, { x: 50, y: 700 - i * 20, font: f, size: 12 }));
+    return Buffer.from(await d.save());
+  };
+  const docxBytes = async () => Buffer.from(await Packer.toBuffer(new Document({ sections: [{ children: ["Perjanjian Pinjam Pakai Tenda (sintetis)", "Pasal 1 Tenda dipinjam selama 3 hari.", "Pasal 2 Biaya kebersihan Rp75.000."].map((t) => new Paragraph({ text: t })) }] })));
+  for (const [kind, name, mime, make, expectText] of [
+    ["PDF", "sewa-etalase.pdf", "application/pdf", pdfBytes, "Sewa Rp150.000 per bulan"],
+    ["DOCX", "pinjam-tenda.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docxBytes, "Biaya kebersihan Rp75.000"],
+  ]) {
+    await step(tag(`unggah ${kind} sintetis di build produksi: dibaca di worker → analisis awal AI selesai`), async () => {
+      const a = await newActor(`prod-ai-${kind.toLowerCase()}`);
+      await register(a.page, base, `prod-ai-${kind.toLowerCase()}+${Date.now()}@example.com`);
+      await a.page.goto(base + "/documents/upload");
+      await a.page.setInputFiles("input[name=file]", { name, mimeType: mime, buffer: await make() });
+      await a.page.check("input[name=consent]");
+      await Promise.all([a.page.waitForURL(/\/documents\/[0-9a-f-]{36}\?/, { timeout: 60000 }), a.page.click("button:has-text('Mulai analisis awal')")]);
+      await a.page.waitForLoadState("networkidle");
+      const text = await a.page.innerText("body");
+      for (const s of ["Berkas berhasil diunggah", "Analisis awal AI selesai", expectText]) if (!text.includes(s)) throw new Error(`${kind}: halaman dokumen tanpa "${s}"`);
+      if (text.includes("Terjadi kendala")) throw new Error(`${kind}: halaman galat`);
+      if (a.issues.length) throw new Error(`${kind}: error konsol: ${a.issues.join(" | ")}`);
+    });
+  }
 }

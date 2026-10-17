@@ -10,7 +10,8 @@ describe("chatJsonWithinDeadline (Task 24, A04)", () => {
   it("tenggat total 75 detik; setiap panggilan (termasuk perbaikan) membawa tenggat yang sama", async () => {
     expect(TURN_DEADLINE_MS).toBe(75_000);
     expect(turnDeadline(() => 1000)).toBe(76_000);
-    const chat = vi.fn(async (_m: unknown, _o?: ChatOpts) => ({ text: chat.mock.calls.length === 1 ? "rusak" : JSON.stringify({ reply: "ok" }), requestId: "r" }));
+    let calls = 0;
+    const chat = vi.fn<(m: unknown, o?: ChatOpts) => Promise<{ text: string; requestId: string }>>(async () => ({ text: ++calls === 1 ? "rusak" : JSON.stringify({ reply: "ok" }), requestId: "r" }));
     const r = await chatJsonWithinDeadline(chat as never, schema, msgs, 123_456, () => 0);
     expect(r).toEqual({ ok: true, data: { reply: "ok" } });
     expect(chat.mock.calls.map((c) => c[1])).toEqual([{ deadline: 123_456 }, { deadline: 123_456 }]);

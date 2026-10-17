@@ -6,7 +6,7 @@ vi.mock("next/navigation", () => ({ redirect: (to: string) => { throw new Error(
 vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-real-ip": "1.2.3.4" }) }));
 vi.mock("@/lib/vault/runtime", () => ({ shareService: () => share }));
 // Task 24 (A07): pembatas konfirmasi baca kini berbasis DB (cakupan share_ack, kunci = clientIp()).
-const ackAllow = vi.fn(async (_key: string) => true);
+const ackAllow = vi.fn<(key: string) => Promise<boolean>>(async () => true);
 vi.mock("@/lib/security/limiters", () => ({ rateLimiter: (scope: string) => ({ allow: (k: string) => (scope === "share_ack" ? ackAllow(k) : Promise.resolve(true)) }) }));
 
 import { ackEmailAvailable, emailProvider } from "@/lib/vault/email-config";
