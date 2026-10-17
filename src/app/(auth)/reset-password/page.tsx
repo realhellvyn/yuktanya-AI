@@ -18,7 +18,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   if (q.done === "1") {
     return (
       <AuthShell title="Kata sandi baru">
-        <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 text-green-900"><strong>Kata sandi berhasil diganti.</strong> Gunakan kata sandi baru saat masuk berikutnya.</p>
+        <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 text-green-900"><strong>Kata sandi berhasil diganti.</strong> Gunakan kata sandi baru saat Anda masuk berikutnya.</p>
         <Link className={linkClass} href="/dashboard">Lanjut ke Beranda</Link>
       </AuthShell>
     );
@@ -37,7 +37,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   }
   return (
     <AuthShell title="Buat kata sandi baru">
-      {q.error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{q.error === "invalid" ? "Kata sandi minimal 8 karakter." : fixedText(AUTH_MESSAGES, q.error) ?? AUTH_MESSAGES.failed}</p>}
+      {q.error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{q.error === "invalid" ? "Kata sandi harus 8 sampai 72 karakter. Ketik ulang kata sandi baru." : fixedText(AUTH_MESSAGES, q.error) ?? AUTH_MESSAGES.failed}</p>}
       <form action={updatePassword} className="space-y-5">
         <label className="block">
           <span className="font-semibold">Kata sandi baru <span className="font-normal text-muted">(Wajib, minimal 8 karakter)</span></span>

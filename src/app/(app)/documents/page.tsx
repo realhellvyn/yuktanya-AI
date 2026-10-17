@@ -21,12 +21,12 @@ export default async function DocumentsPage() {
         actions={
           <div className="flex flex-wrap gap-3">
             {docs.length > 0 && <ButtonLink href="/workspace/new">Buat dokumen baru</ButtonLink>}
-            {flags.aiPreReview && <ButtonLink href="/documents/upload" variant="secondary">Periksa dokumen</ButtonLink>}
+            {flags.aiPreReview && <ButtonLink href="/documents/upload" variant="secondary">Analisis dokumen</ButtonLink>}
           </div>
         }
       />
       {docs.length === 0 ? (
-        <EmptyState title="Belum ada dokumen" text="Mulai dari membuat dokumen pertama Anda." action={<ButtonLink href="/workspace/new">Buat Dokumen</ButtonLink>} />
+        <EmptyState title="Belum ada dokumen" text="Dokumen yang Anda buat akan tampil di sini." action={<ButtonLink href="/workspace/new">Buat dokumen</ButtonLink>} />
       ) : (
         <ul className="space-y-3">
           {docs.map((d) => (
@@ -35,9 +35,9 @@ export default async function DocumentsPage() {
                 <div className="min-w-0 space-y-1">
                   <p className="text-lg font-bold text-navy">{d.title}</p>
                   <p className="text-sm text-muted">Dibuat {formatDateId(wibDate(d.createdAt))}{d.versionCount > 0 ? ` · ${d.versionCount} versi` : ""}</p>
-                  {d.category === "UPLOAD" ? <StatusBadge tone="info">Dokumen unggahan</StatusBadge> : d.versionCount === 0 ? <StatusBadge tone="warning">Draf belum selesai</StatusBadge> : <StatusBadge tone="info">Dokumen sudah dibuat</StatusBadge>}
+                  {d.category === "UPLOAD" ? <StatusBadge tone="info">Dokumen unggahan</StatusBadge> : d.versionCount === 0 ? <StatusBadge tone="warning">Draf belum selesai</StatusBadge> : <StatusBadge tone="info">Dokumen selesai</StatusBadge>}
                 </div>
-                <ButtonLink href={d.versionCount === 0 ? `/workspace/${d.id}` : `/documents/${d.id}`} variant={d.versionCount === 0 ? "primary" : "secondary"}>{d.versionCount === 0 ? "Lanjutkan mengisi" : "Buka"}</ButtonLink>
+                <ButtonLink href={d.versionCount === 0 ? `/workspace/${d.id}` : `/documents/${d.id}`} variant={d.versionCount === 0 ? "primary" : "secondary"}>{d.versionCount === 0 ? "Lanjutkan mengisi" : "Buka dokumen"}</ButtonLink>
               </Card>
             </li>
           ))}

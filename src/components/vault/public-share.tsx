@@ -18,9 +18,9 @@ type Props = {
 };
 
 const NOT_OK: Record<string, string> = {
-  NOT_FOUND: "Tautan tidak ditemukan.",
+  NOT_FOUND: "Tautan tidak ditemukan. Periksa kembali alamat tautan yang Anda terima.",
   EXPIRED: "Tautan sudah kedaluwarsa. Minta tautan baru kepada pemilik dokumen.",
-  REVOKED: "Tautan sudah dicabut oleh pemiliknya.",
+  REVOKED: "Tautan sudah dicabut oleh pemilik dokumen.",
 };
 const box = "mt-1 block min-h-12 w-full rounded-lg border border-border-strong px-3 text-lg";
 
@@ -42,7 +42,7 @@ export function PublicShare({ view, token, requestAction, verifyAction, ackAvail
     <main className="mx-auto max-w-3xl space-y-6 p-6">
       <h1 className="text-3xl font-semibold">{view.title}</h1>
       <p>Versi {view.versionNo} · kode versi <span className="font-mono">{view.sha256.slice(0, 12)}</span> · Versi baru belum diperiksa</p>
-      {view.hasNewer && <p role="status" className="rounded-lg border border-line bg-surface p-3">Ada versi yang lebih baru. Minta tautan baru kepada pemilik dokumen.</p>}
+      {view.hasNewer && <p role="status" className="rounded-lg border border-line bg-surface p-3">Tersedia versi yang lebih baru. Minta tautan baru kepada pemilik dokumen.</p>}
       <DocumentPreview doc={view.doc} />
 
       <section aria-labelledby="ack-h" className="space-y-3 rounded-lg border border-line bg-surface p-4">
@@ -55,7 +55,7 @@ export function PublicShare({ view, token, requestAction, verifyAction, ackAvail
         {errorMsg && <p role="alert" className="font-semibold text-danger">{errorMsg}</p>}
         {step === "kode" ? (
           <div className="space-y-4">
-            {shownEmail && <p>Kode dikirim ke {shownEmail}</p>}
+            {shownEmail && <p>Kode sudah dikirim ke {shownEmail}.</p>}
             <form action={verifyAction} className="space-y-3">
               <input type="hidden" name="token" value={token} />
               <input type="hidden" name="email" value={safeEmail} />
@@ -63,7 +63,7 @@ export function PublicShare({ view, token, requestAction, verifyAction, ackAvail
                 <span className="font-medium">Kode 6 digit dari email Anda (Wajib)</span>
                 <input name="code" inputMode="numeric" pattern="\d{6}" maxLength={6} required autoComplete="one-time-code" className={box} />
               </label>
-              <button type="submit" className="min-h-12 rounded-lg bg-primary hover:bg-primary-hover px-5 font-semibold text-on-primary">Konfirmasi</button>
+              <button type="submit" className="min-h-12 rounded-lg bg-primary hover:bg-primary-hover px-5 font-semibold text-on-primary">Konfirmasi baca</button>
             </form>
             <div className="flex flex-wrap gap-3">
               <form action={requestAction}>
@@ -87,7 +87,7 @@ export function PublicShare({ view, token, requestAction, verifyAction, ackAvail
         </>}
       </section>
 
-      <a href="/register" className="inline-flex min-h-12 items-center rounded-lg border border-border-strong bg-surface px-5 font-medium">Buat dokumen sendiri, gratis</a>
+      <a href="/register" className="inline-flex min-h-12 items-center rounded-lg border border-border-strong bg-surface px-5 font-medium">Buat dokumen Anda sendiri secara gratis</a>
     </main>
   );
 }

@@ -35,14 +35,14 @@ export function UploadForm({ action, idempotencyKey }: {
       {state.error && (
         <div role="alert" className="space-y-2 rounded-xl border border-danger bg-red-50 p-4 text-danger">
           <p className="font-semibold">{state.error}</p>
-          {state.code !== "NO_CONSENT" && state.code !== "FEATURE_DISABLED" && <p>Pilih berkas lagi sebelum mencoba.</p>}
+          {state.code !== "NO_CONSENT" && state.code !== "FEATURE_DISABLED" && <p>Pilih berkas kembali sebelum mencoba lagi.</p>}
           {state.code && SPECIAL.has(state.code) && (
-            <Link href="/cases/new" className="inline-flex min-h-12 items-center font-semibold text-link underline underline-offset-4">Ajukan penilaian khusus</Link>
+            <Link href="/cases/new" className="inline-flex min-h-12 items-center font-semibold text-link underline underline-offset-4">Ajukan Special Legal Case</Link>
           )}
         </div>
       )}
-      <Button type="submit" disabled={pending}>{pending ? "Membaca dan menganalisis…" : "Mulai Analisis Awal"}</Button>
-      {pending && <p role="status" className="text-muted">Mohon tunggu. Proses ini dapat memakan waktu hingga satu menit.</p>}
+      <Button type="submit" disabled={pending}>{pending ? "Membaca dan menganalisis…" : "Mulai analisis awal"}</Button>
+      {pending && <p role="status" className="text-muted">Mohon tunggu. Proses ini dapat berlangsung hingga satu menit.</p>}
     </form>
   );
 }

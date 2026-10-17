@@ -28,8 +28,8 @@ export function OfflineNotice({ offline }: { offline: boolean }) {
   if (!offline) return null;
   return (
     <p id="chat-offline" role="status" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold">
-      Anda sedang offline. Pesan belum bisa dikirim.
-      <span className="mt-1 block font-normal">Tombol Kirim aktif lagi saat internet tersambung. Tulisan Anda tetap tersimpan di perangkat ini.</span>
+      Perangkat tidak terhubung ke internet. Pesan belum dapat dikirim.
+      <span className="mt-1 block font-normal">Tombol Kirim aktif kembali setelah internet tersambung. Tulisan Anda tetap tersimpan di perangkat ini.</span>
     </p>
   );
 }
@@ -110,7 +110,7 @@ export function ChatPanel({ documentId, lines, greeting, action, sendKey, retryK
           <input type="hidden" name="documentId" value={documentId} />
           <input type="hidden" name="retry" value="1" />
           <input type="hidden" name="key" value={retryKey} />
-          <p className="flex-1">Pesan terakhir Anda belum dijawab AI.</p>
+          <p className="flex-1">Pesan terakhir Anda belum dibalas AI.</p>
           <RetryButton />
         </form>
       )}
@@ -134,7 +134,7 @@ export function ChatPanel({ documentId, lines, greeting, action, sendKey, retryK
             className="mt-2 block w-full rounded-xl border border-border-strong bg-surface px-4 py-3 text-lg"
           />
         </label>
-        {restored && <p role="status" className="text-muted">Tulisan Anda yang belum terkirim sudah dikembalikan.</p>}
+        {restored && <p role="status" className="text-muted">Tulisan Anda yang belum terkirim sudah dikembalikan ke kotak pesan.</p>}
         <SendButton offline={offline} />
       </form>
     </section>

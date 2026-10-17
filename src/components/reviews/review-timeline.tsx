@@ -12,7 +12,7 @@ export function ReviewTimeline({ status, timeline }: { status: string; timeline?
   // Dibatalkan: tahap terakhir yang benar-benar tercatat, tanpa "tahap ini".
   const reached = cancelled ? at.reduce<number>((n, d, i) => (d ? i : n), -1) : REACHED[status] ?? 0;
   return (
-    <ol aria-label="Tahapan pemeriksaan" className="space-y-2">
+    <ol aria-label="Tahapan Legal Review" className="space-y-2">
       {STEPS.map((s, i) => {
         const done = cancelled ? i <= reached : i < reached || (i === reached && i === STEPS.length - 1);
         const current = !cancelled && i === reached && !done;
@@ -20,12 +20,12 @@ export function ReviewTimeline({ status, timeline }: { status: string; timeline?
           <li key={s} className="flex flex-wrap items-baseline gap-x-2">
             <span aria-hidden="true" className={i <= reached ? "font-bold" : "text-muted"}>{i <= reached ? "✓" : "○"}</span>
             <span className={current ? "font-semibold" : undefined}>{s}</span>
-            <span className="text-muted">{done ? "— selesai" : current ? "— tahap ini" : "— belum"}</span>
+            <span className="text-muted">{done ? "(selesai)" : current ? "(tahap saat ini)" : "(belum)"}</span>
             {at[i] && i <= reached && <span className="text-muted">({date(at[i]!)} WIB)</span>}
           </li>
         );
       })}
-      {cancelled && <li className="font-semibold">Dibatalkan — permintaan ini tidak dilanjutkan.</li>}
+      {cancelled && <li className="font-semibold">Dibatalkan: pengajuan ini tidak dilanjutkan.</li>}
     </ol>
   );
 }

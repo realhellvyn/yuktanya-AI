@@ -1,4 +1,5 @@
-// Salinan wajib dan konstanta teks bersama (Bahasa Indonesia sederhana).
+// Salinan wajib dan konstanta teks bersama (Bahasa Indonesia formal dan ringkas). Konstanta yang ikut tercetak di ekspor
+// (judul dan pernyataan verifikasi, VERIFIED_LABEL, LEGAL_DISCLAIMER, QR_NOT_SIGNATURE) sengaja tidak diubah Task 19.
 export const SLOGAN = "Legal Service Seharga Secangkir Kopi.";
 export const AI_DRAFT_LABEL = "Dibuat dengan bantuan AI. Belum diperiksa oleh profesional hukum.";
 export const AI_PREREVIEW_LABEL = "Analisis awal AI bersifat informasional dan dapat keliru.";
@@ -11,7 +12,7 @@ export const AI_REVIEW_CONSENT =
 export const UPLOAD_HASH_NOTE = "Kode ini untuk teks hasil pembacaan, bukan berkas asli.";
 export const SPECIAL_CASE_NOTE = "Biaya dan ruang lingkup ditentukan setelah asesmen profesional.";
 export const CHECKOUT_NOTE =
-  "Pembayaran adalah biaya pemeriksaan. Tidak menjamin hasil positif atau penerbitan verifikasi Enhanced.";
+  "Pembayaran adalah biaya pemeriksaan. Pembayaran tidak menjamin hasil positif atau penerbitan verifikasi Enhanced.";
 export const LEGAL_DISCLAIMER = "Tidak menjamin keabsahan atau hasil hukum dalam semua keadaan.";
 // Label Verified wajib (docs/SECURITY_AND_LEGAL.md "Mandatory copy"; DECISIONS_AND_PRECEDENCE "Review integrity").
 // Tampil bersama pernyataan VERIFICATION_POLICY pada setiap verifikasi hukum (LEGAL, LEGAL_ENHANCED) yang aktif.

@@ -4,7 +4,7 @@ export function UploadHashes({ versionSha256, originalSha256 }: { versionSha256:
     <div className="space-y-1 text-sm text-muted">
       <p className="break-all">Kode teks yang diperiksa (dipakai di QR dan halaman verifikasi): {versionSha256}</p>
       <p className="break-all">Kode berkas asli yang Anda unggah: {originalSha256}</p>
-      <p>Kedua kode ini memang berbeda: yang pertama dihitung dari teks hasil pembacaan berkas, yang kedua dari berkas aslinya.</p>
+      <p>Kedua kode ini memang berbeda. Kode pertama dihitung dari teks hasil pembacaan berkas, kode kedua dari berkas aslinya.</p>
     </div>
   );
 }

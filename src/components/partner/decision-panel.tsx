@@ -9,7 +9,7 @@ const DECISION: Record<Decision, string> = {
   APPROVE: "Setujui Enhanced",
   DENY: "Selesai dengan catatan (tanpa Enhanced)",
   INCONCLUSIVE: "Belum dapat disimpulkan",
-  REFER_SPECIAL: "Rujuk sebagai kasus khusus",
+  REFER_SPECIAL: "Rujuk sebagai Special Legal Case",
 };
 
 // Keputusan akhir Pemeriksaan Mendalam. "Setujui Enhanced" hanya aktif bila semua syarat terpenuhi; alasan yang kurang ditulis jelas.
@@ -35,15 +35,15 @@ export function DecisionPanel(props: {
       <input type="hidden" name="deepId" value={props.deepId} /><input type="hidden" name="revision" value={props.revision} />
       <dl className="grid gap-x-4 gap-y-2 rounded-xl bg-subtle p-4 sm:grid-cols-[auto_1fr]">
         <dt className="font-semibold">Versi</dt><dd>Versi {props.versionNo}</dd>
-        <dt className="font-semibold">Sidik jari (SHA-256)</dt><dd className="break-all font-mono text-sm">{props.sha256}</dd>
-        <dt className="font-semibold">Ruang lingkup standar</dt><dd className="break-words">{props.parentScope || "(tidak tercatat)"}</dd>
+        <dt className="font-semibold">Kode versi (SHA-256)</dt><dd className="break-all font-mono text-sm">{props.sha256}</dd>
+        <dt className="font-semibold">Ruang lingkup Legal Review</dt><dd className="break-words">{props.parentScope || "(tidak tercatat)"}</dd>
       </dl>
       <label className="block"><span className={labelText}>Keputusan</span>
         <select name="decision" className={fieldClass} value={decision} onChange={(e) => setDecision(e.target.value as Decision)}>
           {(Object.keys(DECISION) as Decision[]).map((d) => <option key={d} value={d}>{DECISION[d]}</option>)}
         </select>
       </label>
-      <label className="block"><span className={labelText}>Alasan (wajib selain Setujui)</span><textarea name="reason" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} className={fieldClass} /></label>
+      <label className="block"><span className={labelText}>Alasan (wajib untuk keputusan selain Setujui Enhanced)</span><textarea name="reason" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} className={fieldClass} /></label>
       <label className="flex min-h-12 items-start gap-3"><input type="checkbox" name="attest" value="yes" checked={attest} onChange={(e) => setAttest(e.target.checked)} className="mt-1 h-6 w-6 shrink-0" /><span>Saya menyatakan bahwa saya profesional yang berwenang dan telah melakukan pemeriksaan tambahan ini sendiri.</span></label>
       <div id="decision-blockers" role="status" aria-live="polite">
         {blockers.length > 0 && (
@@ -57,10 +57,10 @@ export function DecisionPanel(props: {
 
       <dialog ref={dialog} aria-labelledby="keputusan-konfirmasi-h" className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-line p-0 backdrop:bg-navy/50">
         <div className="space-y-4 p-5">
-          <h3 id="keputusan-konfirmasi-h" className="text-xl font-bold text-navy">Simpan keputusan Pemeriksaan Mendalam?</h3>
+          <h3 id="keputusan-konfirmasi-h" className="text-xl font-bold text-navy">Simpan keputusan Deep Review?</h3>
           <dl className="space-y-2">
-            <div><dt className="font-semibold">Dokumen dan versi</dt><dd className="break-words">{props.title} — Versi {props.versionNo}</dd></div>
-            <div><dt className="font-semibold">Sidik jari (SHA-256)</dt><dd className="break-all font-mono text-sm">{props.sha256}</dd></div>
+            <div><dt className="font-semibold">Dokumen dan versi</dt><dd className="break-words">{props.title}, versi {props.versionNo}</dd></div>
+            <div><dt className="font-semibold">Kode versi (SHA-256)</dt><dd className="break-all font-mono text-sm">{props.sha256}</dd></div>
             <div><dt className="font-semibold">Keputusan</dt><dd>{DECISION[decision]}</dd></div>
             <div><dt className="font-semibold">Ruang lingkup</dt><dd className="break-words">{props.parentScope || "(tidak tercatat)"} (pemeriksaan tambahan)</dd></div>
             <div><dt className="font-semibold">Catatan yang belum diselesaikan</dt>

@@ -111,7 +111,7 @@ describe("perbandingan dan peringatan", () => {
     const a = buildAlerts({ ...base, overdue_reviews: 2, overdue_deep: 1, paid_not_queued: 1, reconciliation: 3, ai_24h: { requests: 10, failed: 4, rate: 0.4 } });
     expect(a.map((x) => x.code)).toEqual(["REVIEW_OVERDUE", "DEEP_OVERDUE", "AI_ERRORS", "PAID_NOT_QUEUED", "RECONCILIATION"]);
     expect(a[0].text).toContain("72 jam");
-    expect(a[0].text).toContain("usia permintaan");
+    expect(a[0].text).toContain("sejak diajukan");
     expect(a[0].text).not.toContain("sejak dibayar");
     expect(a[2].text).toContain("40%");
     // terlalu sedikit permintaan → tidak ada alarm palsu

@@ -7,13 +7,13 @@ import { deleteAccountAction } from "../actions";
 import { fixedText } from "@/lib/query-text";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Hapus Akun | Yuktanya" };
+export const metadata = { title: "Hapus akun | Yuktanya" };
 
 const link = "inline-flex min-h-12 items-center font-semibold text-link underline";
 const ERRORS: Record<string, string> = {
-  confirm: `Ketik kata ${CONFIRM_WORD} persis seperti contoh untuk melanjutkan. Akun Anda belum dihapus.`,
+  confirm: `Akun Anda belum dihapus. Ketik kata ${CONFIRM_WORD} persis seperti contoh untuk melanjutkan.`,
   blocked: "Akun belum bisa dihapus. Lihat alasannya di bawah. Tidak ada data yang berubah.",
-  error: "Penghapusan gagal karena gangguan sistem. Tidak ada data yang berubah. Coba lagi nanti.",
+  error: "Penghapusan gagal karena gangguan sistem. Tidak ada data yang berubah. Coba lagi beberapa saat lagi.",
 };
 
 export default async function DeleteAccountPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
@@ -25,7 +25,7 @@ export default async function DeleteAccountPage({ searchParams }: { searchParams
 
   return (
     <main className="max-w-3xl space-y-6">
-      <PageHeading title="Hapus akun" lead="Baca dulu apa yang dihapus dan apa yang tetap disimpan. Penghapusan tidak dapat dibatalkan." />
+      <PageHeading title="Hapus akun" lead="Baca data yang dihapus dan data yang tetap disimpan sebelum melanjutkan. Penghapusan tidak dapat dibatalkan." />
       {error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{error}</p>}
 
       <section aria-labelledby="dihapus">
@@ -34,9 +34,9 @@ export default async function DeleteAccountPage({ searchParams }: { searchParams
           <ul className="list-disc space-y-1.5 pl-6">
             <li>Semua dokumen Anda beserta setiap versinya, draf, dan percakapan dengan AI.</li>
             <li>Berkas yang Anda unggah, berkas unduhan dokumen, dan paket bukti.</li>
-            <li>Tautan bagikan, catatan konfirmasi baca dari penerima, dan pengingat.</li>
-            <li>Ringkasan yang Anda tulis untuk Kasus Hukum Khusus, dan nama profil Anda.</li>
-            <li>Login Anda. Setelah ini Anda tidak bisa masuk lagi dengan email ini ke akun yang sama.</li>
+            <li>Tautan berbagi, catatan konfirmasi baca dari penerima, dan pengingat.</li>
+            <li>Ringkasan yang Anda tulis untuk Kasus Hukum Khusus (Special Legal Case), dan nama profil Anda.</li>
+            <li>Akses masuk Anda. Setelah itu, Anda tidak dapat masuk lagi ke akun yang sama dengan email ini.</li>
           </ul>
         </Card>
       </section>
@@ -47,10 +47,10 @@ export default async function DeleteAccountPage({ searchParams }: { searchParams
           <ul className="list-disc space-y-1.5 pl-6">
             <li>Catatan pesanan dan pembayaran: dibutuhkan untuk pencocokan keuangan. Catatan ini tidak lagi terhubung dengan email Anda.</li>
             <li>Catatan audit sistem (tanpa isi dokumen): agar riwayat tindakan penting tetap dapat dipercaya.</li>
-            <li>Dokumen yang sudah diperiksa pengacara atau punya kode verifikasi: kode verifikasinya tetap bisa dicek orang lain di halaman Cek Keaslian (hanya status dan sidik jari), tetapi judul dan isi dokumennya dikosongkan. Laporan pemeriksaan pengacara tetap disimpan sebagai catatan kerja mereka.</li>
+            <li>Dokumen yang sudah diperiksa pengacara atau memiliki kode verifikasi: kode verifikasinya tetap dapat dicek orang lain di halaman pengecekan (hanya status dan sidik jari), tetapi judul dan isi dokumennya dikosongkan. Laporan Legal Review tetap disimpan sebagai catatan kerja pengacara.</li>
           </ul>
           <p className="text-muted">Aturan ini adalah pengaturan awal sistem dan menunggu persetujuan mitra hukum.</p>
-          <p>Ingin menyimpan salinan? <a className={link} href="/settings/export">Unduh data saya dulu</a></p>
+          <p>Ingin menyimpan salinan? <a className={link} href="/settings/export">Unduh data saya lebih dulu</a></p>
         </Card>
       </section>
 
@@ -59,7 +59,7 @@ export default async function DeleteAccountPage({ searchParams }: { searchParams
           <Card className="space-y-3 border-amber-400 bg-amber-50">
             <h2 id="tertahan" className="text-xl font-bold text-navy">Akun belum bisa dihapus sekarang</h2>
             <ul className="list-disc space-y-1.5 pl-6" data-testid="erase-blockers">
-              {blockers.map((b) => <li key={b}>{ERASE_BLOCK_MESSAGES[b] ?? "Masih ada proses yang berjalan. Coba lagi nanti."}</li>)}
+              {blockers.map((b) => <li key={b}>{ERASE_BLOCK_MESSAGES[b] ?? "Masih ada proses yang berjalan. Coba lagi setelah proses selesai."}</li>)}
             </ul>
             <Link className={link} href="/settings">Kembali ke Pengaturan</Link>
           </Card>

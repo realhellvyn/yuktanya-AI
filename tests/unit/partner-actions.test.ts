@@ -71,7 +71,7 @@ describe("aksi Pemeriksaan Mendalam", () => {
     expect(deep.decide).toHaveBeenCalledWith("u1", ID, { revision: 4, decision: "DENY", reason: "Belum terpenuhi", attest: true, noConflict: true, enhancedEnabled: true });
   });
   it("teks pemberitahuan biasa, tanpa istilah teknis", () => {
-    expect(INVALID_FORM_TEXT).toBe("Data formulir tidak valid. Muat ulang halaman lalu coba lagi.");
+    expect(INVALID_FORM_TEXT).toBe("Data formulir tidak valid. Muat ulang halaman, lalu coba lagi.");
   });
 });
 

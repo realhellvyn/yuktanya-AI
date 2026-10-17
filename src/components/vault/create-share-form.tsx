@@ -30,7 +30,7 @@ export function CreateShareForm({
       {state.error && <p role="alert" className="font-semibold text-danger">{state.error}</p>}
       {state.link && (
         <p role="status" className="break-all rounded-lg border border-line bg-surface p-3">
-          Salin tautan ini dan kirim ke pihak lawan. Tautan hanya ditampilkan sekali: <strong>{state.link}</strong>
+          Salin tautan ini dan kirimkan ke pihak lain. Tautan hanya ditampilkan sekali: <strong>{state.link}</strong>
         </p>
       )}
     </form>

@@ -20,7 +20,7 @@ export function AiReviewResult({ report, completedAt, verified }: { report: AiRe
         <p className="text-sm text-muted">Selesai {when} WIB</p>
         <div className="flex flex-wrap gap-2">
           {verified && <StatusBadge tone="info">{VERIFICATION_TITLES.AI}</StatusBadge>}
-          <StatusBadge tone="warning">Bukan Legal Verified — belum diperiksa pengacara</StatusBadge>
+          <StatusBadge tone="warning">Bukan Legal Verified: belum diperiksa pengacara</StatusBadge>
         </div>
       </div>
       <p role="note" className="rounded-xl border border-amber-400 bg-amber-50 p-3 font-semibold text-amber-900">{AI_PREREVIEW_LABEL}</p>
@@ -29,7 +29,7 @@ export function AiReviewResult({ report, completedAt, verified }: { report: AiRe
         <section key={g.key} className="space-y-2">
           <h4 className="text-lg font-semibold text-navy">{g.title}</h4>
           {report[g.key].length === 0 ? (
-            <p className="text-muted">Tidak ada.</p>
+            <p className="text-muted">Tidak ada catatan.</p>
           ) : (
             <ul className="list-disc space-y-1 pl-6">
               {report[g.key].map((t, i) => <li key={i} className="break-words">{t}</li>)}

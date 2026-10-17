@@ -27,7 +27,7 @@ export function AuthForm({ mode, action, error, sent, resent, returnTo }: Props)
         <h1 className="text-[1.75rem] font-bold leading-tight text-navy">{isLogin ? "Masuk ke Yuktanya" : "Buat akun Yuktanya"}</h1>
         {sent && (
           <p role="status" className="rounded-xl border border-border-strong bg-tint p-4">
-            Kami sudah mengirim email konfirmasi. Buka email Anda lalu tekan tautannya. Belum menerima? Periksa folder spam, lalu kirim ulang lewat kotak di bawah.
+            Email konfirmasi sudah dikirim. Buka email tersebut, lalu tekan tautan di dalamnya. Bila belum menerima, periksa folder spam atau kirim ulang lewat formulir di bawah.
           </p>
         )}
         {resent && (
@@ -62,7 +62,7 @@ export function AuthForm({ mode, action, error, sent, resent, returnTo }: Props)
               Sebelum mendaftar, baca <Link className="inline-flex min-h-11 items-center font-semibold text-link underline" href="/privacy">Kebijakan Privasi</Link> dan <Link className="inline-flex min-h-11 items-center font-semibold text-link underline" href="/terms">Syarat Penggunaan</Link>.
             </p>
           )}
-          <Button type="submit" className="w-full text-lg">{isLogin ? "Masuk" : "Daftar Gratis"}</Button>
+          <Button type="submit" className="w-full text-lg">{isLogin ? "Masuk" : "Daftar gratis"}</Button>
         </form>
         {(error || sent || resent) && (
           <form action={resendConfirmation} className="space-y-3 border-t border-line pt-5">
@@ -79,7 +79,7 @@ export function AuthForm({ mode, action, error, sent, resent, returnTo }: Props)
       </Card>
       <p className="text-center">
         {isLogin ? (
-          <>Belum punya akun? <Link className="inline-flex min-h-12 items-center font-semibold text-link underline" href="/register">Daftar Gratis</Link></>
+          <>Belum punya akun? <Link className="inline-flex min-h-12 items-center font-semibold text-link underline" href="/register">Daftar gratis</Link></>
         ) : (
           <>Sudah punya akun? <Link className="inline-flex min-h-12 items-center font-semibold text-link underline" href="/login">Masuk</Link></>
         )}

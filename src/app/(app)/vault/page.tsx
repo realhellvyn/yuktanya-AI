@@ -15,8 +15,8 @@ export default async function VaultPage() {
   return (
     <main className="max-w-3xl space-y-6">
       <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">Legal Vault</h1>
-      <p>Vault menyimpan versi dokumen yang sudah dibuat dan tidak dapat diubah. Dokumen yang masih diisi ada di Dokumen Saya.</p>
-      {detailed.length === 0 ? <p>Belum ada versi yang tersimpan.</p> : (
+      <p>Legal Vault menyimpan versi dokumen yang sudah selesai dan tidak dapat diubah. Draf yang masih diisi tersedia di Dokumen Saya.</p>
+      {detailed.length === 0 ? <p>Belum ada versi dokumen yang tersimpan.</p> : (
         <ul className="space-y-4">
           {detailed.filter((d) => d !== null).map((d) => (
             <li key={d.id} className="rounded-lg border border-line bg-surface p-4">
@@ -25,7 +25,7 @@ export default async function VaultPage() {
                 {d.versions.map((v) => (
                   <li key={v.id}>
                     <Link className="inline-flex min-h-12 items-center text-link underline" href={`/documents/${d.id}?version=${v.id}`}>Versi {v.versionNo}</Link>
-                    {" "}· kode <span className="font-mono">{v.sha256.slice(0, 12)}</span>
+                    {" "}· kode versi <span className="font-mono">{v.sha256.slice(0, 12)}</span>
                   </li>
                 ))}
               </ul>

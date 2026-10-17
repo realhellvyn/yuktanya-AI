@@ -65,11 +65,11 @@ export async function journey({ step, base, db, newActor, fake }) {
     await p.waitForFunction((t) => document.querySelector("textarea[name=message]")?.value === t, draft, { timeout: 10000 });
     await p.waitForSelector("text=Tulisan Anda yang belum terkirim sudah dikembalikan");
     await p.context().setOffline(true);
-    await p.waitForSelector("text=Anda sedang offline. Pesan belum bisa dikirim.", { timeout: 5000 });
+    await p.waitForSelector("text=Perangkat tidak terhubung ke internet. Pesan belum dapat dikirim.", { timeout: 5000 });
     if (!(await p.locator("button:has-text('Kirim')").isDisabled())) throw new Error("tombol Kirim tetap aktif saat offline");
     await actors.b.shot("draf-offline");
     await p.context().setOffline(false);
-    await p.waitForSelector("text=Anda sedang offline", { state: "detached", timeout: 5000 });
+    await p.waitForSelector("text=Perangkat tidak terhubung ke internet", { state: "detached", timeout: 5000 });
     if (await p.locator("button:has-text('Kirim')").isDisabled()) throw new Error("tombol Kirim tidak aktif lagi setelah online");
     await say(p, draft, "Baik, saya catat");
     // Langsung setelah kirim sukses (termasuk setelah reset formulir React yang ditunda): kotak harus kosong, tidak dikembalikan.
@@ -163,7 +163,7 @@ export async function journey({ step, base, db, newActor, fake }) {
     let downloaded = false;
     p.once("download", () => (downloaded = true));
     await Promise.all([p.waitForURL(/notice=export-limit/, { timeout: 20000 }), p.click("[data-testid=export-link]")]);
-    await p.waitForSelector("[data-testid=settings-notice]:has-text('Coba lagi nanti')");
+    await p.waitForSelector("[data-testid=settings-notice]:has-text('Coba lagi satu jam lagi')");
     if (downloaded) throw new Error("galat tersimpan sebagai berkas unduhan");
   });
 

@@ -1,4 +1,4 @@
-// Teks dan logika tampilan Kasus Hukum Khusus (murni, dapat diuji unit). Bahasa Indonesia sederhana.
+// Teks dan logika tampilan Special Legal Case (murni, dapat diuji unit). Bahasa Indonesia formal dan ringkas.
 import { fixedText } from "@/lib/query-text";
 import type { CaseErrorCode, CaseStatus } from "./service";
 
@@ -15,27 +15,27 @@ export const CASE_STATUS_TONE: Record<CaseStatus, "info" | "success" | "warning"
 };
 
 export const CASE_ERROR_TEXT: Record<CaseErrorCode | "SPECIAL_CASE_OPEN", string> = {
-  NOT_FOUND: "Kasus atau dokumen tidak ditemukan.",
-  FORBIDDEN: "Anda tidak berwenang melakukan tindakan ini.",
-  CONSENT_REQUIRED: "Centang persetujuan terlebih dahulu.",
-  SUMMARY_INVALID: "Ceritakan kebutuhan Anda minimal 20 huruf dan paling banyak 2.000 huruf.",
-  CASE_EXISTS: "Dokumen ini sudah punya permintaan penilaian khusus yang masih berjalan.",
-  INVALID_STATE: "Tindakan ini tidak bisa dilakukan pada tahap sekarang. Muat ulang halaman.",
-  CONFLICT_CHECK_REQUIRED: "Nyatakan bahwa pemeriksaan konflik kepentingan sudah dilakukan.",
-  INVALID_AMOUNT: "Isi biaya dalam rupiah (minimal Rp1.000).",
-  INVALID_SCOPE: "Tulis ruang lingkup pekerjaan minimal 10 huruf.",
+  NOT_FOUND: "Kasus atau dokumen tidak ditemukan. Muat ulang halaman, lalu coba lagi.",
+  FORBIDDEN: "Akun Anda tidak berwenang melakukan tindakan ini.",
+  CONSENT_REQUIRED: "Persetujuan belum dicentang. Centang persetujuan, lalu kirim lagi.",
+  SUMMARY_INVALID: "Ringkasan kebutuhan harus 20 sampai 2.000 karakter.",
+  CASE_EXISTS: "Dokumen ini sudah memiliki pengajuan Special Legal Case yang masih berjalan.",
+  INVALID_STATE: "Tindakan ini tidak dapat dilakukan pada tahap sekarang. Muat ulang halaman untuk melihat status terbaru.",
+  CONFLICT_CHECK_REQUIRED: "Centang pernyataan bahwa pemeriksaan konflik kepentingan sudah dilakukan.",
+  INVALID_AMOUNT: "Isi biaya dalam rupiah, minimal Rp1.000.",
+  INVALID_SCOPE: "Ruang lingkup pekerjaan minimal 10 karakter.",
   INVALID_EXPIRY: "Tanggal berlaku penawaran harus setelah hari ini dan paling lama 90 hari.",
   QUOTE_EXPIRED: "Penawaran ini sudah kedaluwarsa. Tunggu penawaran baru dari firma.",
-  STALE_QUOTE: "Penawaran sudah diperbarui firma. Baca penawaran terbaru sebelum memutuskan.",
-  INVALID_FIRM: "Firma tidak ditemukan.",
-  SPECIAL_CASE_OPEN: "Dokumen ini memerlukan penilaian khusus. Review Standar tidak tersedia selama penilaian khusus berjalan.",
+  STALE_QUOTE: "Firma sudah memperbarui penawaran. Baca penawaran terbaru sebelum memutuskan.",
+  INVALID_FIRM: "Firma tidak ditemukan. Pilih firma lain.",
+  SPECIAL_CASE_OPEN: "Dokumen ini sedang diajukan sebagai Special Legal Case. Legal Review tidak tersedia selama Special Legal Case masih berjalan.",
 };
 // Kode bisa datang dari alamat (?e=): hanya properti milik sendiri yang dibaca ("__proto__", "toString" -> kalimat umum).
 export const caseErrorText = (code: unknown): string | null =>
-  code ? fixedText(CASE_ERROR_TEXT, code) ?? "Terjadi kendala. Coba lagi." : null;
+  code ? fixedText(CASE_ERROR_TEXT, code) ?? "Tindakan belum berhasil. Muat ulang halaman, lalu coba lagi." : null;
 
 export type Step = { label: string; state: "done" | "current" | "todo" };
-// Tahapan untuk pemilik: Diajukan → Dinilai firma → Penawaran → Keputusan Anda.
+// Tahapan untuk pemilik: Diajukan, Dinilai firma, Penawaran, Keputusan Anda.
 export function caseTimeline(status: CaseStatus): Step[] {
   const labels = ["Diajukan", "Dinilai firma hukum", "Penawaran dikirim", "Keputusan Anda"];
   const at: Record<CaseStatus, number> = { SUBMITTED: 1, TRIAGED: 2, QUOTED: 3, ACCEPTED: 4, DECLINED: 4, CLOSED: 4 };

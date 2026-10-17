@@ -9,14 +9,14 @@ export type ChooserState = { lines: ChooserTurn[]; choice: ChooserChoice | null;
 
 // Kode galat → kalimat tetap (tidak ada teks dari klien atau model yang dipakai sebagai pesan sistem).
 const NOTICE: Partial<Record<ChooserErrorCode, string>> = {
-  AI_MESSAGE_QUOTA_REACHED: "Batas pesan AI hari ini sudah tercapai, jadi pesan Anda belum terkirim. Anda tetap bisa memilih dokumen sendiri di halaman Buat Dokumen, atau lanjutkan besok mulai pukul 00.00 WIB.",
-  AI_UNAVAILABLE: "Layanan AI sedang sibuk dan jatah AI Anda tidak terpakai. Tulisan Anda masih ada di kotak pesan: tekan Kirim lagi, atau pilih dokumen sendiri.",
+  AI_MESSAGE_QUOTA_REACHED: "Kuota pesan AI hari ini sudah habis. Pesan terakhir Anda belum terkirim. Anda tetap dapat memilih dokumen sendiri di halaman Buat Dokumen. Kuota diperbarui pukul 00.00 WIB.",
+  AI_UNAVAILABLE: "Layanan AI sedang sibuk. Kuota AI Anda tidak terpakai, dan tulisan Anda masih ada di kotak pesan. Tekan Kirim lagi, atau pilih dokumen sendiri.",
   AI_BUSY: "Pesan sebelumnya masih diproses. Tunggu sebentar, lalu kirim lagi.",
-  DUPLICATE_REQUEST: "Pesan ini sudah diproses. Bila jawabannya belum tampil, kirim lagi.",
+  DUPLICATE_REQUEST: "Pesan ini sudah diproses. Bila balasannya belum tampil, kirim lagi.",
   TOO_MANY_ATTEMPTS: "Terlalu banyak percobaan dalam waktu singkat. Tunggu satu menit, lalu kirim lagi.",
-  INVALID_REQUEST: "Pesan belum dapat diproses. Tulis pesan Anda (paling banyak 2.000 huruf), lalu kirim lagi.",
+  INVALID_REQUEST: "Pesan belum dapat diproses. Tulis pesan Anda (paling banyak 2.000 karakter), lalu kirim lagi.",
 };
-const FALLBACK = "Pesan belum dapat diproses. Coba lagi sebentar lagi, atau pilih dokumen sendiri.";
+const FALLBACK = "Pesan belum dapat diproses. Coba lagi beberapa saat lagi, atau pilih dokumen sendiri.";
 
 export async function chooseTemplateAction(prev: ChooserState, formData: FormData): Promise<ChooserState> {
   const message = String(formData.get("message") ?? "");

@@ -99,7 +99,7 @@ describe("draf pesan percakapan (localStorage)", () => {
 
   it("pemberitahuan offline memakai kalimat tetap dan hanya tampil saat offline", () => {
     const on = renderToStaticMarkup(createElement(OfflineNotice, { offline: true }));
-    expect(on).toContain("Anda sedang offline. Pesan belum bisa dikirim.");
+    expect(on).toContain("Perangkat tidak terhubung ke internet. Pesan belum dapat dikirim.");
     expect(on).toContain('role="status"');
     expect(renderToStaticMarkup(createElement(OfflineNotice, { offline: false }))).toBe("");
   });

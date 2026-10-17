@@ -10,7 +10,7 @@ export function PublicVerification({ result, code }: { result: PublicVerificatio
     return (
       <main className="mx-auto max-w-2xl space-y-4 p-6">
         <h1 className="text-3xl font-semibold">Kode tidak ditemukan</h1>
-        <p role="status">Kode ini tidak ada di Yuktanya. Periksa kembali kode atau pindai ulang kode QR.</p>
+        <p role="status">Kode ini tidak terdaftar di Yuktanya. Periksa kembali kode atau pindai ulang kode QR.</p>
       </main>
     );
   }

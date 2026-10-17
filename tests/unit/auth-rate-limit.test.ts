@@ -37,7 +37,7 @@ describe("aksi auth dengan pembatas laju", () => {
     await expect(requestPasswordReset(form({ email: cred.email }))).rejects.toThrow("REDIRECT:/forgot-password?error=rate_limited");
     await expect(resendConfirmation(form({ email: cred.email, page: "register", returnTo: "/dashboard" }))).rejects.toThrow("REDIRECT:/register?error=rate_limited&returnTo=%2Fdashboard");
     expect(supabaseCalls()).toBe(0);
-    expect(AUTH_MESSAGES.rate_limited).toBe("Terlalu sering mencoba. Tunggu beberapa menit, lalu coba lagi.");
+    expect(AUTH_MESSAGES.rate_limited).toBe("Terlalu banyak percobaan. Tunggu beberapa menit, lalu coba lagi.");
   });
 
   it("kunci memakai IP klien dan email yang dinormalkan, sebelum keberadaan akun diperiksa", async () => {

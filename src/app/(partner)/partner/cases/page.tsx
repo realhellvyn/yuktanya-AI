@@ -8,7 +8,7 @@ import { categoryLabel } from "@/lib/partner/labels";
 import { getSessionRoles } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Kasus Khusus — Triase & Penawaran | Mitra Hukum Yuktanya" };
+export const metadata = { title: "Special Legal Case | Mitra Hukum Yuktanya" };
 
 // Khusus koordinator (juga dijaga proxy). Daftar hanya memuat kasus firma tempat akun ini menjadi koordinator.
 export default async function PartnerCasesPage() {
@@ -17,9 +17,9 @@ export default async function PartnerCasesPage() {
   const rows = await casesService().partnerList(s.userId);
   return (
     <main className="max-w-4xl space-y-6">
-      <PageHeading title="Kasus khusus" lead="Permintaan penilaian khusus untuk firma Anda: periksa konflik kepentingan, nilai kebutuhan, lalu kirim penawaran." />
+      <PageHeading title="Special Legal Case" lead="Pengajuan Kasus Hukum Khusus (Special Legal Case) untuk firma Anda. Periksa konflik kepentingan, nilai kebutuhan, lalu kirim penawaran." />
       {rows.length === 0 ? (
-        <EmptyState title="Belum ada kasus khusus" text="Permintaan baru dari pemilik dokumen akan muncul di sini." />
+        <EmptyState title="Belum ada Special Legal Case" text="Pengajuan baru dari pemilik dokumen akan tampil di sini." />
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => (

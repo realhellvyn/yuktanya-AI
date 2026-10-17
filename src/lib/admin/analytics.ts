@@ -5,7 +5,7 @@ import { fmtCount, NO_DATA } from "./format";
 export const CATEGORIES = [
   { value: "NDA", label: "Perjanjian Kerahasiaan (NDA)" },
   { value: "PKS", label: "Perjanjian Kerja Sama" },
-  { value: "UTANG_PIUTANG", label: "Perjanjian Utang Piutang" },
+  { value: "UTANG_PIUTANG", label: "Surat Utang Piutang" },
   { value: "UPLOAD", label: "Dokumen unggahan" },
 ] as const;
 export const MEMBERSHIPS = [
@@ -54,7 +54,7 @@ export function parseAnalyticsQuery(q: { r?: string; dari?: string; sampai?: str
   const fallback = (msg: string) => preset("7", `${msg} Menampilkan 7 hari terakhir.`);
   if (!q.dari || !q.sampai) return fallback("Isi keduanya: tanggal awal dan tanggal akhir.");
   if (!validDate(typed.dari) || !validDate(typed.sampai)) return fallback("Tanggal tidak valid. Pilih tanggal dari kalender.");
-  if (typed.sampai < typed.dari) return fallback("Tanggal akhir tidak boleh sebelum tanggal awal. Tanggal akhir harus sama atau setelah tanggal awal.");
+  if (typed.sampai < typed.dari) return fallback("Tanggal akhir tidak boleh sebelum tanggal awal. Pilih tanggal akhir yang sama dengan atau setelah tanggal awal.");
   if (typed.sampai > today) return fallback("Tanggal akhir tidak boleh setelah hari ini.");
   const span = Math.round((startWib(typed.sampai).getTime() - startWib(typed.dari).getTime()) / DAY) + 1;
   if (span > MAX_DAYS) return fallback(`Rentang paling panjang ${MAX_DAYS} hari.`);
@@ -77,13 +77,13 @@ export type Alert = { code: string; text: string };
 
 export function buildAlerts(a: AlertsInput): Alert[] {
   const out: Alert[] = [];
-  if (a.overdue_reviews > 0) out.push({ code: "REVIEW_OVERDUE", text: `${fmtCount(a.overdue_reviews)} Review Standar masih terbuka dengan usia permintaan lebih dari ${a.overdue_hours} jam. Periksa perutean dan beban reviewer.` });
-  if (a.overdue_deep > 0) out.push({ code: "DEEP_OVERDUE", text: `${fmtCount(a.overdue_deep)} Pemeriksaan Mendalam menunggu lebih dari ${a.overdue_hours} jam.` });
+  if (a.overdue_reviews > 0) out.push({ code: "REVIEW_OVERDUE", text: `${fmtCount(a.overdue_reviews)} Legal Review masih terbuka lebih dari ${a.overdue_hours} jam sejak diajukan. Periksa penugasan dan beban kerja pemeriksa.` });
+  if (a.overdue_deep > 0) out.push({ code: "DEEP_OVERDUE", text: `${fmtCount(a.overdue_deep)} Deep Review menunggu lebih dari ${a.overdue_hours} jam.` });
   const rate = a.ai_24h?.rate === null || a.ai_24h?.rate === undefined ? null : Number(a.ai_24h.rate);
   if (a.ai_24h && rate !== null && a.ai_24h.requests >= a.ai_min_requests && rate >= Number(a.ai_rate_threshold)) {
-    out.push({ code: "AI_ERRORS", text: `Galat AI 24 jam terakhir ${Math.round(rate * 100)}% (${fmtCount(a.ai_24h.failed)} dari ${fmtCount(a.ai_24h.requests)} permintaan). Periksa halaman Pemakaian AI.` });
+    out.push({ code: "AI_ERRORS", text: `Tingkat kegagalan AI dalam 24 jam terakhir ${Math.round(rate * 100)}% (${fmtCount(a.ai_24h.failed)} dari ${fmtCount(a.ai_24h.requests)} permintaan). Periksa halaman Pemakaian AI.` });
   }
-  if (a.paid_not_queued > 0) out.push({ code: "PAID_NOT_QUEUED", text: `${fmtCount(a.paid_not_queued)} order sudah dibayar tetapi belum masuk antrean review.` });
+  if (a.paid_not_queued > 0) out.push({ code: "PAID_NOT_QUEUED", text: `${fmtCount(a.paid_not_queued)} pesanan sudah dibayar tetapi belum masuk antrean pemeriksaan.` });
   if (a.reconciliation > 0) out.push({ code: "RECONCILIATION", text: `${fmtCount(a.reconciliation)} pembayaran perlu rekonsiliasi.` });
   return out;
 }

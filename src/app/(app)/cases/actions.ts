@@ -20,7 +20,7 @@ export async function submitCaseAction(_prev: SubmitCaseState, formData: FormDat
   const key = str(formData, "key");
   const values = { summary, consent };
   if (documentId && !isUuid(documentId)) return { error: caseErrorText("NOT_FOUND")!, values };
-  if (!/^[A-Za-z0-9-]{8,64}$/.test(key)) return { error: "Formulir kedaluwarsa. Muat ulang halaman.", values };
+  if (!/^[A-Za-z0-9-]{8,64}$/.test(key)) return { error: "Formulir sudah kedaluwarsa. Muat ulang halaman, lalu kirim lagi.", values };
   let id: string;
   try {
     id = await casesService().submit(userId, { documentId: documentId || null, summary, consent, key });

@@ -13,24 +13,24 @@ import { assignDeepAction } from "./deep-actions";
 import { fixedText } from "@/lib/query-text";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Antrean Review Standar & Pemeriksaan Mendalam | Mitra Hukum Yuktanya" };
+export const metadata = { title: "Antrean Legal Review dan Deep Review | Mitra Hukum Yuktanya" };
 const ERR: Record<string, string> = {
-  FORBIDDEN: "Anda tidak berwenang menugaskan permintaan ini.",
-  REVIEWER_NOT_AUTHORIZED: "Reviewer ini tidak memiliki otorisasi aktif untuk firma ini.",
-  REVIEWER_AT_CAPACITY: "Reviewer ini sudah mencapai batas pekerjaan aktif.",
-  NOT_FOUND: "Permintaan tidak ditemukan.",
-  NOT_ASSIGNABLE: "Permintaan ini tidak dapat ditugaskan lagi.",
-  CONFLICT_OF_INTEREST: "Firma Anda sudah mencatat konflik kepentingan dengan pemilik dokumen ini, jadi permintaan ini tidak dapat ditugaskan.",
+  FORBIDDEN: "Akun Anda tidak berwenang menugaskan permintaan ini.",
+  REVIEWER_NOT_AUTHORIZED: "Pemeriksa ini tidak memiliki otorisasi aktif untuk firma ini. Pilih pemeriksa lain.",
+  REVIEWER_AT_CAPACITY: "Pemeriksa ini sudah mencapai batas pekerjaan aktif. Pilih pemeriksa lain.",
+  NOT_FOUND: "Permintaan tidak ditemukan. Muat ulang halaman.",
+  NOT_ASSIGNABLE: "Permintaan ini tidak dapat ditugaskan lagi. Muat ulang halaman untuk melihat status terbaru.",
+  CONFLICT_OF_INTEREST: "Firma Anda sudah mencatat konflik kepentingan dengan pemilik dokumen ini, sehingga permintaan ini tidak dapat ditugaskan.",
   CONFLICT_CONFIRM_REQUIRED: "Centang pernyataan konflik kepentingan sebelum menyimpan.",
   INVALID_REQUEST: INVALID_FORM_TEXT,
 };
 const OK: Record<string, string> = {
   assigned: "Penugasan disimpan.",
-  conflict: "Konflik kepentingan firma dicatat. Permintaan ini tidak akan ditugaskan di firma Anda; admin platform menindaklanjutinya.",
+  conflict: "Konflik kepentingan firma sudah dicatat. Permintaan ini tidak akan ditugaskan di firma Anda, dan admin platform akan menindaklanjutinya.",
 };
 const DONE: Record<string, string> = {
-  WITH_NOTES: "Selesai — Dengan Legal Note", WITHIN_SCOPE: "Selesai — Tanpa Legal Note", INCONCLUSIVE: "Belum dapat disimpulkan", DECLINED: "Tidak dapat memeriksa",
-  ENHANCED_APPROVED: "Enhanced disetujui", COMPLETED_WITH_NOTES: "Selesai dengan catatan (tanpa Enhanced)", REFERRED_SPECIAL_CASE: "Dirujuk sebagai kasus khusus",
+  WITH_NOTES: "Selesai dengan Legal Note", WITHIN_SCOPE: "Selesai tanpa Legal Note", INCONCLUSIVE: "Belum dapat disimpulkan", DECLINED: "Tidak dapat memeriksa",
+  ENHANCED_APPROVED: "Enhanced disetujui", COMPLETED_WITH_NOTES: "Selesai dengan catatan (tanpa Enhanced)", REFERRED_SPECIAL_CASE: "Dirujuk sebagai Special Legal Case",
 };
 const H2 = "text-xl font-bold text-navy md:text-2xl";
 const statusText = (s: string) => (s === "IN_REVIEW" ? "Sedang diperiksa" : "Ditugaskan, belum dibuka");
@@ -60,23 +60,23 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
   const nameOf = (id: string) => coord?.reviewers.find((x) => x.reviewerId === id)?.email ?? id.slice(0, 8);
   return (
     <main className="max-w-4xl space-y-8">
-      <PageHeading title="Dashboard Mitra Hukum" lead="Antrean Review Standar dan Pemeriksaan Mendalam yang menjadi tanggung jawab Anda."
+      <PageHeading title="Dashboard Mitra Hukum" lead="Antrean Legal Review dan Deep Review yang menjadi tanggung jawab Anda."
         actions={isReviewer ? <ButtonLink href="/partner/approvals" variant="secondary">Lihat yang siap diputuskan</ButtonLink> : undefined} />
-      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{fixedText(ERR, q.e) ?? "Terjadi kendala. Coba lagi."}</p>}
-      {fixedText(DONE, q.done) && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">Pemeriksaan diselesaikan dengan hasil: {fixedText(DONE, q.done)}. Pemilik dokumen sudah diberi tahu.</p>}
+      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{fixedText(ERR, q.e) ?? "Tindakan belum berhasil. Muat ulang halaman, lalu coba lagi."}</p>}
+      {fixedText(DONE, q.done) && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">Pemeriksaan selesai dengan hasil: {fixedText(DONE, q.done)}. Pemilik dokumen sudah diberi tahu.</p>}
       {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">{fixedText(OK, q.ok) ?? "Tersimpan."}</p>}
 
       {isReviewer && (
         <section aria-labelledby="antrean-h" className="space-y-3">
-          <h2 id="antrean-h" className={H2}>Review Standar saya</h2>
-          {queue.length === 0 ? <EmptyState title="Belum ada pekerjaan" text="Belum ada Review Standar yang ditugaskan kepada Anda." /> : (
+          <h2 id="antrean-h" className={H2}>Legal Review saya</h2>
+          {queue.length === 0 ? <EmptyState title="Belum ada pekerjaan" text="Belum ada Legal Review yang ditugaskan kepada Anda." /> : (
             <ul className="space-y-3">
               {queue.map((r) => (
                 <li key={r.requestId}>
                   <Card className="flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-0 space-y-1">
                       <Link className="inline-flex min-h-12 items-center text-lg font-semibold text-link underline underline-offset-4" href={`/partner/reviews/${r.requestId}`}>{categoryLabel(r.category)}</Link>
-                      <p className="text-muted">Review Standar · Usia {age(r.createdAt)}</p>
+                      <p className="text-muted">Legal Review · Usia {age(r.createdAt)}</p>
                     </div>
                     <StatusBadge tone={r.status === "IN_REVIEW" ? "info" : "warning"}>{statusText(r.status)}</StatusBadge>
                   </Card>
@@ -89,14 +89,14 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
 
       {deepQueue.length > 0 && (
         <section aria-labelledby="deepq-h" className="space-y-3">
-          <h2 id="deepq-h" className={H2}>Pemeriksaan mendalam saya</h2>
+          <h2 id="deepq-h" className={H2}>Deep Review saya</h2>
           <ul className="space-y-3">
             {deepQueue.map((r) => (
               <li key={r.deepId}>
                 <Card className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0 space-y-1">
                     <Link className="inline-flex min-h-12 items-center text-lg font-semibold text-link underline underline-offset-4" href={`/partner/deep/${r.deepId}`}>{categoryLabel(r.category)}</Link>
-                    <p className="text-muted">Pemeriksaan Mendalam · Usia {age(r.createdAt)}</p>
+                    <p className="text-muted">Deep Review · Usia {age(r.createdAt)}</p>
                   </div>
                   <StatusBadge tone={r.status === "IN_REVIEW" ? "info" : "warning"}>{statusText(r.status)}</StatusBadge>
                 </Card>
@@ -109,18 +109,18 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
       {coord && (
         <section aria-labelledby="tugas-h" id="penugasan" className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 id="tugas-h" className={H2}>Review Standar belum ditugaskan</h2>
+            <h2 id="tugas-h" className={H2}>Legal Review belum ditugaskan</h2>
             <ButtonLink href="/partner/team" variant="quiet">Lihat tim firma</ButtonLink>
           </div>
-          {coord.requests.length === 0 ? <EmptyState title="Tidak ada yang menunggu" text="Tidak ada permintaan yang menunggu penugasan." /> : (
+          {coord.requests.length === 0 ? <EmptyState title="Tidak ada permintaan baru" text="Tidak ada permintaan yang menunggu penugasan." /> : (
             <ul className="space-y-3">
               {coord.requests.map((r) => (
                 <li key={r.requestId}>
                   <Card className="space-y-3">
                     <p className="font-semibold text-navy">{categoryLabel(r.category)} · Usia {age(r.createdAt)}</p>
                     {r.conflict ? (
-                      <p role="status" className="rounded-xl border border-amber-400 bg-amber-50 p-3 text-amber-950">Konflik kepentingan firma sudah dicatat. Permintaan ini tidak ditugaskan di firma Anda; admin platform menindaklanjutinya.</p>
-                    ) : coord.reviewers.length === 0 ? <p>Belum ada reviewer di firma Anda. Minta admin platform menambahkan reviewer.</p> : (
+                      <p role="status" className="rounded-xl border border-amber-400 bg-amber-50 p-3 text-amber-950">Konflik kepentingan firma sudah dicatat. Permintaan ini tidak ditugaskan di firma Anda, dan admin platform akan menindaklanjutinya.</p>
+                    ) : coord.reviewers.length === 0 ? <p>Belum ada pemeriksa di firma Anda. Minta admin platform menambahkan pemeriksa.</p> : (
                       <form action={assignAction} className="flex flex-wrap items-end gap-3">
                         <input type="hidden" name="requestId" value={r.requestId} />
                         <ReviewerSelect reviewers={coord.reviewers} label="Tugaskan kepada" />
@@ -144,7 +144,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
 
       {deepCoord && (deepCoord.requests.length > 0 || deepCoord.inflight.length > 0) && coord && (
         <section aria-labelledby="deepc-h" className="space-y-3">
-          <h2 id="deepc-h" className={H2}>Pemeriksaan mendalam: penugasan</h2>
+          <h2 id="deepc-h" className={H2}>Penugasan Deep Review</h2>
           {[...deepCoord.requests.map((r) => ({ id: r.deepId, mode: "assign", note: "Belum ditugaskan", ok: true, cat: r.category })), ...deepCoord.inflight.map((r) => ({ id: r.deepId, mode: "reassign", note: r.reviewerAuthorized ? `Dikerjakan ${nameOf(r.reviewerId)}` : `Dikerjakan ${nameOf(r.reviewerId)} (otorisasi tidak aktif)`, ok: r.reviewerAuthorized, cat: r.category }))].map((r) => (
             <Card key={r.id}>
               <form action={assignDeepAction} className="flex flex-wrap items-end gap-3">
@@ -160,13 +160,13 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
 
       {coord && coord.inflight.length > 0 && (
         <section aria-labelledby="jalan-h" className="space-y-3">
-          <h2 id="jalan-h" className={H2}>Review Standar sedang dikerjakan</h2>
+          <h2 id="jalan-h" className={H2}>Legal Review yang sedang dikerjakan</h2>
           <ul className="space-y-3">
             {coord.inflight.map((r) => (
               <li key={r.requestId}>
                 <Card className="space-y-3">
-                  <p className="break-words font-semibold text-navy">{categoryLabel(r.category)} · Usia {age(r.createdAt)} · Reviewer {nameOf(r.reviewerId)}</p>
-                  {!r.reviewerAuthorized && <p role="alert" className="font-semibold text-danger">Otorisasi reviewer ini tidak aktif. Pindahkan penugasan.</p>}
+                  <p className="break-words font-semibold text-navy">{categoryLabel(r.category)} · Usia {age(r.createdAt)} · Pemeriksa {nameOf(r.reviewerId)}</p>
+                  {!r.reviewerAuthorized && <p role="alert" className="font-semibold text-danger">Otorisasi pemeriksa ini tidak aktif. Pindahkan penugasan ke pemeriksa lain.</p>}
                   <form action={reassignAction} className="flex flex-wrap items-end gap-3">
                     <input type="hidden" name="requestId" value={r.requestId} />
                     <ReviewerSelect reviewers={coord.reviewers} label="Pindahkan ke" />
@@ -178,7 +178,7 @@ export default async function PartnerPage({ searchParams }: { searchParams: Prom
           </ul>
         </section>
       )}
-      {!isReviewer && !coord && <EmptyState title="Belum ada tugas" text="Akun ini belum memiliki tugas di dashboard mitra." />}
+      {!isReviewer && !coord && <EmptyState title="Belum ada tugas" text="Akun ini belum memiliki tugas di Dashboard Mitra Hukum." />}
     </main>
   );
 }

@@ -31,13 +31,13 @@ export function versionStatusText(s: VersionReviewState | undefined, newerThanRe
   const notReviewed = { text: newerThanReviewed ? "Versi baru belum diperiksa" : "Belum diperiksa pengacara", tone: "warning" as const };
   if (!s) return notReviewed;
   if (s.legal === "ACTIVE") {
-    return { text: s.enhanced === "ACTIVE" ? "Sudah diperiksa pengacara — Legal Verified Enhanced aktif" : "Sudah diperiksa pengacara — Legal Verified aktif", tone: "success" };
+    return { text: s.enhanced === "ACTIVE" ? "Sudah diperiksa pengacara: Legal Verified Enhanced aktif" : "Sudah diperiksa pengacara: Legal Verified aktif", tone: "success" };
   }
-  if (s.legal === "SUSPENDED") return { text: "Sudah diperiksa pengacara — verifikasi ditangguhkan sementara", tone: "warning" };
-  if (s.legal === "REVOKED") return { text: "Sudah diperiksa pengacara — verifikasi dicabut", tone: "danger" };
-  if (s.review && LIVE.includes(s.review)) return { text: "Sedang dalam pemeriksaan pengacara", tone: "info" };
-  if (s.review === "COMPLETED" && s.outcome === "INCONCLUSIVE") return { text: "Sudah diperiksa pengacara — belum dapat disimpulkan, tanpa Legal Verified", tone: "neutral" };
-  if (s.review === "DECLINED") return { text: "Pemeriksaan ditolak pemeriksa — versi ini belum diperiksa", tone: "neutral" };
+  if (s.legal === "SUSPENDED") return { text: "Sudah diperiksa pengacara: verifikasi ditangguhkan sementara", tone: "warning" };
+  if (s.legal === "REVOKED") return { text: "Sudah diperiksa pengacara: verifikasi dicabut", tone: "danger" };
+  if (s.review && LIVE.includes(s.review)) return { text: "Legal Review sedang berjalan", tone: "info" };
+  if (s.review === "COMPLETED" && s.outcome === "INCONCLUSIVE") return { text: "Sudah diperiksa pengacara: belum dapat disimpulkan, tanpa Legal Verified", tone: "neutral" };
+  if (s.review === "DECLINED") return { text: "Legal Review ditolak pengacara: versi ini belum diperiksa", tone: "neutral" };
   return notReviewed;
 }
 

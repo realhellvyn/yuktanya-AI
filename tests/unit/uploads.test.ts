@@ -268,7 +268,7 @@ describe("keluaran AI divalidasi skema dan ditampilkan sebagai teks", () => {
     expect(h).toContain("Bukan Legal Verified");
     expect(h).not.toContain("<script>");
     expect(h).toContain("&lt;script&gt;");
-    expect(h).toContain("Tidak ada.");
+    expect(h).toContain("Tidak ada catatan.");
     expect(h).not.toMatch(/\bcap\b/i);
   });
 });

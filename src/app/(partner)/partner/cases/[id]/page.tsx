@@ -14,11 +14,11 @@ import { closeCaseAction, quoteCaseAction, triageCaseAction } from "../actions";
 import { fixedText } from "@/lib/query-text";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Kasus Khusus — Triase & Penawaran | Mitra Hukum Yuktanya" };
+export const metadata = { title: "Special Legal Case | Mitra Hukum Yuktanya" };
 
 const OK: Record<string, string> = {
   triase: "✓ Triase tersimpan. Kirim penawaran bila firma dapat menangani kasus ini.",
-  penawaran: "✓ Penawaran terkirim ke pemilik.",
+  penawaran: "✓ Penawaran terkirim ke pemilik dokumen.",
   ditutup: "✓ Kasus ditutup.",
 };
 const ymdWib = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(d);
@@ -35,7 +35,7 @@ export default async function PartnerCasePage({ params, searchParams }: { params
   const error = caseErrorText(q.e);
   return (
     <main className="max-w-3xl space-y-6">
-      <PageHeading title="Kasus khusus" lead={`${c.category ? categoryLabel(c.category) : "Tanpa dokumen terkait"} · ${c.firmName}`} />
+      <PageHeading title="Special Legal Case" lead={`${c.category ? categoryLabel(c.category) : "Tanpa dokumen terkait"} · ${c.firmName}`} />
       {fixedText(OK, q.ok) && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-success">{fixedText(OK, q.ok)}</p>}
       {error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{error}</p>}
       <Card className="space-y-3">
@@ -43,8 +43,8 @@ export default async function PartnerCasePage({ params, searchParams }: { params
           <h2 className="text-xl font-semibold">Status</h2>
           <StatusBadge tone={CASE_STATUS_TONE[c.status]}>{CASE_STATUS_LABEL[c.status]}</StatusBadge>
         </div>
-        <p className="text-muted">Masuk {formatWib(c.createdAt)}. Pemilik menyetujui berbagi ringkasan pada {formatWib(c.consentAt)}.</p>
-        <h3 className="font-semibold">Ringkasan dari pemilik</h3>
+        <p className="text-muted">Masuk {formatWib(c.createdAt)}. Pemilik dokumen menyetujui berbagi ringkasan pada {formatWib(c.consentAt)}.</p>
+        <h3 className="font-semibold">Ringkasan dari pemilik dokumen</h3>
         <p className="whitespace-pre-wrap break-words rounded-xl border border-line bg-subtle p-3">{c.summary}</p>
       </Card>
 
@@ -59,7 +59,7 @@ export default async function PartnerCasePage({ params, searchParams }: { params
             </label>
             <Button type="submit">Simpan triase</Button>
           </form>
-          <p className="text-muted">Bila ada konflik atau firma tidak dapat menangani, tutup kasus di bawah dengan alasan singkat.</p>
+          <p className="text-muted">Bila ada konflik kepentingan atau firma tidak dapat menangani kasus ini, tutup kasus di bawah dengan alasan singkat.</p>
         </Card>
       )}
 
@@ -68,7 +68,7 @@ export default async function PartnerCasePage({ params, searchParams }: { params
           <h2 className="text-xl font-semibold">Penawaran terakhir (revisi {c.quote.revision})</h2>
           <p>Biaya: <strong>{formatIdr(c.quote.amountIdr)}</strong></p>
           <p className="whitespace-pre-wrap break-words">Ruang lingkup: {c.quote.scope}</p>
-          <p>Berlaku sampai {formatWib(c.quote.expiresAt)}{quoteExpired(c.quote.expiresAt, now) ? " — sudah kedaluwarsa" : ""}</p>
+          <p>Berlaku sampai {formatWib(c.quote.expiresAt)}{quoteExpired(c.quote.expiresAt, now) ? " (sudah kedaluwarsa)" : ""}</p>
           {c.status === "ACCEPTED" && <p role="status" className="font-semibold">Diterima pemilik pada {formatWib(c.decidedAt!)}. Atur perjanjian kerja dan pembayaran secara terpisah; sistem tidak membuat tagihan otomatis.</p>}
           {c.status === "DECLINED" && <p role="status" className="font-semibold">Ditolak pemilik.</p>}
         </Card>
@@ -76,7 +76,7 @@ export default async function PartnerCasePage({ params, searchParams }: { params
 
       {(c.status === "TRIAGED" || c.status === "QUOTED") && (
         <Card className="space-y-3">
-          <h2 className="text-xl font-semibold">{c.status === "QUOTED" ? "Perbarui penawaran" : "Kirim penawaran khusus"}</h2>
+          <h2 className="text-xl font-semibold">{c.status === "QUOTED" ? "Perbarui penawaran" : "Kirim penawaran"}</h2>
           <QuoteForm action={quoteCaseAction} caseId={c.id} isRevision={c.status === "QUOTED"}
             minDate={ymdWib(new Date(now.getTime() + 86_400_000))} maxDate={ymdWib(new Date(now.getTime() + 89 * 86_400_000))} />
         </Card>
@@ -88,7 +88,7 @@ export default async function PartnerCasePage({ params, searchParams }: { params
           <form action={closeCaseAction} className="space-y-3">
             <input type="hidden" name="caseId" value={c.id} />
             <label className="block">
-              <span className={labelText}>Alasan singkat (dilihat pemilik)</span>
+              <span className={labelText}>Alasan singkat (dapat dilihat pemilik dokumen)</span>
               <input name="reason" maxLength={500} required className={fieldClass} />
             </label>
             <Button type="submit" variant="secondary">Tutup kasus</Button>
@@ -97,7 +97,7 @@ export default async function PartnerCasePage({ params, searchParams }: { params
       ) : (
         <Card><p className="font-semibold">Kasus ditutup{c.closeReason ? `: ${c.closeReason}` : "."}</p></Card>
       )}
-      <ButtonLink href="/partner/cases" variant="secondary">Semua kasus khusus</ButtonLink>
+      <ButtonLink href="/partner/cases" variant="secondary">Semua Special Legal Case</ButtonLink>
     </main>
   );
 }

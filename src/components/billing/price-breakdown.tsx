@@ -3,14 +3,14 @@ import { formatIdr, PRICING } from "@/lib/pricing/catalog";
 import type { Quote } from "@/lib/billing/service";
 
 const VARIANT_TEXT: Record<string, string> = {
-  FREE: "Harga umum",
+  FREE: "Harga akun gratis",
   MEMBER: "Harga Member aktif",
-  MEMBER_FIRST: "Harga Member untuk pemeriksaan pertama pada periode ini",
-  MEMBER_LATER: "Harga Member untuk pemeriksaan berikutnya pada periode ini",
-  CREDIT: "Memakai kredit pemeriksaan Anda",
+  MEMBER_FIRST: "Harga Member untuk Legal Review pertama dalam periode ini",
+  MEMBER_LATER: "Harga Member untuk Legal Review berikutnya dalam periode ini",
+  CREDIT: "Memakai kredit Legal Review Anda",
   DEFAULT: "Harga tetap",
 };
-export const AI_FREE_LAWYER_PAID = "AI gratis; pemeriksaan pengacara berbayar.";
+export const AI_FREE_LAWYER_PAID = "AI gratis; Legal Review oleh pengacara berbayar.";
 
 // Rincian biaya di halaman pembayaran: harga dari snapshot order (server), keterangan varian, dan aturan harga yang berlaku.
 export function PriceBreakdown({ service, quote, kind = "STANDARD_REVIEW" }: { service: string; quote: Quote; kind?: string }) {
@@ -24,14 +24,14 @@ export function PriceBreakdown({ service, quote, kind = "STANDARD_REVIEW" }: { s
       </dl>
       {kind === "DEEP_REVIEW" ? (
         <p>
-          Pemeriksaan mendalam adalah biaya tambahan di luar pemeriksaan standar yang sudah dibayar: {formatIdr(PRICING.deepAdditional.free)} untuk
-          non-member, {formatIdr(PRICING.deepAdditional.member)} untuk Member aktif.
+          Deep Review adalah biaya tambahan di luar Legal Review yang sudah dibayar: {formatIdr(PRICING.deepAdditional.free)} untuk
+          akun gratis, {formatIdr(PRICING.deepAdditional.member)} untuk Member aktif.
         </p>
       ) : kind === "STANDARD_REVIEW" ? (
         <p>
-          Member aktif membayar {formatIdr(PRICING.standard.memberFirst)} untuk pemeriksaan pertama pada setiap periode tagihan, lalu{" "}
-          {formatIdr(PRICING.standard.memberLater)} untuk pemeriksaan berikutnya. Non-member membayar {formatIdr(PRICING.standard.free)}.
-          Membership {formatIdr(PRICING.membershipMonthlyIdr)} per periode tagihan dan tidak wajib.
+          Member aktif membayar {formatIdr(PRICING.standard.memberFirst)} untuk Legal Review pertama dalam setiap periode tagihan, lalu{" "}
+          {formatIdr(PRICING.standard.memberLater)} untuk Legal Review berikutnya. Akun gratis membayar {formatIdr(PRICING.standard.free)}.
+          Membership {formatIdr(PRICING.membershipMonthlyIdr)} per periode tagihan dan bersifat opsional.
         </p>
       ) : null}
       <p className="font-semibold">{AI_FREE_LAWYER_PAID}</p>

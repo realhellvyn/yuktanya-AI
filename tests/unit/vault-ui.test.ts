@@ -26,14 +26,14 @@ const panel = (over: Partial<Parameters<typeof VaultPanel>[0]> = {}) =>
 describe("VaultPanel", () => {
   it("menampilkan peringatan sebelum membuat link dan label bukan tanda tangan di konfirmasi", () => {
     const html = panel();
-    expect(html).toContain("Siapa pun yang punya link dapat membaca dokumen ini");
+    expect(html).toContain("Siapa pun yang memiliki tautan dapat membaca dokumen ini");
     expect(html).toContain("bukan tanda tangan elektronik");
   });
 
-  it("fitur yang tidak tersedia menampilkan 'Tersedia untuk Member' dan tidak menampilkan formulirnya", () => {
+  it("fitur yang tidak tersedia menampilkan 'Fitur ini hanya tersedia untuk Member.' dan tidak menampilkan formulirnya", () => {
     const html = panel({ features: { share: false, reminders: false, evidence: false } });
-    expect(html.match(/Tersedia untuk Member/g)?.length).toBe(3);
-    expect(html).not.toContain("Siapa pun yang punya link");
+    expect(html.match(/Fitur ini hanya tersedia untuk Member\./g)?.length).toBe(3);
+    expect(html).not.toContain("Siapa pun yang memiliki tautan");
     expect(html).not.toContain("Buat paket bukti");
   });
 
@@ -67,10 +67,10 @@ describe("PublicShare", () => {
     expect(html).toContain("Sinta Dewi");
     expect(html).toContain("Versi 2");
     expect(html).toContain("cccccccccccc");
-    expect(html).toContain("Ada versi yang lebih baru");
+    expect(html).toContain("Tersedia versi yang lebih baru");
     expect(html).toContain("Versi baru belum diperiksa");
     expect(html).toContain("bukan tanda tangan elektronik");
-    expect(html).toContain("Buat dokumen sendiri, gratis");
+    expect(html).toContain("Buat dokumen Anda sendiri secara gratis");
     expect(html.replace(/<input[^>]*>/g, "")).not.toContain("t".repeat(43));
   });
 
@@ -96,7 +96,7 @@ describe("PublicShare", () => {
   it("langkah kode menampilkan alamat tujuan, tombol kirim ulang kode, dan tautan ubah email", () => {
     const html = renderToStaticMarkup(PublicShare({ ...base, view: ok, step: "kode", email: "pihak@example.test" }));
     // Email dari alamat ditampilkan tersamar (audit D-05); teks bebas di ?e= tidak pernah tampil.
-    expect(html).toContain("Kode dikirim ke pi***@example.test");
+    expect(html).toContain("Kode sudah dikirim ke pi***@example.test.");
     expect(html).not.toContain(">pihak@example.test<");
     const evil = renderToStaticMarkup(PublicShare({ ...base, view: ok, step: "kode", email: "Transfer Rp500.000 ke rekening 123" }));
     expect(evil).not.toContain("Transfer Rp500.000");
@@ -122,20 +122,20 @@ describe("konfirmasi baca tanpa layanan email", () => {
     expect(html).not.toContain("Kirim kode");
     expect(html).toContain("Sinta Dewi");
     const kode = renderToStaticMarkup(PublicShare({ token: "t".repeat(43), requestAction: noop, verifyAction: noop, ackAvailable: false, view: ok, step: "kode", email: "a@b.co" }));
-    expect(kode).not.toContain("Kode dikirim");
+    expect(kode).not.toContain("Kode sudah dikirim");
     expect(kode).not.toContain('name="code"');
   });
 
   it("panel pemilik: tidak menjanjikan konfirmasi baca atau pengingat lewat email", () => {
     const html = panel({ emailAvailable: false });
     expect(html).toContain("Konfirmasi baca lewat email belum tersedia");
-    expect(html).not.toContain("Pihak lawan dapat menekan konfirmasi baca lewat email");
+    expect(html).not.toContain("Penerima tautan dapat memberikan konfirmasi baca lewat email");
     expect(html).toContain("Pengingat lewat email belum dapat dikirim");
     expect(html).not.toMatch(/\bcap\b/i);
   });
 
   it("dengan layanan email: alur konfirmasi baca seperti biasa", () => {
-    expect(panel({ emailAvailable: true })).toContain("Pihak lawan dapat menekan konfirmasi baca lewat email");
+    expect(panel({ emailAvailable: true })).toContain("Penerima tautan dapat memberikan konfirmasi baca lewat email");
     expect(panel({ emailAvailable: true })).not.toContain("belum tersedia");
   });
 });

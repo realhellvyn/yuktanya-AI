@@ -6,7 +6,7 @@ export default function Page() {
   return (
     <LegalPage
       title="Kebijakan Privasi"
-      lead="Penjelasan apa yang disimpan Yuktanya dan ke mana data dikirim, sesuai cara kerja sistem saat ini."
+      lead="Data yang disimpan Yuktanya dan ke mana data dikirim, sesuai cara kerja sistem saat ini."
       sections={[
         {
           id: "data",
@@ -16,8 +16,8 @@ export default function Page() {
               <li>Akun: email dan kata sandi (kata sandi dikelola layanan masuk, tidak kami simpan sebagai teks biasa).</li>
               <li>Dokumen: isi dokumen, setiap versinya, dan sidik jari digital (SHA-256) untuk mengecek apakah isinya berubah.</li>
               <li>Percakapan pengisian dokumen dan jawaban yang Anda ketik.</li>
-              <li>Pemakaian harian (jumlah pesan, dokumen, dan analisis AI) untuk menerapkan batas harian.</li>
-              <li>Pesanan dan status pembayaran, permintaan pemeriksaan pengacara, serta hasil pemeriksaan dan verifikasinya.</li>
+              <li>Pemakaian harian (jumlah pesan, dokumen, dan analisis AI) untuk menerapkan kuota harian.</li>
+              <li>Pesanan dan status pembayaran, permintaan Legal Review, serta hasil pemeriksaan dan verifikasinya.</li>
               <li>Catatan kejadian (audit) untuk tindakan penting seperti penerbitan dan pencabutan verifikasi.</li>
               <li>Peristiwa penggunaan yang bersifat ringkas (nama kejadian, tanpa isi dokumen), disimpan di basis data.</li>
               <li>Sumber iklan, bila Anda datang lewat tautan iklan: disimpan sementara di cookie browser hingga 30 hari, lalu dicatat pada akun saat Anda mendaftar.</li>
@@ -31,7 +31,7 @@ export default function Page() {
             <>
               <p>Percakapan pengisian dokumen dikirim dari server kami ke layanan AI (gerbang FreeLLMAPI). Hanya akun yang sudah masuk yang dapat memakai AI.</p>
               <p>Analisis awal AI atas dokumen hanya berjalan setelah Anda mencentang persetujuan pada layar analisis tersebut.</p>
-              <p>Penyedia model di balik gerbang itu bisa memiliki aturan penyimpanan sendiri yang belum kami konfirmasi. Karena itu, jangan memasukkan data rahasia yang sungguhan selama masa uji ini. Pakailah data contoh.</p>
+              <p>Penyedia model di balik gerbang itu bisa memiliki aturan penyimpanan sendiri yang belum kami konfirmasi. Karena itu, selama masa uji coba, jangan memasukkan data rahasia yang sebenarnya. Gunakan data contoh.</p>
             </>
           ),
         },
@@ -57,7 +57,7 @@ export default function Page() {
                 <li>Catatan percobaan pemakaian AI (untuk membatasi permintaan berlebihan) dihapus otomatis setelah 30 hari.</li>
                 <li>Kode konfirmasi baca yang sudah kedaluwarsa dihapus otomatis setelah 7 hari.</li>
                 <li>Di halaman Pengaturan Anda dapat mengunduh salinan data Anda (berkas JSON) dan menghapus akun.</li>
-                <li>Saat akun dihapus, dokumen, percakapan, berkas, tautan bagikan, dan pengingat Anda dihapus. Catatan pesanan, pembayaran, dan audit tetap disimpan untuk pencocokan keuangan, tanpa terhubung lagi ke email Anda. Kode verifikasi yang sudah terbit tetap bisa dicek, tetapi isi dokumennya dikosongkan.</li>
+                <li>Saat akun dihapus, dokumen, percakapan, berkas, tautan berbagi, dan pengingat Anda dihapus. Catatan pesanan, pembayaran, dan audit tetap disimpan untuk pencocokan keuangan, tanpa terhubung lagi ke email Anda. Kode verifikasi yang sudah terbit tetap bisa dicek, tetapi isi dokumennya dikosongkan.</li>
               </ul>
               <p>Catatan verifikasi dan audit sengaja tidak dapat diubah agar riwayat tetap dapat dipercaya.</p>
             </>

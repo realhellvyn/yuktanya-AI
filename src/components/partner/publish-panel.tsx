@@ -7,8 +7,8 @@ import { standardOutcomeBlockers, type NoteLite, type StandardOutcome } from "@/
 
 export type PublishNote = NoteLite & { title: string };
 const OUTCOME: Record<StandardOutcome, string> = {
-  WITH_NOTES: "Selesai — Dengan Legal Note",
-  WITHIN_SCOPE: "Selesai — Tanpa Legal Note, sesuai lingkup",
+  WITH_NOTES: "Selesai dengan Legal Note",
+  WITHIN_SCOPE: "Selesai tanpa Legal Note, sesuai ruang lingkup",
   INCONCLUSIVE: "Belum dapat disimpulkan (tanpa verifikasi)",
   DECLINED: "Tidak dapat memeriksa (tanpa verifikasi)",
 };
@@ -38,9 +38,9 @@ export function PublishPanel(props: {
       <input type="hidden" name="revision" value={props.revision} />
       <dl className="grid gap-x-4 gap-y-2 rounded-xl bg-subtle p-4 sm:grid-cols-[auto_1fr]">
         <dt className="font-semibold">Versi</dt><dd>Versi {props.versionNo}</dd>
-        <dt className="font-semibold">Sidik jari (SHA-256)</dt><dd className="break-all font-mono text-sm">{props.sha256}</dd>
+        <dt className="font-semibold">Kode versi (SHA-256)</dt><dd className="break-all font-mono text-sm">{props.sha256}</dd>
         <dt className="font-semibold">Ruang lingkup</dt><dd className="break-words">{props.scope.trim() || "(belum diisi)"}</dd>
-        <dt className="font-semibold">Legal Note</dt><dd>{props.notes.length} catatan, {followUp.length} perlu ditindaklanjuti pemilik</dd>
+        <dt className="font-semibold">Legal Note</dt><dd>{props.notes.length} catatan, {followUp.length} perlu ditindaklanjuti pemilik dokumen</dd>
       </dl>
       <label className="block"><span className={labelText}>Hasil pemeriksaan</span>
         <select name="outcome" className={fieldClass} value={outcome} onChange={(e) => setOutcome(e.target.value as StandardOutcome)}>
@@ -61,13 +61,13 @@ export function PublishPanel(props: {
 
       <dialog ref={dialog} aria-labelledby="konfirmasi-h" className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-line p-0 backdrop:bg-navy/50">
         <div className="space-y-4 p-5">
-          <h3 id="konfirmasi-h" className="text-xl font-bold text-navy">Terbitkan hasil Review Standar?</h3>
+          <h3 id="konfirmasi-h" className="text-xl font-bold text-navy">Terbitkan hasil Legal Review?</h3>
           <dl className="space-y-2">
-            <div><dt className="font-semibold">Dokumen dan versi</dt><dd className="break-words">{props.title} — Versi {props.versionNo}</dd></div>
-            <div><dt className="font-semibold">Sidik jari (SHA-256)</dt><dd className="break-all font-mono text-sm">{props.sha256}</dd></div>
+            <div><dt className="font-semibold">Dokumen dan versi</dt><dd className="break-words">{props.title}, versi {props.versionNo}</dd></div>
+            <div><dt className="font-semibold">Kode versi (SHA-256)</dt><dd className="break-all font-mono text-sm">{props.sha256}</dd></div>
             <div><dt className="font-semibold">Hasil</dt><dd>{OUTCOME[outcome]}</dd></div>
             <div><dt className="font-semibold">Ruang lingkup</dt><dd className="break-words">{props.scope}</dd></div>
-            <div><dt className="font-semibold">Catatan yang belum diselesaikan pemilik</dt>
+            <div><dt className="font-semibold">Catatan yang belum diselesaikan pemilik dokumen</dt>
               <dd>{followUp.length === 0 ? "Tidak ada" : <ul className="list-disc pl-6">{followUp.map((n) => <li key={n.noteNo} className="break-words">Catatan {n.noteNo}: {n.title} ({SEV[n.severity] ?? n.severity})</li>)}</ul>}</dd></div>
           </dl>
           <p>{verified ? "Lencana Yuktanya Legal Verified hanya berlaku untuk versi ini. Versi baru tidak mewarisi hasil." : "Hasil ini tidak menerbitkan lencana verifikasi."} Setelah diterbitkan, laporan dan catatan tidak dapat diubah.</p>

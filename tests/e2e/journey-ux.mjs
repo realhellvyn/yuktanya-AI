@@ -71,7 +71,7 @@ export async function journey({ page, step, shot, base, vp, issues, llm }) {
     await page.goto(base + "/workspace/new");
     await Promise.all([page.waitForURL("**/workspace/pilih"), page.click("a:has-text('Bantu saya memilih')")]);
     // Judul dialirkan setelah navigasi (dev server: kompilasi pertama); tunggu, jangan membaca seketika.
-    await page.waitForFunction(() => document.title === "Bantu Memilih Dokumen | Yuktanya", null, { timeout: 15000 }).catch(async () => { throw new Error("judul " + (await page.title())); });
+    await page.waitForFunction(() => document.title === "Bantu memilih dokumen | Yuktanya", null, { timeout: 15000 }).catch(async () => { throw new Error("judul " + (await page.title())); });
     await layoutOk();
     // Galat render setelah balasan (Task 17: "i is not a function" di build produksi) harus gagal di langkah ini, bukan menunggu batas waktu.
     const crashed = async (where) => {
@@ -106,7 +106,7 @@ export async function journey({ page, step, shot, base, vp, issues, llm }) {
     await page.fill("textarea[name=message]", "Saya Sinta Dewi meminjamkan Rp5.000.000 kepada Budi Santoso.");
     await reply("section[aria-label='Percakapan dengan AI']", "percakapan dokumen");
     await page.goto(base + "/dashboard");
-    const q = (await page.locator("li:has-text('Sisa pesan AI')").innerText()).replace(/\s+/g, " ");
+    const q = (await page.locator("li:has-text('Pesan AI')").innerText()).replace(/\s+/g, " ");
     if (!/17 dari 20/.test(q)) throw new Error("dua pesan pemilih + satu pesan dokumen harus memakai 3 jatah: " + q);
   });
 
@@ -120,7 +120,7 @@ export async function journey({ page, step, shot, base, vp, issues, llm }) {
     if ((llm.control.chooser ?? 0) - before !== 1) throw new Error("panggilan LLM pemilih: " + ((llm.control.chooser ?? 0) - before));
     await layoutOk();
     await shot("ux-pilih-kasus-khusus");
-    await Promise.all([page.waitForURL("**/cases/new", { timeout: 30000 }), page.click("[data-testid=saran-kasus-khusus] a:has-text('Ajukan penilaian khusus')")]);
+    await Promise.all([page.waitForURL("**/cases/new", { timeout: 30000 }), page.click("[data-testid=saran-kasus-khusus] a:has-text('Ajukan Special Legal Case')")]);
     await page.waitForSelector("h1");
     const line = page.locator("main p", { hasText: /^Biaya dan ruang lingkup ditentukan setelah asesmen profesional\.$/ });
     if ((await line.count()) < 1) throw new Error("/cases/new tanpa kalimat wajib kasus khusus: " + (await page.innerText("main")).slice(0, 300));
@@ -130,10 +130,10 @@ export async function journey({ page, step, shot, base, vp, issues, llm }) {
   let docUrl = "";
   await step(tag("checkout: dokumen, versi, ruang lingkup, pemeriksa, aturan harga, AI gratis; tanpa overflow"), async () => {
     docUrl = await createNdaVersion(page, base);
-    await page.click("button:has-text('Minta pemeriksaan pengacara')");
+    await page.click("button:has-text('Ajukan Legal Review')");
     await page.waitForURL(/\/checkout\/[0-9a-f-]{36}/, { timeout: 30000 });
     const t = await page.innerText("main");
-    for (const m of ["Yang akan diperiksa", "Perjanjian Kerahasiaan", "versi 1", "Kode versi", "Ruang lingkup", "Siapa yang memeriksa", "Langkah berikutnya", "Rp50.000", "Member aktif membayar Rp30.000", "AI gratis; pemeriksaan pengacara berbayar", "menjamin hasil positif"]) {
+    for (const m of ["Dokumen yang akan diperiksa", "Perjanjian Kerahasiaan", "versi 1", "Kode versi", "Ruang lingkup", "Siapa yang memeriksa", "Langkah berikutnya", "Rp50.000", "Member aktif membayar Rp30.000", "AI gratis; Legal Review oleh pengacara berbayar", "menjamin hasil positif"]) {
       if (!t.includes(m)) throw new Error(`checkout tanpa "${m}": ${t.slice(0, 500)}`);
     }
     await page.waitForFunction(() => document.title === "Pembayaran | Yuktanya", null, { timeout: 10000 }).catch(async () => { throw new Error("judul " + (await page.title())); });

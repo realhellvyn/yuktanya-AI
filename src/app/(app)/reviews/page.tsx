@@ -4,11 +4,11 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { requireUserId } from "@/lib/documents/session";
 import { reviewService } from "@/lib/reviews/runtime";
 
-export const metadata = { title: "Review Saya | Yuktanya" };
+export const metadata = { title: "Legal Review Saya | Yuktanya" };
 
 export const dynamic = "force-dynamic";
 const STATUS: Record<string, { text: string; tone: "info" | "success" | "warning" | "neutral" }> = {
-  QUEUED: { text: "Menunggu pemeriksaan", tone: "warning" }, ASSIGNED: { text: "Menunggu pemeriksaan", tone: "warning" },
+  QUEUED: { text: "Menunggu diperiksa", tone: "warning" }, ASSIGNED: { text: "Menunggu diperiksa", tone: "warning" },
   IN_REVIEW: { text: "Sedang diperiksa", tone: "info" }, COMPLETED: { text: "Selesai diperiksa", tone: "success" },
   DECLINED: { text: "Tidak dapat diperiksa", tone: "neutral" }, CANCELLED: { text: "Dibatalkan", tone: "neutral" },
 };
@@ -19,12 +19,12 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
   const rows = await reviewService().listForOwner(userId);
   return (
     <main className="max-w-3xl space-y-6">
-      <PageHeading title="Review Saya" lead="Status pemeriksaan dokumen Anda oleh pengacara." />
-      {q.dibuat && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-success">✓ Permintaan pemeriksaan diterima dan masuk antrean.</p>}
-      {q.notice === "deep-tidak-valid" && <p role="alert" className="font-semibold text-red-800">Pemeriksaan mendalam tidak dapat dipesan karena pemeriksaan standar tidak dikenali.</p>}
-      {q.notice === "sudah" && <p role="status" className="rounded-xl border border-line bg-surface p-4">Versi ini sudah punya permintaan pemeriksaan.</p>}
+      <PageHeading title="Legal Review Saya" lead="Status Legal Review dokumen Anda oleh pengacara mitra." />
+      {q.dibuat && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-success">✓ Pengajuan Legal Review diterima dan masuk antrean.</p>}
+      {q.notice === "deep-tidak-valid" && <p role="alert" className="font-semibold text-red-800">Deep Review belum dapat dipesan karena Legal Review terkait tidak ditemukan. Buka hasil Legal Review dari daftar di bawah, lalu coba lagi.</p>}
+      {q.notice === "sudah" && <p role="status" className="rounded-xl border border-line bg-surface p-4">Versi ini sudah memiliki pengajuan Legal Review. Statusnya tampil di daftar di bawah.</p>}
       {rows.length === 0 ? (
-        <EmptyState title="Belum ada dokumen yang diperiksa pengacara" text="Buka salah satu dokumen Anda lalu pilih “Minta pemeriksaan pengacara”." action={<div className="flex flex-wrap gap-3"><ButtonLink href="/bantuan#pengacara" variant="secondary">Lihat cara pemeriksaan</ButtonLink><ButtonLink href="/documents" variant="quiet">Lihat dokumen saya</ButtonLink></div>} />
+        <EmptyState title="Belum ada Legal Review" text="Buka salah satu dokumen Anda, lalu tekan “Ajukan Legal Review”." action={<div className="flex flex-wrap gap-3"><ButtonLink href="/bantuan#pengacara" variant="secondary">Lihat cara mengajukan</ButtonLink><ButtonLink href="/documents" variant="quiet">Buka Dokumen Saya</ButtonLink></div>} />
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => {
@@ -32,8 +32,8 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
             return (
               <li key={r.requestId}>
                 <Card className="flex flex-wrap items-center justify-between gap-3 !p-4">
-                  <div className="space-y-1.5"><p className="text-lg font-bold text-navy">{r.title} — versi {r.versionNo}</p><StatusBadge tone={st.tone}>{st.text}</StatusBadge></div>
-                  <ButtonLink href={`/reviews/${r.requestId}`} variant="secondary">Lihat</ButtonLink>
+                  <div className="space-y-1.5"><p className="text-lg font-bold text-navy">{r.title}, versi {r.versionNo}</p><StatusBadge tone={st.tone}>{st.text}</StatusBadge></div>
+                  <ButtonLink href={`/reviews/${r.requestId}`} variant="secondary">Lihat hasil</ButtonLink>
                 </Card>
               </li>
             );

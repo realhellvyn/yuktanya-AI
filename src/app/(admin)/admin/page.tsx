@@ -13,7 +13,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const { o, range } = await loadOverview(await searchParams);
   return (
     <main className="max-w-5xl space-y-8">
-      <PageHeading title="Dashboard Admin Platform" lead="Ringkasan operasional. Admin merutekan dan mencatat; admin tidak menilai isi hukum atau menerbitkan hasil pemeriksaan." />
+      <PageHeading title="Dashboard Admin Platform" lead="Ringkasan operasional. Admin menugaskan dan mencatat; admin tidak menilai isi hukum dan tidak menerbitkan hasil pemeriksaan." />
       <RangeNav path="/admin" range={range} />
       <section aria-labelledby="kpi-h" className="space-y-3">
         <h2 id="kpi-h" className="text-xl font-bold text-navy md:text-2xl">Ringkasan</h2>
@@ -21,7 +21,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <KpiCard label="Pengguna terdaftar" value={fmtCount(o.users.registered)} hint={`Baru: ${fmtCount(o.users.new)}`} />
           <KpiCard label="Permintaan AI" value={fmtCount(o.ai?.requests)} hint={`Berhasil: ${fmtPercent(o.ai?.success_rate)}`} />
           <KpiCard label="Dokumen dimulai" value={fmtCount(o.documents.started)} hint={`Versi dibuat: ${fmtCount(o.documents.versions)}`} />
-          <KpiCard label="Review dibayar (kohort baru)" value={fmtCount(o.funnel.review_paid)} hint={`dari ${fmtCount(o.funnel.registered)} pengguna baru`} />
+          <KpiCard label="Legal Review dibayar (kohort baru)" value={fmtCount(o.funnel.review_paid)} hint={`dari ${fmtCount(o.funnel.registered)} pengguna baru`} />
           <KpiCard label="Pendapatan dikumpulkan" value={fmtIdr(o.revenue?.collected)} hint="Dari pembayaran terverifikasi, bukan laba" />
           <KpiCard label="Member aktif" value={fmtCount(o.members.active)} />
         </div>
@@ -29,7 +29,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       <section aria-labelledby="ops-h" className="space-y-3">
         <h2 id="ops-h" className="text-xl font-bold text-navy md:text-2xl">Perlu tindakan</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <KpiCard label="Review belum ditugaskan" value={fmtCount(o.reviews.unassigned)} />
+          <KpiCard label="Legal Review belum ditugaskan" value={fmtCount(o.reviews.unassigned)} />
           <KpiCard label="Perlu rekonsiliasi pembayaran" value={fmtCount(o.incidents.reconciliation)} />
           <KpiCard label="Email gagal terkirim" value={fmtCount(o.incidents.failed_outbox)} />
         </div>

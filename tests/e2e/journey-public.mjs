@@ -5,8 +5,8 @@ const LEGAL_PENDING = "Menunggu persetujuan mitra hukum";
 const PUBLIC = [
   { path: "/privacy", markers: ["Kebijakan Privasi", LEGAL_PENDING, "FreeLLMAPI"], legal: true },
   { path: "/terms", markers: ["Syarat Penggunaan", LEGAL_PENDING, "00.00 WIB"], legal: true },
-  { path: "/bantuan", markers: ["Cara membuat dokumen", "Saluran kontak belum disiapkan", "Cara mengecek keaslian dokumen"] },
-  { path: "/design-preview", markers: ["Pratinjau Desain", "Lencana status", "Indikator langkah", "Salah isi"], noindex: true },
+  { path: "/bantuan", markers: ["Cara membuat dokumen", "Saluran kontak belum tersedia", "Cara mengecek keaslian dokumen"] },
+  { path: "/design-preview", markers: ["Pratinjau desain", "Lencana status", "Indikator langkah", "Salah isi"], noindex: true },
   { path: "/forgot-password", markers: ["Lupa kata sandi"] },
 ];
 

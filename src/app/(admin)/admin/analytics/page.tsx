@@ -20,11 +20,11 @@ const longDay = (d: Date) => d.toLocaleDateString("id-ID", { day: "numeric", mon
 const CARDS: { key: SeriesKey; label: string; idr?: boolean }[] = [
   { key: "new_users", label: "Pengguna baru" },
   { key: "docs_started", label: "Dokumen dimulai" },
-  { key: "drafts_completed", label: "Versi dokumen dibekukan" },
+  { key: "drafts_completed", label: "Versi dokumen dibuat" },
   { key: "ai_messages", label: "Pesan AI berhasil" },
-  { key: "reviews_requested", label: "Review Standar diminta" },
-  { key: "reviews_paid", label: "Review Standar dibayar" },
-  { key: "reviews_completed", label: "Review Standar selesai" },
+  { key: "reviews_requested", label: "Legal Review diajukan" },
+  { key: "reviews_paid", label: "Legal Review dibayar" },
+  { key: "reviews_completed", label: "Legal Review selesai" },
   { key: "revenue", label: "Uang terkumpul", idr: true },
 ];
 const CHARTS: { key: SeriesKey; label: string; idr?: boolean; note?: string }[] = [
@@ -32,13 +32,13 @@ const CHARTS: { key: SeriesKey; label: string; idr?: boolean; note?: string }[] 
   { key: "docs_started", label: "Dokumen dimulai per hari" },
   { key: "ai_messages", label: "Pesan AI berhasil per hari", note: "Tidak berlaku untuk filter jenis dokumen" },
   { key: "ai_failed", label: "Permintaan AI gagal per hari", note: "Belum ada catatan permintaan AI, atau tidak berlaku untuk filter jenis dokumen" },
-  { key: "reviews_requested", label: "Review Standar diminta per hari" },
-  { key: "reviews_paid", label: "Review Standar dibayar per hari" },
-  { key: "reviews_completed", label: "Review Standar selesai per hari" },
+  { key: "reviews_requested", label: "Legal Review diajukan per hari" },
+  { key: "reviews_paid", label: "Legal Review dibayar per hari" },
+  { key: "reviews_completed", label: "Legal Review selesai per hari" },
   { key: "revenue", label: "Uang terkumpul per hari", idr: true },
 ];
 const OUTCOME: Record<string, string> = { WITH_NOTES: "Dengan catatan", WITHIN_SCOPE: "Sesuai lingkup", INCONCLUSIVE: "Belum dapat disimpulkan", DECLINED: "Ditolak", UNKNOWN: "Tanpa hasil" };
-const DEEP_OUTCOME: Record<string, string> = { ENHANCED_APPROVED: "Enhanced disetujui", COMPLETED_WITH_NOTES: "Selesai dengan catatan", INCONCLUSIVE: "Belum dapat disimpulkan", REFERRED_SPECIAL_CASE: "Dirujuk ke kasus khusus", UNKNOWN: "Tanpa hasil" };
+const DEEP_OUTCOME: Record<string, string> = { ENHANCED_APPROVED: "Enhanced disetujui", COMPLETED_WITH_NOTES: "Selesai dengan catatan", INCONCLUSIVE: "Belum dapat disimpulkan", REFERRED_SPECIAL_CASE: "Dirujuk ke Special Legal Case", UNKNOWN: "Tanpa hasil" };
 const KIND: Record<string, string> = { AI: "AI Verified", LEGAL: "Legal Verified", LEGAL_ENHANCED: "Enhanced" };
 const list = (rec: Record<string, number>, names: Record<string, string>) =>
   Object.keys(rec).length === 0 ? "0" : Object.entries(rec).map(([k, n]) => `${names[k] ?? k}: ${fmtCount(n)}`).join(", ");
@@ -58,7 +58,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const f = o.funnel;
   const funnel: [string, number][] = [
     ["Terdaftar", f.registered], ["Pernah memakai AI", f.ai_used], ["Memulai dokumen", f.doc_started], ["Membuat versi dokumen", f.version_created],
-    ["Meminta review", f.review_requested], ["Review dibayar", f.review_paid], ["Review selesai", f.review_completed],
+    ["Mengajukan Legal Review", f.review_requested], ["Legal Review dibayar", f.review_paid], ["Legal Review selesai", f.review_completed],
   ];
   const q = current.quality;
 
@@ -106,7 +106,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
           Menampilkan: <strong>{query.label}</strong> ({longDay(query.from)} sampai {longDay(new Date(query.to.getTime() - 1))}, WIB). {filterText}.
           {" "}Dibandingkan dengan {query.days} hari sebelumnya ({longDay(query.prevFrom)} sampai {longDay(new Date(query.prevTo.getTime() - 1))}).
         </p>
-        <p className="text-muted">Filter keanggotaan memakai status pengguna pada saat kejadian. Filter jenis dokumen hanya berlaku untuk angka dokumen, review, dan uang dari review.</p>
+        <p className="text-muted">Filter keanggotaan memakai status pengguna pada saat kejadian. Filter jenis dokumen hanya berlaku untuk angka dokumen, Legal Review, dan uang dari Legal Review.</p>
       </section>
 
       <section aria-labelledby="alert-h" className="space-y-3">
@@ -118,7 +118,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
             {alerts.map((a) => <li key={a.code} className="rounded-xl border border-amber-400 bg-amber-50 p-4"><strong>Perlu dicek: </strong>{a.text}</li>)}
           </ul>
         )}
-        <p className="text-muted">Batas antrean {current.alerts.overdue_hours} jam adalah ambang sementara; SLA belum disepakati dengan mitra hukum.</p>
+        <p className="text-muted">Batas antrean {current.alerts.overdue_hours} jam adalah ambang sementara; target waktu layanan belum disepakati dengan mitra hukum.</p>
       </section>
 
       <section aria-labelledby="kpi-h" className="space-y-3">
@@ -143,11 +143,11 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         <h2 id="quality-h" className="text-xl font-bold text-navy md:text-2xl">Kualitas</h2>
         <Card>
           <dl className="grid gap-3 sm:grid-cols-2">
-            <div><dt className="font-semibold">Hasil Review Standar selesai</dt><dd>{list(q.reviews_by_outcome, OUTCOME)}</dd></div>
+            <div><dt className="font-semibold">Hasil Legal Review selesai</dt><dd>{list(q.reviews_by_outcome, OUTCOME)}</dd></div>
             <div><dt className="font-semibold">Legal Note diterbitkan</dt><dd>{fmtCount(q.legal_notes_published)}</dd></div>
             <div><dt className="font-semibold">Verifikasi terbit</dt><dd>{list(q.verifications_issued, KIND)}</dd></div>
             <div><dt className="font-semibold">Verifikasi dicabut</dt><dd>{fmtCount(q.verifications_revoked)}</dd></div>
-            <div><dt className="font-semibold">Hasil Pemeriksaan Mendalam</dt><dd>{list(q.deep_by_outcome, DEEP_OUTCOME)}</dd></div>
+            <div><dt className="font-semibold">Hasil Deep Review</dt><dd>{list(q.deep_by_outcome, DEEP_OUTCOME)}</dd></div>
             <div><dt className="font-semibold">Keluaran AI tidak terbaca</dt><dd>{fmtCount(q.ai_malformed)}</dd></div>
             <div><dt className="font-semibold">Keluhan</dt><dd>{q.complaints === null ? `${NO_DATA} (belum dicatat sistem)` : fmtCount(q.complaints)}</dd></div>
           </dl>
@@ -156,10 +156,10 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
       </section>
 
       <section aria-labelledby="funnel-h" className="space-y-3">
-        <h2 id="funnel-h" className="text-xl font-bold text-navy md:text-2xl">Funnel kohort</h2>
+        <h2 id="funnel-h" className="text-xl font-bold text-navy md:text-2xl">Tahapan kohort pendaftar</h2>
         <p>Kohort tetap: pengguna yang mendaftar pada rentang ini ({fmtCount(f.registered)} orang). Setiap langkah menghitung pengguna unik dari kohort itu, kapan pun langkah itu terjadi. Persentase memakai kohort sebagai penyebut. Filter tidak berlaku di tabel ini.</p>
         <div className="overflow-x-auto rounded-2xl border border-line bg-surface"><table className="w-full border-collapse">
-          <caption className="sr-only">Funnel kohort pendaftar</caption>
+          <caption className="sr-only">Tahapan kohort pendaftar</caption>
           <thead><tr><th scope="col" className="border-b border-line p-3 text-left">Langkah</th><th scope="col" className="border-b border-line p-3 text-right">Pengguna</th><th scope="col" className="border-b border-line p-3 text-right">% kohort</th></tr></thead>
           <tbody>{funnel.map(([label, n]) => <tr key={label}><th scope="row" className="border-b border-line p-3 text-left font-normal">{label}</th><td className="border-b border-line p-3 text-right">{fmtCount(n)}</td><td className="border-b border-line p-3 text-right">{f.registered > 0 ? `${Math.round((n / f.registered) * 100)}%` : NO_DATA}</td></tr>)}</tbody>
         </table></div>

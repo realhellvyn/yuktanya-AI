@@ -16,7 +16,7 @@ import { reviewService } from "@/lib/reviews/runtime";
 import { qrPng, verifyUrl } from "@/lib/verification/qr";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Hasil Pemeriksaan | Yuktanya" };
+export const metadata = { title: "Hasil Legal Review | Yuktanya" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function ReviewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ notice?: string }> }) {
@@ -44,13 +44,13 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
   if (elig?.eligible) await trackDeepOfferShown(userId, id);
   return (
     <main className="max-w-3xl space-y-6">
-      <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">{review.title} — versi {review.versionNo}</h1>
+      <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">{review.title}, versi {review.versionNo}</h1>
       <ReviewTimeline status={review.status} timeline={review.timeline} />
       <ResultPanel review={review} verifyUrl={url} qrDataUrl={qr} isLatestVersion={review.versionNo === latest} />
       {notice && <p role="alert" className="font-semibold text-red-800">{notice}</p>}
       {deep && <DeepResult deep={deep} verifyUrl={deepUrl} />}
-      {deepRef && <ButtonLink href={`/deep-reviews/${deepRef.deepId}`} variant="secondary">Lihat status pemeriksaan mendalam</ButtonLink>}
-      {elig?.eligible && <ButtonLink href={`/reviews/${id}/deep`} variant="secondary">Lihat rincian pemeriksaan mendalam</ButtonLink>}
+      {deepRef && <ButtonLink href={`/deep-reviews/${deepRef.deepId}`} variant="secondary">Lihat status Deep Review</ButtonLink>}
+      {elig?.eligible && <ButtonLink href={`/reviews/${id}/deep`} variant="secondary">Lihat rincian Deep Review</ButtonLink>}
       {elig && <DeepOffer {...offerViewProps(elig)} action={requestDeepAction} parentRequestId={id} />}
     </main>
   );

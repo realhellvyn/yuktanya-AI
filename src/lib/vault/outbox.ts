@@ -20,7 +20,7 @@ function render(row: Row): EmailMessage {
     return {
       to: String(p.to),
       subject: "Kode konfirmasi baca Yuktanya",
-      text: `Kode konfirmasi baca Anda: ${String(p.code)}\nKode berlaku 10 menit. Konfirmasi baca hanya menyatakan Anda sudah membaca versi dokumen ini dan bukan tanda tangan elektronik.\nJika bukan Anda yang meminta, abaikan email ini.`,
+      text: `Kode konfirmasi baca Anda: ${String(p.code)}\nKode berlaku 10 menit. Konfirmasi baca hanya menyatakan Anda sudah membaca versi dokumen ini dan bukan tanda tangan elektronik.\nBila Anda tidak meminta kode ini, abaikan email ini.`,
     };
   }
   if (row.kind === "reminder") {

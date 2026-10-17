@@ -70,6 +70,13 @@ describe("token brand kit di globals.css", () => {
     expect(tok("danger")).toBe("#B91C1C");
   });
 
+  it("kontrol bawaan memakai warna brand dan placeholder kotak isian cukup kontras", () => {
+    expect(css).toMatch(/html\s*\{[^}]*accent-color:\s*var\(--primary\);/);
+    expect(css).toMatch(/::placeholder\s*\{[^}]*color:\s*var\(--muted\);[^}]*opacity:\s*1;/);
+    // Placeholder tampil di kotak isian berlatar surface.
+    expect(contrast("muted", "surface")).toBeGreaterThanOrEqual(4.5);
+  });
+
   it("hanya tema terang: tidak ada blok tema gelap", () => {
     expect(css).not.toMatch(/prefers-color-scheme\s*:\s*dark|data-theme/);
   });
@@ -136,9 +143,12 @@ const literals = (code: string) => [...code.matchAll(/"([^"\n]*)"|'([^'\n]*)'|`(
 
 // Kelas warna gold (bukan gold-ink), dengan atau tanpa varian (hover:, md:, ...) dan opasitas.
 const GOLD_CLASS = /(?<![\w-])(?:[a-z0-9-]+:)*(?:text|bg|fill|stroke|border|ring|outline|decoration|from|via|to|divide|placeholder|caret|accent|shadow)-gold(?:\/\d+)?(?![\w-])/;
-// Aturan yang diuji: string kelas yang memuat kelas gold wajib memuat bg-navy pada string yang sama (elemen itu sendiri
-// berlatar navy). Gold di latar terang hanya 2:1, jadi tidak boleh untuk teks, ikon bermakna, atau isi tombol.
-const goldViolations = (code: string) => literals(code).filter((s) => GOLD_CLASS.test(s) && !/(?<![\w-])bg-navy(?![\w-])/.test(s));
+// Aturan yang diuji: string kelas yang memuat kelas gold wajib memuat bg-navy POLOS pada string yang sama (elemen itu sendiri
+// selalu berlatar navy). Gold di latar terang hanya 2:1, jadi tidak boleh untuk teks, ikon bermakna, atau isi tombol.
+// bg-navy dengan varian (hover:, md:) hanya berlaku pada keadaan tertentu, dan bg-navy/10 bukan latar navy pekat: keduanya
+// tidak dihitung.
+const PLAIN_BG_NAVY = /(?<![\w:/-])bg-navy(?![\w/-])/;
+const goldViolations = (code: string) => literals(code).filter((s) => GOLD_CLASS.test(s) && !PLAIN_BG_NAVY.test(s));
 
 describe("aturan gold dan palet hangat di src/**", () => {
   it("pendeteksi aturan gold bekerja", () => {
@@ -147,6 +157,11 @@ describe("aturan gold dan palet hangat di src/**", () => {
     expect(goldViolations(`cn("hover:text-gold/80 font-bold")`)).toHaveLength(1);
     expect(goldViolations(`<span className="bg-navy text-gold">1</span>`)).toHaveLength(0);
     expect(goldViolations(`<a className="text-gold-ink underline">x</a>`)).toHaveLength(0);
+    // bg-navy harus polos: varian atau opasitas tidak menjamin latar navy pekat.
+    expect(goldViolations(`<b className="hover:bg-navy text-gold">x</b>`)).toHaveLength(1);
+    expect(goldViolations(`<b className="md:bg-navy text-gold">x</b>`)).toHaveLength(1);
+    expect(goldViolations(`<b className="bg-navy/10 text-gold">x</b>`)).toHaveLength(1);
+    expect(goldViolations(`<b className="md:p-4 bg-navy text-gold">x</b>`)).toHaveLength(0);
   });
 
   it("kelas gold hanya dipakai pada elemen ber-bg-navy", () => {

@@ -72,7 +72,7 @@ export async function journey({ step, base, db, llm, newActor }) {
     await p.goto(base + "/documents/upload");
     await p.setInputFiles("input[name=file]", file);
     await p.check("input[name=consent]");
-    await Promise.all([p.waitForURL(/\/documents\/[0-9a-f-]{36}\?/, { timeout: 60000 }), p.click("button:has-text('Mulai Analisis Awal')")]);
+    await Promise.all([p.waitForURL(/\/documents\/[0-9a-f-]{36}\?/, { timeout: 60000 }), p.click("button:has-text('Mulai analisis awal')")]);
     await p.waitForLoadState("networkidle");
     return p.url().split("?")[0];
   };
@@ -83,9 +83,9 @@ export async function journey({ step, base, db, llm, newActor }) {
       ids[who] = (await db.query("select id from auth.users where email = $1", [mail(who)])).rows[0].id;
     }
     const p = actors.a.page;
-    await Promise.all([p.waitForURL("**/documents/upload"), p.click("a:has-text('Periksa dokumen yang sudah Anda punya')")]);
+    await Promise.all([p.waitForURL("**/documents/upload"), p.click("a:has-text('Analisis dokumen yang sudah Anda miliki')")]);
     const t = await p.innerText("main");
-    for (const s of ["Periksa dokumen yang sudah Anda punya", "Dokumen baru: 1 dari 1", "Analisis AI: 2 dari 2", "FreeLLMAPI", "5 MB"]) if (!t.includes(s)) throw new Error(`halaman unggah tanpa "${s}"`);
+    for (const s of ["Analisis dokumen yang sudah Anda miliki", "Dokumen baru: 1 dari 1", "Analisis AI: 2 dari 2", "FreeLLMAPI", "5 MB"]) if (!t.includes(s)) throw new Error(`halaman unggah tanpa "${s}"`);
   });
 
   await step(tag("A: unggah DOCX sintetis + persetujuan → versi beku, hasil berkelompok, label wajib, AI Verified terpisah"), async () => {
@@ -117,7 +117,7 @@ export async function journey({ step, base, db, llm, newActor }) {
     await p.goto(base + "/documents/upload");
     const t = await p.innerText("main");
     if (!t.includes("Analisis AI: 1 dari 2")) throw new Error("jatah analisis tidak berkurang: " + t.slice(0, 600));
-    if (!t.includes("Dokumen baru: 0 dari 1") || !t.includes("Batas dokumen baru hari ini sudah tercapai")) throw new Error("jatah dokumen tidak berkurang");
+    if (!t.includes("Dokumen baru: 0 dari 1") || !t.includes("Kuota dokumen baru hari ini sudah habis")) throw new Error("jatah dokumen tidak berkurang");
     if (await p.locator("input[name=file]").count()) throw new Error("form unggah masih tampil saat jatah dokumen habis");
     const used = (await db.query("select quota_type, count(*)::int as n from ai_usage_reservations where user_id = $1 and status = 'FINALIZED' group by quota_type order by quota_type", [ids.a])).rows.map((r) => `${r.quota_type}:${r.n}`).join(",");
     if (used !== "DOCUMENT:1,MESSAGE:1,REVIEW:1") throw new Error("pemakaian jatah: " + used);
@@ -140,12 +140,12 @@ export async function journey({ step, base, db, llm, newActor }) {
     const before = llm.control.prereview ?? 0;
     await uploadAndAnalyze(p, { name: "akta-tanah.txt", mimeType: "text/plain", buffer: Buffer.from(RISKY) });
     const t = await p.innerText("main");
-    if (!t.includes("Dokumen ini memerlukan penilaian khusus")) throw new Error("pesan penilaian khusus tidak tampil");
+    if (!t.includes("Dokumen ini perlu diajukan sebagai Special Legal Case")) throw new Error("pesan penilaian khusus tidak tampil");
     for (const s of GROUPS) if (t.includes(s)) throw new Error("hasil AI palsu tampil untuk dokumen berisiko tinggi");
     if ((llm.control.prereview ?? 0) !== before) throw new Error("AI dipanggil untuk dokumen berisiko tinggi");
-    if (await p.locator("button:has-text('Minta pemeriksaan pengacara')").count()) throw new Error("tombol Review Standar tampil");
+    if (await p.locator("button:has-text('Ajukan Legal Review')").count()) throw new Error("tombol Review Standar tampil");
     if (await p.locator("button:has-text('Analisis awal AI')").count()) throw new Error("tombol analisis AI tampil");
-    await Promise.all([p.waitForURL(/\/cases\/new\?document=/), p.click("a:has-text('Ajukan penilaian khusus')")]);
+    await Promise.all([p.waitForURL(/\/cases\/new\?document=/), p.click("a:has-text('Ajukan Special Legal Case')")]);
     const used = (await db.query("select count(*)::int as n from ai_usage_reservations where user_id = $1 and quota_type = 'REVIEW' and status = 'FINALIZED'", [ids.c])).rows[0].n;
     if (used !== 0) throw new Error("jatah review terpakai: " + used);
   });
@@ -155,7 +155,7 @@ export async function journey({ step, base, db, llm, newActor }) {
     await register(fresh.page, base, mail("d"));
     const d = { page: fresh.page, issues: fresh.issues };
     await d.page.setViewportSize({ width: HP.width, height: HP.height });
-    await checkPage(d, HP, "/documents/upload", ["Mulai Analisis Awal", LABEL]);
+    await checkPage(d, HP, "/documents/upload", ["Mulai analisis awal", LABEL]);
     const o = await open("a", HP);
     await checkPage(o, HP, new URL(docA).pathname, [LABEL, ...GROUPS, AI_TITLE]);
     await checkPage(o, HP, "/documents", ["Dokumen unggahan"]);

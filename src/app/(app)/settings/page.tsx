@@ -16,8 +16,8 @@ export const metadata = { title: "Pengaturan | Yuktanya" };
 const link = "inline-flex min-h-12 items-center font-semibold text-link underline";
 
 const NOTICES: Record<string, string> = {
-  "export-limit": "Anda sudah mengunduh data beberapa kali dalam satu jam terakhir. Coba lagi nanti.",
-  "export-large": "Data Anda terlalu besar untuk diunduh sekaligus. Hubungi tim Yuktanya lewat halaman Bantuan.",
+  "export-limit": "Data Anda sudah diunduh beberapa kali dalam satu jam terakhir. Coba lagi satu jam lagi.",
+  "export-large": "Data Anda terlalu besar untuk diunduh sekaligus. Lihat halaman Bantuan untuk informasi kontak tim Yuktanya.",
 };
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ notice?: string }> }) {
@@ -29,7 +29,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const [usage, member] = await Promise.all([createPgUsageStore(pool).snapshot(userId), getMembershipState(pool, userId)]);
   return (
     <main className="max-w-3xl space-y-6">
-      <PageHeading title="Pengaturan" lead="Data akun dan privasi Anda." />
+      <PageHeading title="Pengaturan" lead="Data akun, kuota, dan privasi Anda." />
       {notice && <p role="alert" data-testid="settings-notice" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold">{notice} <Link className="inline-flex min-h-12 items-center underline" href="/bantuan">Buka Bantuan</Link></p>}
 
       <section aria-labelledby="akun">
@@ -40,13 +40,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <div>
               <dt className="text-muted">Paket</dt>
               <dd className="flex flex-wrap items-center gap-3 text-lg font-semibold">
-                {member.active ? "Member Aktif" : "Gratis"}
-                <StatusBadge tone={member.active ? "success" : "neutral"}>{member.active ? "Aktif" : "Tanpa membership"}</StatusBadge>
+                {member.active ? "Member aktif" : "Gratis"}
+                <StatusBadge tone={member.active ? "success" : "neutral"}>{member.active ? "Aktif" : "Tanpa Membership"}</StatusBadge>
               </dd>
               {member.active && <dd className="text-muted">Periode: {formatDateId(wibDate(member.periodStart))} – {formatDateId(wibDate(member.periodEnd))}</dd>}
             </div>
             <div>
-              <dt className="text-muted">Sisa hari ini (di-reset pukul 00.00 WIB)</dt>
+              <dt className="text-muted">Sisa kuota hari ini (diperbarui pukul 00.00 WIB)</dt>
               <dd>
                 <ul className="list-disc space-y-1 pl-6">
                   <li>Pesan AI: {usage.messagesRemaining} dari {usage.messageLimit}</li>
@@ -57,7 +57,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             </div>
           </dl>
           <div className="flex flex-wrap gap-x-6">
-            <Link className={link} href="/membership">Lihat membership</Link>
+            <Link className={link} href="/membership">Lihat Membership</Link>
             <Link className={link} href="/forgot-password">Ganti kata sandi</Link>
           </div>
         </Card>
@@ -66,7 +66,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <section aria-labelledby="privasi">
         <Card className="space-y-3">
           <h2 id="privasi" className="text-xl font-bold text-navy">Privasi</h2>
-          <p>Baca apa yang disimpan Yuktanya dan ke mana data dikirim.</p>
+          <p>Baca data apa yang disimpan Yuktanya dan ke mana data dikirim.</p>
           <div className="flex flex-wrap gap-x-6">
             <Link className={link} href="/privacy">Kebijakan Privasi</Link>
             <Link className={link} href="/terms">Syarat Penggunaan</Link>
@@ -78,11 +78,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <Card className="space-y-4">
           <h2 id="data-anda" className="text-xl font-bold text-navy">Data Anda</h2>
           <div className="space-y-2">
-            <p>Unduh salinan data Anda dalam satu berkas (JSON): profil, dokumen dan isinya, percakapan, unggahan, pesanan, dan Kasus Hukum Khusus.</p>
+            <p>Unduh salinan data Anda dalam satu berkas (JSON): profil, dokumen dan isinya, percakapan, unggahan, pesanan, dan Kasus Hukum Khusus (Special Legal Case).</p>
             <a className={buttonClass("secondary")} href="/settings/export" data-testid="export-link">Unduh data saya</a>
           </div>
           <div className="space-y-2 border-t border-line pt-4">
-            <p>Hapus akun beserta dokumen dan percakapan Anda. Sebelum menghapus, Anda akan melihat apa yang dihapus dan apa yang tetap disimpan.</p>
+            <p>Hapus akun beserta dokumen dan percakapan Anda. Sebelum menghapus, Anda dapat membaca data yang dihapus dan data yang tetap disimpan.</p>
             <Link className={link} href="/settings/hapus-akun">Hapus akun</Link>
           </div>
         </Card>

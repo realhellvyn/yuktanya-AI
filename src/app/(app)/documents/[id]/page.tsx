@@ -62,7 +62,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
     urls[v.id] = verifyUrl(v.code);
     if (v.status === "ACTIVE") qrs[v.id] = `data:image/png;base64,${Buffer.from(await qrPng(urls[v.id])).toString("base64")}`;
   }
-  // Kasus khusus terbuka: Review Standar diblokir di database (order dan pratinjau harga); tampilkan arah ke kasusnya.
+  // Special Legal Case terbuka: Legal Review diblokir di database (order dan pratinjau harga); tampilkan arah ke kasusnya.
   const openCase = await casesService().openForDocument(userId, id);
   const upload = doc.category === "UPLOAD" ? await uploadRepo().meta(userId, id) : null;
   const highRisk = upload?.riskLevel === "HIGH";
@@ -87,7 +87,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
       <PageHeading title={doc.title} lead={selectedMeta ? `Versi ${selectedMeta.versionNo} · dibuat ${when(selectedMeta.createdAt)} WIB` : undefined} />
       {q.error === "pdf" && (
         <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">
-          PDF belum mendukung beberapa karakter di dokumen ini. Gunakan unduhan Word (DOCX).
+          Beberapa karakter di dokumen ini belum dapat dicetak ke PDF. Unduh dokumen dalam format Word (DOCX).
         </p>
       )}
       {q.baru && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-success">✓ Dokumen berhasil dibuat. Versi ini tidak dapat diubah.</p>}
@@ -126,14 +126,14 @@ export default async function DocumentPage({ params, searchParams }: { params: P
               <h2 className="text-lg font-bold text-navy">Berkas asli</h2>
               <p className="break-words">{upload.filename} · {upload.kind} · {(upload.byteSize / 1024).toFixed(1).replace(".", ",")} KB{upload.pages ? ` · ${upload.pages} halaman` : ""}</p>
               <UploadHashes versionSha256={selected.sha256} originalSha256={upload.originalSha256} />
-              <p className="text-sm text-muted">Di bawah ini teks hasil pembacaan berkas. Format asli (tabel, gambar, tanda tangan) tidak ikut terbaca.</p>
+              <p className="text-sm text-muted">Di bawah ini adalah teks hasil pembacaan berkas. Format asli seperti tabel, gambar, dan tanda tangan tidak ikut terbaca.</p>
             </Card>
           )}
           <DocumentPreview doc={selected.doc} />
           {changes && (
             <Card className="space-y-2">
               <h3 className="font-bold text-navy">Perbedaan dengan versi sebelumnya</h3>
-              {changes.length === 0 ? <p>Tidak ada perbedaan.</p> : (
+              {changes.length === 0 ? <p>Tidak ada perbedaan dengan versi sebelumnya.</p> : (
                 <ul className="space-y-2">
                   {changes.map((c) => <li key={c.id}><strong>{LABEL[c.change]}:</strong> {c.after ?? c.before}</li>)}
                 </ul>
@@ -142,33 +142,33 @@ export default async function DocumentPage({ params, searchParams }: { params: P
           )}
 
           <section aria-labelledby="periksa-h" className="space-y-3">
-            <h2 id="periksa-h" className="text-2xl font-bold text-navy">Pemeriksaan</h2>
+            <h2 id="periksa-h" className="text-2xl font-bold text-navy">Pemeriksaan dan verifikasi</h2>
             <VerificationPanel verifications={verifications} qrDataUrls={qrs} urls={urls} />
             {highRisk && !openCase && (
               <Card className="space-y-3 border-amber-300 bg-amber-50/60">
-                <p className="text-lg font-semibold text-navy">Dokumen ini memerlukan penilaian khusus</p>
-                <p>Topiknya berisiko tinggi ({upload!.riskReasons.join(", ").toLowerCase()}), jadi tidak dianalisis AI dan tidak dapat dipesan untuk pemeriksaan standar oleh pengacara. {SPECIAL_CASE_NOTE}</p>
-                <ButtonLink href={`/cases/new?document=${id}`}>Ajukan penilaian khusus</ButtonLink>
+                <p className="text-lg font-semibold text-navy">Dokumen ini perlu diajukan sebagai Special Legal Case</p>
+                <p>Topik dokumen ini berisiko tinggi ({upload!.riskReasons.join(", ").toLowerCase()}). Karena itu, dokumen ini tidak dianalisis AI dan tidak dapat diajukan untuk Legal Review. Ajukan sebagai Kasus Hukum Khusus (Special Legal Case). {SPECIAL_CASE_NOTE}</p>
+                <ButtonLink href={`/cases/new?document=${id}`}>Ajukan Special Legal Case</ButtonLink>
               </Card>
             )}
             {openCase && (
               <Card className="space-y-3 border-amber-300 bg-amber-50/60">
-                <p className="text-lg font-semibold text-navy">Dokumen ini memerlukan penilaian khusus</p>
-                <p>Pemeriksaan standar oleh pengacara tidak tersedia selama penilaian khusus berjalan. {SPECIAL_CASE_NOTE}</p>
-                <ButtonLink href={`/cases/${openCase}`} variant="secondary">Lihat status penilaian khusus</ButtonLink>
+                <p className="text-lg font-semibold text-navy">Dokumen ini sedang diajukan sebagai Special Legal Case</p>
+                <p>Legal Review tidak tersedia selama Kasus Hukum Khusus (Special Legal Case) untuk dokumen ini masih berjalan. {SPECIAL_CASE_NOTE}</p>
+                <ButtonLink href={`/cases/${openCase}`} variant="secondary">Lihat status Special Legal Case</ButtonLink>
               </Card>
             )}
             {quote && (
               <Card className="space-y-3 border-line bg-tint">
                 <form action={requestReviewAction} className="space-y-3">
                   <input type="hidden" name="versionId" value={selected.id} />
-                  <p>Pemeriksaan oleh pengacara untuk versi ini: <strong>{formatIdr(quote.amountIdr)}</strong>. Pembayaran adalah biaya pemeriksaan dan tidak menjamin hasil positif.</p>
-                  <Button type="submit">Minta pemeriksaan pengacara</Button>
+                  <p>Biaya Legal Review oleh pengacara untuk versi ini: <strong>{formatIdr(quote.amountIdr)}</strong>. Pembayaran adalah biaya pemeriksaan. Pembayaran tidak menjamin hasil positif.</p>
+                  <Button type="submit">Ajukan Legal Review</Button>
                 </form>
               </Card>
             )}
             {!openCase && !highRisk && (
-              <div className="flex flex-wrap items-center gap-x-2 text-muted"><span>Dokumen Anda rumit atau berisiko tinggi?</span><ButtonLink href={`/cases/new?document=${id}`} variant="quiet" className="!px-0">Ajukan penilaian khusus</ButtonLink></div>
+              <div className="flex flex-wrap items-center gap-x-2 text-muted"><span>Dokumen Anda rumit atau berisiko tinggi?</span><ButtonLink href={`/cases/new?document=${id}`} variant="quiet" className="!px-0">Ajukan Special Legal Case</ButtonLink></div>
             )}
             <div id="analisis-ai" className="space-y-3">
               {aiStatus && <p role="status" className="rounded-xl border border-line bg-surface p-3 font-semibold">{AI_REVIEW_STATUS_TEXT[aiStatus]}</p>}
@@ -182,7 +182,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
                       <input type="checkbox" name="consent" value="yes" required className="mt-1 h-6 w-6 shrink-0" />
                       <span>{AI_REVIEW_CONSENT}</span>
                     </label>
-                    <Button type="submit" variant="secondary">{aiReport ? "Analisis ulang dengan AI" : "Analisis awal AI"}</Button>
+                    <Button type="submit" variant="secondary">{aiReport ? "Ulangi analisis awal AI" : "Mulai analisis awal AI"}</Button>
                   </form>
                 </Card>
               )}

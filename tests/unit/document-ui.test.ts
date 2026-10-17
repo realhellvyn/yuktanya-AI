@@ -62,14 +62,14 @@ describe("DocumentPreview dan VersionList", () => {
     ];
     const reviewed = { review: "COMPLETED", outcome: "WITH_NOTES", legal: "ACTIVE" as const, enhanced: null, ai: false };
     const h = renderToStaticMarkup(VersionList({ documentId: "d1", versions, statuses: { v1: reviewed } }));
-    expect(h.indexOf("Sudah diperiksa pengacara — Legal Verified aktif")).toBeGreaterThan(-1);
+    expect(h.indexOf("Sudah diperiksa pengacara: Legal Verified aktif")).toBeGreaterThan(-1);
     expect(h.indexOf("Sudah diperiksa pengacara")).toBeLessThan(h.indexOf("Versi 2"));
     expect(h).toContain("Versi baru belum diperiksa");
     const revoked = renderToStaticMarkup(VersionList({ documentId: "d1", versions: versions.slice(0, 1), statuses: { v1: { ...reviewed, legal: "REVOKED" } } }));
     expect(revoked).toContain("verifikasi dicabut");
     expect(revoked).not.toContain("belum diperiksa");
     const inflight = renderToStaticMarkup(VersionList({ documentId: "d1", versions: versions.slice(0, 1), statuses: { v1: { review: "IN_REVIEW", outcome: null, legal: null, enhanced: null, ai: false } } }));
-    expect(inflight).toContain("Sedang dalam pemeriksaan pengacara");
+    expect(inflight).toContain("Legal Review sedang berjalan");
   });
 
   it("daftar versi: belum diperiksa, hash 12 karakter, tanpa badge", () => {

@@ -69,6 +69,15 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* Kontrol bawaan (kotak centang, tombol pilihan, slider) memakai warna brand, bukan biru bawaan browser. */
+  accent-color: var(--primary);
+}
+
+/* Teks contoh di kotak isian: muted di atas surface ≥ 4,5:1 (diuji di tests/unit/brand-tokens.test.ts).
+   opacity 1 karena Firefox memudarkan placeholder secara bawaan. */
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }
 
 body {

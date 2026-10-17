@@ -16,8 +16,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Beranda | Yuktanya" };
 
 const REVIEW_STATUS: Record<string, { text: string; tone: "info" | "success" | "warning" | "neutral" }> = {
-  QUEUED: { text: "Menunggu pemeriksaan", tone: "warning" },
-  ASSIGNED: { text: "Menunggu pemeriksaan", tone: "warning" },
+  QUEUED: { text: "Menunggu diperiksa", tone: "warning" },
+  ASSIGNED: { text: "Menunggu diperiksa", tone: "warning" },
   IN_REVIEW: { text: "Sedang diperiksa", tone: "info" },
   COMPLETED: { text: "Selesai diperiksa", tone: "success" },
   DECLINED: { text: "Tidak dapat diperiksa", tone: "neutral" },
@@ -57,13 +57,13 @@ export default async function DashboardPage() {
     <main className="max-w-4xl space-y-8">
       <header className="space-y-2">
         <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">Selamat datang di Yuktanya</h1>
-        <p className="text-xl text-muted">Apa yang ingin Anda buat hari ini?</p>
+        <p className="text-xl text-muted">Buat dokumen baru atau lanjutkan dokumen yang sudah ada.</p>
       </header>
 
       <Card className="space-y-4 border-line bg-tint">
         {draft ? (
           <>
-            <p className="text-lg font-semibold text-navy">Lanjutkan dokumen terakhir: {draft.title}</p>
+            <p className="text-lg font-semibold text-navy">Draf terakhir: {draft.title}</p>
             <div className="flex flex-wrap gap-3">
               <ButtonLink href={`/workspace/${draft.id}`}>Lanjutkan mengisi</ButtonLink>
               <ButtonLink href="/workspace/new" variant="secondary">Buat dokumen baru</ButtonLink>
@@ -71,16 +71,16 @@ export default async function DashboardPage() {
           </>
         ) : (
           <>
-            <p className="text-lg font-semibold text-navy">Buat dokumen dengan bantuan AI. Gratis.</p>
-            <p className="text-muted">Pilih jenis dokumen, lalu ceritakan isinya kepada AI. Belum tahu dokumen mana yang cocok? Pilih &ldquo;Saya belum tahu&rdquo;.</p>
-            <div><ButtonLink href="/workspace/new">Buat dokumen baru (Gratis)</ButtonLink></div>
+            <p className="text-lg font-semibold text-navy">Buat dokumen dengan bantuan AI, gratis.</p>
+            <p className="text-muted">Pilih jenis dokumen, lalu ceritakan kebutuhan Anda kepada AI. Bila belum yakin, pilih &ldquo;Saya belum tahu&rdquo;.</p>
+            <div><ButtonLink href="/workspace/new">Buat dokumen baru</ButtonLink></div>
           </>
         )}
         <p className="text-muted">{AI_DRAFT_LABEL} AI bukan pengacara.</p>
         <div className="border-t border-line pt-4">
           {flags.aiPreReview
-            ? <ButtonLink href="/documents/upload" variant="secondary">Periksa dokumen yang sudah Anda punya</ButtonLink>
-            : <ButtonLink href="/bantuan#pengacara" variant="secondary">Cara memeriksakan dokumen ke pengacara</ButtonLink>}
+            ? <ButtonLink href="/documents/upload" variant="secondary">Analisis dokumen yang sudah Anda miliki</ButtonLink>
+            : <ButtonLink href="/bantuan#pengacara" variant="secondary">Cara mengajukan Legal Review</ButtonLink>}
         </div>
       </Card>
 
@@ -90,7 +90,7 @@ export default async function DashboardPage() {
           {docs.length > 0 && <ButtonLink href="/documents" variant="quiet">Lihat semua</ButtonLink>}
         </div>
         {recent.length === 0 ? (
-          <EmptyState title="Belum ada dokumen" text="Mulai dari membuat dokumen pertama Anda." action={<ButtonLink href="/workspace/new">Buat Dokumen</ButtonLink>} />
+          <EmptyState title="Belum ada dokumen" text="Dokumen yang Anda buat akan tampil di sini." action={<ButtonLink href="/workspace/new">Buat dokumen</ButtonLink>} />
         ) : (
           <ul className="space-y-3">
             {recent.map((d) => (
@@ -101,8 +101,8 @@ export default async function DashboardPage() {
                     <p className="text-sm text-muted">Dibuat {formatDateId(wibDate(d.createdAt))}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {d.versionCount === 0 ? <StatusBadge tone="warning">Draf belum selesai</StatusBadge> : <StatusBadge tone="info">Dokumen sudah dibuat</StatusBadge>}
-                    <ButtonLink href={d.versionCount === 0 ? `/workspace/${d.id}` : `/documents/${d.id}`} variant="secondary">{d.versionCount === 0 ? "Lanjutkan" : "Buka"}</ButtonLink>
+                    {d.versionCount === 0 ? <StatusBadge tone="warning">Draf belum selesai</StatusBadge> : <StatusBadge tone="info">Dokumen selesai</StatusBadge>}
+                    <ButtonLink href={d.versionCount === 0 ? `/workspace/${d.id}` : `/documents/${d.id}`} variant="secondary">{d.versionCount === 0 ? "Lanjutkan mengisi" : "Buka dokumen"}</ButtonLink>
                   </div>
                 </Card>
               </li>
@@ -113,17 +113,17 @@ export default async function DashboardPage() {
 
       {reviews.length > 0 && (
         <section aria-labelledby="rev-h" className="space-y-3">
-          <h2 id="rev-h" className="text-2xl font-bold text-navy">Status Pemeriksaan</h2>
+          <h2 id="rev-h" className="text-2xl font-bold text-navy">Status Legal Review</h2>
           <ul className="space-y-3">
             {reviews.slice(0, 3).map((r) => {
               const s = REVIEW_STATUS[r.status] ?? { text: r.status, tone: "neutral" as const };
               return (
                 <li key={r.requestId}>
                   <Card className="flex flex-wrap items-center justify-between gap-3 !p-4">
-                    <p className="font-semibold text-navy">{r.title} — versi {r.versionNo}</p>
+                    <p className="font-semibold text-navy">{r.title}, versi {r.versionNo}</p>
                     <div className="flex items-center gap-3">
                       <StatusBadge tone={s.tone}>{s.text}</StatusBadge>
-                      <ButtonLink href={`/reviews/${r.requestId}`} variant="secondary">Lihat</ButtonLink>
+                      <ButtonLink href={`/reviews/${r.requestId}`} variant="secondary">Lihat hasil</ButtonLink>
                     </div>
                   </Card>
                 </li>
@@ -135,28 +135,28 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="space-y-4">
-          <h2 className="text-xl font-bold text-navy">Pemakaian hari ini</h2>
+          <h2 className="text-xl font-bold text-navy">Kuota AI hari ini</h2>
           <ul className="space-y-4">
-            <Quota label="Sisa pesan AI" left={usage.messagesRemaining} total={usage.messageLimit} />
-            <Quota label="Sisa pembuatan dokumen" left={usage.documentsRemaining} total={usage.documentLimit} />
-            <Quota label="Sisa pemeriksaan awal AI" left={usage.aiReviewsRemaining} total={usage.aiReviewLimit} />
+            <Quota label="Pesan AI" left={usage.messagesRemaining} total={usage.messageLimit} />
+            <Quota label="Dokumen baru" left={usage.documentsRemaining} total={usage.documentLimit} />
+            <Quota label="Analisis awal AI" left={usage.aiReviewsRemaining} total={usage.aiReviewLimit} />
           </ul>
-          <p className="text-sm text-muted">Setiap pemeriksaan AI memakai 1 pesan AI. Jatah dihitung ulang {resetText(usage.resetAt)}.</p>
+          <p className="text-sm text-muted">Angka menunjukkan sisa kuota. Setiap analisis awal AI juga memakai 1 pesan AI. Kuota diperbarui {resetText(usage.resetAt)}.</p>
         </Card>
         <Card className="space-y-3">
           {membership.active ? (
             <>
-              <div className="flex flex-wrap items-center gap-3"><h2 className="text-xl font-bold text-navy">Member Aktif</h2><StatusBadge tone="success">Aktif</StatusBadge></div>
+              <div className="flex flex-wrap items-center gap-3"><h2 className="text-xl font-bold text-navy">Member aktif</h2><StatusBadge tone="success">Aktif</StatusBadge></div>
               <p>Periode: {formatDateId(wibDate(membership.periodStart))} – {formatDateId(wibDate(membership.periodEnd))}</p>
-              <p className="font-semibold">{membership.firstReviewUsed ? `Pemeriksaan berikutnya: ${formatIdr(PRICING.standard.memberLater)}` : `Pemeriksaan pertama: ${formatIdr(PRICING.standard.memberFirst)}`}</p>
+              <p className="font-semibold">{membership.firstReviewUsed ? `Legal Review berikutnya: ${formatIdr(PRICING.standard.memberLater)}` : `Legal Review pertama: ${formatIdr(PRICING.standard.memberFirst)}`}</p>
               <p className="text-sm text-muted">Membership {formatIdr(PRICING.membershipMonthlyIdr)} per periode tagihan.</p>
             </>
           ) : (
             <>
-              <h2 className="text-xl font-bold text-navy">Akun Gratis</h2>
+              <h2 className="text-xl font-bold text-navy">Akun gratis</h2>
               <p>Buat dokumen dengan AI: <strong>Gratis</strong></p>
-              <p>Pemeriksaan pengacara: <strong>{formatIdr(PRICING.standard.free)}</strong> per dokumen standar</p>
-              <ButtonLink href="/membership" variant="quiet">Lihat membership (opsional)</ButtonLink>
+              <p>Legal Review: <strong>{formatIdr(PRICING.standard.free)}</strong> per dokumen</p>
+              <ButtonLink href="/membership" variant="quiet">Lihat Membership (opsional)</ButtonLink>
             </>
           )}
         </Card>
@@ -165,7 +165,7 @@ export default async function DashboardPage() {
       <Card className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-xl font-bold text-navy">Butuh bantuan?</h2>
-          <p className="text-muted">Cara membuat dokumen, batas harian, pemeriksaan pengacara, dan cara mengecek keaslian dokumen.</p>
+          <p className="text-muted">Panduan membuat dokumen, kuota harian, Legal Review, dan pengecekan keaslian dokumen.</p>
         </div>
         <ButtonLink href="/bantuan" variant="secondary">Buka Bantuan</ButtonLink>
       </Card>

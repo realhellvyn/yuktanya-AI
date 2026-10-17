@@ -11,7 +11,7 @@ describe("PriceBreakdown", () => {
       const h = renderToStaticMarkup(PriceBreakdown({ service: "Pemeriksaan Standar", quote: { amountIdr: amount, variant, usesCredit: false } }));
       expect(h).toContain(text);
       expect(h).toContain(CHECKOUT_NOTE);
-      expect(h).toContain("pemeriksaan pertama pada setiap periode tagihan");
+      expect(h).toContain("Legal Review pertama dalam setiap periode tagihan");
       expect(h).not.toMatch(/semua Rp30\.000|\bcap\b/i);
     }
   });
@@ -25,7 +25,9 @@ describe("PriceBreakdown", () => {
 describe("OrderStatus", () => {
   const base = { amountIdr: 30000, expiresAt: "2026-10-17T05:00:00.000Z" };
   it("status berupa teks", () => {
-    expect(renderToStaticMarkup(OrderStatus({ order: { ...base, status: "PENDING_PAYMENT" } }))).toContain("Menunggu pembayaran");
+    // Waktu dipatok sebelum expiresAt: tanpa ini tes gagal begitu jam nyata melewati 17 Okt 2026 05.00 UTC.
+    const now = new Date("2026-10-16T05:00:00.000Z");
+    expect(renderToStaticMarkup(OrderStatus({ order: { ...base, status: "PENDING_PAYMENT" }, now }))).toContain("Menunggu pembayaran");
     expect(renderToStaticMarkup(OrderStatus({ order: { ...base, status: "PAID" } }))).toContain("Pembayaran dikonfirmasi");
     expect(renderToStaticMarkup(OrderStatus({ order: { ...base, status: "EXPIRED" } }))).toContain("Kedaluwarsa");
     expect(renderToStaticMarkup(OrderStatus({ order: { ...base, status: "RECONCILIATION_REQUIRED" } }))).toContain("sudah kami terima");
@@ -36,7 +38,7 @@ describe("OrderStatus", () => {
     expect(before).toContain("Selesaikan pembayaran sebelum");
     const after = renderToStaticMarkup(OrderStatus({ order: { ...base, status: "PENDING_PAYMENT" }, now: new Date("2026-10-17T05:00:01Z") }));
     expect(after).toContain("Batas waktu pembayaran lewat");
-    expect(after).toContain("buat permintaan baru");
+    expect(after).toContain("buat pengajuan baru");
     expect(after).not.toContain("Menunggu pembayaran");
     expect(after).not.toContain("Selesaikan pembayaran sebelum");
     expect(isPastDue({ ...base, status: "PENDING_PAYMENT" }, new Date("2026-10-17T05:00:01Z"))).toBe(true);
@@ -45,13 +47,13 @@ describe("OrderStatus", () => {
 });
 
 describe("PriceBreakdown (Task 14, checkout D-06)", () => {
-  it("menyebut AI gratis dan pemeriksaan pengacara berbayar; aturan harga Deep untuk pesanan Deep", () => {
+  it("menyebut AI gratis dan Legal Review oleh pengacara berbayar; aturan harga Deep untuk pesanan Deep", () => {
     const std = renderToStaticMarkup(PriceBreakdown({ service: "Pemeriksaan Standar", quote: { amountIdr: 50000, variant: "FREE", usesCredit: false }, kind: "STANDARD_REVIEW" }));
-    expect(std).toContain("AI gratis; pemeriksaan pengacara berbayar");
+    expect(std).toContain("AI gratis; Legal Review oleh pengacara berbayar");
     const deep = renderToStaticMarkup(PriceBreakdown({ service: "Pemeriksaan mendalam", quote: { amountIdr: 150000, variant: "MEMBER", usesCredit: false }, kind: "DEEP_REVIEW" }));
     expect(deep).toContain("Rp200.000");
     expect(deep).toContain("Rp150.000");
-    expect(deep).toContain("AI gratis; pemeriksaan pengacara berbayar");
+    expect(deep).toContain("AI gratis; Legal Review oleh pengacara berbayar");
     expect(deep).not.toContain("Rp30.000");
   });
 });

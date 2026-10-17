@@ -9,7 +9,7 @@ const say = async (page, text, expectReply) => {
 };
 const quota = async (page, base) => {
   await page.goto(base + "/dashboard");
-  return (await page.locator("li:has-text('Sisa pesan AI')").innerText()).replace(/\s+/g, " ");
+  return (await page.locator("li:has-text('Pesan AI')").innerText()).replace(/\s+/g, " ");
 };
 
 export async function journey({ page, step, shot, base, vp, issues, llm }) {
@@ -73,7 +73,7 @@ export async function journey({ page, step, shot, base, vp, issues, llm }) {
     await page.click("a:has-text('Lanjutkan mengisi')");
     await page.waitForSelector("button:has-text('Coba lagi')");
     await Promise.all([page.waitForLoadState("networkidle"), page.click("button:has-text('Coba lagi')")]);
-    await page.waitForFunction(() => !document.body.innerText.includes("belum dijawab AI"), null, { timeout: 30000 });
+    await page.waitForFunction(() => !document.body.innerText.includes("belum dibalas AI"), null, { timeout: 30000 });
     const q = await quota(page, base);
     if (!/16 dari 20/.test(q)) throw new Error("kuota salah setelah coba lagi: " + q);
   });

@@ -6,7 +6,7 @@ import { loadOverview } from "@/lib/admin/page-data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pendapatan | Admin Yuktanya" };
-const KIND: Record<string, string> = { MEMBERSHIP_MONTHLY: "Membership bulanan", MEMBERSHIP_ANNUAL: "Membership tahunan", BUNDLE: "Paket kredit", STANDARD_REVIEW: "Pemeriksaan standar", DEEP_REVIEW: "Pemeriksaan mendalam" };
+const KIND: Record<string, string> = { MEMBERSHIP_MONTHLY: "Membership bulanan", MEMBERSHIP_ANNUAL: "Membership tahunan", BUNDLE: "Paket kredit", STANDARD_REVIEW: "Legal Review", DEEP_REVIEW: "Deep Review" };
 
 export default async function RevenuePage({ searchParams }: { searchParams: Promise<{ r?: string }> }) {
   const { o, range } = await loadOverview(await searchParams);

@@ -15,9 +15,9 @@ export function deepTimeline({ status, assigned }: { status: string; assigned: b
 }
 
 const NOT_ENHANCED: Record<string, string> = {
-  COMPLETED_WITH_NOTES: "Profesional hukum menyelesaikan pemeriksaan, tetapi tidak semua syarat Enhanced terpenuhi. Hasil pemeriksaan standar Anda tetap berlaku untuk versi yang diperiksa.",
-  INCONCLUSIVE: "Pemeriksaan belum dapat disimpulkan, jadi Enhanced tidak diberikan. Tidak ada lencana hukum baru untuk pemeriksaan ini.",
-  REFERRED_SPECIAL_CASE: "Dokumen ini dirujuk sebagai kasus khusus. Biaya dan ruang lingkup ditentukan setelah asesmen profesional, dan Enhanced belum diberikan.",
+  COMPLETED_WITH_NOTES: "Profesional hukum menyelesaikan pemeriksaan, tetapi tidak semua syarat Enhanced terpenuhi. Hasil Legal Review Anda tetap berlaku untuk versi yang diperiksa.",
+  INCONCLUSIVE: "Pemeriksaan belum dapat disimpulkan, sehingga Enhanced tidak diberikan. Tidak ada lencana hukum baru untuk pemeriksaan ini.",
+  REFERRED_SPECIAL_CASE: "Dokumen ini dirujuk sebagai Special Legal Case. Biaya dan ruang lingkup ditentukan setelah asesmen profesional. Enhanced belum diberikan.",
 };
 
 export type EnhancedView = { enhanced: boolean; headline: string; text: string };
@@ -33,7 +33,7 @@ export function enhancedExplanation(outcome: string | null, decisionReason: stri
       return {
         enhanced: false,
         headline: verificationStatus === "SUSPENDED" ? "Enhanced ditangguhkan sementara" : "Enhanced dicabut",
-        text: `Keputusan Enhanced pernah dicatat untuk pemeriksaan ini, tetapi lencananya sekarang ${state}. Biasanya ini terjadi karena verifikasi pemeriksaan standar yang menjadi dasarnya tidak lagi aktif. Lencana ini tidak boleh dipakai sebagai bukti sampai statusnya aktif kembali.`,
+        text: `Keputusan Enhanced pernah dicatat untuk pemeriksaan ini, tetapi lencananya sekarang ${state}. Biasanya ini terjadi karena verifikasi Legal Review yang menjadi dasarnya tidak lagi aktif. Lencana ini tidak boleh dipakai sebagai bukti sampai statusnya aktif kembali.`,
       };
     }
     return { enhanced: false, headline: "Enhanced belum berlaku", text: "Keputusan tercatat, tetapi tidak ada lencana Enhanced yang aktif untuk pemeriksaan ini." };

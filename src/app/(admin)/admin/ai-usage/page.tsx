@@ -13,7 +13,7 @@ export default async function AiUsagePage({ searchParams }: { searchParams: Prom
     <main className="max-w-5xl space-y-6">
       <PageHeading title="Pemakaian AI" />
       <RangeNav path="/admin/ai-usage" range={range} />
-      {o.ai === null && <p role="status">Belum ada telemetri AI yang tercatat.</p>}
+      {o.ai === null && <p role="status">Belum ada data pemakaian AI yang tercatat.</p>}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <KpiCard label="Permintaan" value={fmtCount(o.ai?.requests)} />
         <KpiCard label="Tingkat keberhasilan" value={fmtPercent(o.ai?.success_rate)} hint="Berhasil / selesai" />
@@ -21,7 +21,7 @@ export default async function AiUsagePage({ searchParams }: { searchParams: Prom
         <KpiCard label="Latensi P50" value={fmtMs(o.ai?.p50_ms)} />
         <KpiCard label="Latensi P95" value={fmtMs(o.ai?.p95_ms)} />
       </div>
-      <p>Hanya angka dan status yang dicatat. Isi pesan dan dokumen pengguna tidak disimpan di telemetri.</p>
+      <p>Hanya angka dan status yang dicatat. Isi pesan dan dokumen pengguna tidak disimpan dalam data pemakaian ini.</p>
     </main>
   );
 }

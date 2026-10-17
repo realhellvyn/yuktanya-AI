@@ -73,13 +73,13 @@ describe("approvals (reviewer)", () => {
     expect(items.map((i) => i.id).sort()).toEqual([fresh, ready].sort());
     const fr = items.find((i) => i.id === fresh)!;
     expect(fr).toMatchObject({ kind: "STANDARD", href: `/partner/reviews/${fresh}`, ready: false, versionNo: 1 });
-    expect(fr.reasons.join(" ")).toMatch(/Belum dibuka/);
+    expect(fr.reasons.join(" ")).toMatch(/belum dibuka/);
     expect(items.find((i) => i.id === ready)).toMatchObject({ ready: true, reasons: [] });
 
     const d = await svc.approvals(c.r.reviewer, NOW);
     expect(d).toHaveLength(1);
     expect(d[0]).toMatchObject({ kind: "DEEP", id: deep, href: `/partner/deep/${deep}`, ready: false });
-    expect(d[0].reasons.join(" ")).toMatch(/Belum dibuka/);
+    expect(d[0].reasons.join(" ")).toMatch(/belum dibuka/);
     expect(await svc.approvals(f.coordinator, NOW)).toEqual([]);
   });
 
@@ -90,7 +90,7 @@ describe("approvals (reviewer)", () => {
     await pool.query("select assign_deep($1, $2, $3, $4)", [c.f.coordinator, deep, c.r.reviewer, NOW]);
     let rev = (await pool.query("select * from start_deep($1, $2, $3)", [c.r.reviewer, deep, NOW])).rows[0].revision as number;
     const half = await svc.approvals(c.r.reviewer, NOW);
-    expect(half[0].reasons.join(" ")).toContain("Lengkapi checklist: M1, M2, M3, M4, M5, M6, M7");
+    expect(half[0].reasons.join(" ")).toContain("Lengkapi daftar periksa: M1, M2, M3, M4, M5, M6, M7");
     rev = (await pool.query("select save_deep_draft($1, $2, $3, 'Pekerjaan tambahan', '', $4) as r", [c.r.reviewer, deep, rev, NOW])).rows[0].r;
     rev = (await pool.query("select set_disposition($1, $2, $3, 1, 'RESOLVED', 'Bukti', $4) as r", [c.r.reviewer, deep, rev, NOW])).rows[0].r;
     for (const item of ["M1", "M2", "M3", "M4", "M5", "M6", "M7"]) {

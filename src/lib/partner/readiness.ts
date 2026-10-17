@@ -19,32 +19,32 @@ export type Readiness = { ready: boolean; reasons: string[] };
 export const CHECKLIST_ITEMS = ["M1", "M2", "M3", "M4", "M5", "M6", "M7"] as const;
 const blank = (s: string | null | undefined) => !s || s.trim() === "";
 const isMaterial = (severity: string) => severity === "MATERIAL" || severity === "CRITICAL";
-const NOT_OPENED = "Belum dibuka. Buka pekerjaan ini untuk mulai memeriksa.";
+const NOT_OPENED = "Pekerjaan ini belum dibuka. Buka pekerjaan untuk mulai memeriksa.";
 const NOT_AUTHORIZED = "Otorisasi profesional Anda tidak aktif. Hubungi koordinator.";
 
 // Cermin B-01 di publish_standard / decide_deep: isi buatan reviewer sebelumnya wajib diperiksa lalu disimpan ulang.
 export function standardConfirmBlockers(s: Pick<StandardState, "scope" | "notes" | "draftMine">): string[] {
   const out: string[] = [];
-  if (s.draftMine === false && !blank(s.scope)) out.push("Laporan diisi reviewer sebelumnya. Periksa lalu tekan Simpan draf.");
+  if (s.draftMine === false && !blank(s.scope)) out.push("Laporan diisi pemeriksa sebelumnya. Periksa isinya, lalu tekan Simpan draf.");
   const others = s.notes.filter((n) => n.mine === false).map((n) => n.noteNo);
-  if (others.length) out.push(`Catatan ${others.join(", ")} dibuat reviewer sebelumnya. Periksa lalu tekan Konfirmasi catatan.`);
+  if (others.length) out.push(`Catatan ${others.join(", ")} dibuat pemeriksa sebelumnya. Periksa catatan tersebut, lalu tekan Konfirmasi catatan.`);
   return out;
 }
 export function deepConfirmBlockers(d: Pick<DeepState, "extraWork" | "checklist" | "dispositions" | "draftMine">): string[] {
   const out: string[] = [];
-  if (d.draftMine === false && !blank(d.extraWork)) out.push("Pekerjaan tambahan diisi reviewer sebelumnya. Periksa lalu simpan ulang.");
+  if (d.draftMine === false && !blank(d.extraWork)) out.push("Pekerjaan tambahan diisi pemeriksa sebelumnya. Periksa isinya, lalu simpan ulang.");
   const disp = d.dispositions.filter((x) => x.mine === false).map((x) => x.noteNo);
-  if (disp.length) out.push(`Tindak lanjut catatan ${disp.join(", ")} diisi reviewer sebelumnya. Periksa lalu simpan ulang.`);
+  if (disp.length) out.push(`Tindak lanjut catatan ${disp.join(", ")} diisi pemeriksa sebelumnya. Periksa isinya, lalu simpan ulang.`);
   const chk = d.checklist.filter((c) => c.mine === false).map((c) => c.item).sort();
-  if (chk.length) out.push(`Butir ${chk.join(", ")} diisi reviewer sebelumnya. Periksa lalu simpan ulang.`);
+  if (chk.length) out.push(`Butir ${chk.join(", ")} diisi pemeriksa sebelumnya. Periksa isinya, lalu simpan ulang.`);
   return out;
 }
 
 export function standardOutcomeBlockers(s: Pick<StandardState, "scope" | "summary" | "notes" | "draftMine">, outcome: StandardOutcome): string[] {
   const out: string[] = [];
-  if (blank(s.scope)) out.push("Isi ruang lingkup pemeriksaan lalu simpan.");
+  if (blank(s.scope)) out.push("Isi ruang lingkup pemeriksaan, lalu simpan.");
   if (outcome === "WITH_NOTES") {
-    if (s.notes.length === 0) out.push("Tambahkan minimal satu Legal Note, atau pilih hasil Tanpa Legal Note.");
+    if (s.notes.length === 0) out.push("Tambahkan minimal satu Legal Note, atau pilih hasil tanpa Legal Note.");
     for (const n of s.notes) {
       if (isMaterial(n.severity) && (blank(n.recommendedAction) || blank(n.rationale) || blank(n.escalation))) {
         out.push(`Catatan ${n.noteNo}: isi tindakan, alasan, dan langkah lanjutan.`);
@@ -53,9 +53,9 @@ export function standardOutcomeBlockers(s: Pick<StandardState, "scope" | "summar
       }
     }
   } else if (outcome === "WITHIN_SCOPE") {
-    if (s.notes.length > 0) out.push("Hapus semua catatan untuk memilih hasil Tanpa Legal Note.");
+    if (s.notes.length > 0) out.push("Hapus semua catatan untuk memilih hasil tanpa Legal Note.");
   } else if (blank(s.summary)) {
-    out.push("Isi ringkasan untuk hasil ini lalu simpan.");
+    out.push("Isi ringkasan untuk hasil ini, lalu simpan.");
   }
   out.push(...standardConfirmBlockers(s));
   return out;
@@ -78,7 +78,7 @@ export function deepReadiness(d: DeepState): Readiness {
   if (blank(d.extraWork)) reasons.push("Catat pekerjaan tambahan yang Anda lakukan.");
   const byItem = new Map(d.checklist.map((c) => [c.item, c]));
   const missing = CHECKLIST_ITEMS.filter((i) => !byItem.has(i) || byItem.get(i)!.result === "UNKNOWN");
-  if (missing.length) reasons.push(`Lengkapi checklist: ${missing.join(", ")}.`);
+  if (missing.length) reasons.push(`Lengkapi daftar periksa: ${missing.join(", ")}.`);
   const noEvidence = CHECKLIST_ITEMS.filter((i) => {
     const c = byItem.get(i);
     return c && ((c.result === "PASS" && blank(c.evidenceRef)) || (c.result === "N_A" && blank(c.reasoning)));

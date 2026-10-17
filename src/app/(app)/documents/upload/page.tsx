@@ -11,9 +11,9 @@ import { UPLOAD_LIMITS } from "@/lib/uploads/limits";
 import { uploadAction } from "./actions";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Periksa Dokumen | Yuktanya" };
+export const metadata = { title: "Analisis dokumen | Yuktanya" };
 
-const TITLE = "Periksa dokumen yang sudah Anda punya";
+const TITLE = "Analisis dokumen yang sudah Anda miliki";
 
 export default async function UploadPage() {
   const userId = await requireUserId();
@@ -22,11 +22,11 @@ export default async function UploadPage() {
       <main className="max-w-3xl space-y-6">
         <PageHeading title={TITLE} />
         <Card className="space-y-3 border-amber-300 bg-amber-50/60">
-          <p className="text-lg font-semibold text-navy">Fitur sedang disiapkan</p>
-          <p>Analisis awal AI untuk dokumen yang Anda unggah belum tersedia. Tidak ada berkas yang disimpan atau dikirim ke AI dari halaman ini.</p>
+          <p className="text-lg font-semibold text-navy">Fitur ini belum tersedia</p>
+          <p>Analisis awal AI untuk dokumen unggahan masih disiapkan. Halaman ini tidak menyimpan berkas dan tidak mengirim apa pun ke AI.</p>
           <div className="flex flex-wrap gap-3">
             <ButtonLink href="/workspace/new">Buat dokumen baru</ButtonLink>
-            <ButtonLink href="/cases/new" variant="secondary">Ajukan penilaian khusus</ButtonLink>
+            <ButtonLink href="/cases/new" variant="secondary">Ajukan Special Legal Case</ButtonLink>
           </div>
         </Card>
       </main>
@@ -37,28 +37,28 @@ export default async function UploadPage() {
   const reset = new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(usage.resetAt));
   return (
     <main className="max-w-3xl space-y-6">
-      <PageHeading title={TITLE} lead="Unggah dokumen perjanjian Anda. AI akan menandai hal yang perlu diperhatikan sebelum Anda bertanya ke pengacara." />
+      <PageHeading title={TITLE} lead="Unggah dokumen perjanjian Anda. AI akan menandai bagian yang perlu diperhatikan sebelum Anda berkonsultasi dengan pengacara." />
       <Card className="space-y-3">
         <h2 className="text-xl font-bold text-navy">Berkas yang dapat diperiksa</h2>
         <ul className="list-disc space-y-1 pl-6">
-          <li>PDF yang teksnya bisa dipilih (bukan hasil pindai/foto), Word (DOCX), atau teks (TXT).</li>
-          <li>Ukuran paling besar 5 MB, paling banyak {limits.maxPages} halaman{usage.plan === "FREE" ? " (Member: 20 halaman)" : ""}.</li>
-          <li>Setiap unggahan menjadi satu dokumen baru yang tidak dapat diubah. Isi berkas asli disimpan privat di akun Anda.</li>
+          <li>PDF yang teksnya dapat dipilih (bukan hasil pindai atau foto), Word (DOCX), atau teks (TXT).</li>
+          <li>Ukuran maksimal 5 MB dan paling banyak {limits.maxPages} halaman{usage.plan === "FREE" ? " (Member: 20 halaman)" : ""}.</li>
+          <li>Setiap unggahan disimpan sebagai satu dokumen baru yang tidak dapat diubah. Berkas asli disimpan secara privat di akun Anda.</li>
         </ul>
-        <h2 className="pt-2 text-xl font-bold text-navy">Sisa jatah hari ini</h2>
+        <h2 className="pt-2 text-xl font-bold text-navy">Sisa kuota hari ini</h2>
         <ul className="space-y-1">
           <li>Dokumen baru: <strong>{usage.documentsRemaining} dari {usage.documentLimit}</strong></li>
-          <li>Analisis AI: <strong>{usage.aiReviewsRemaining} dari {usage.aiReviewLimit}</strong> (setiap analisis juga memakai 1 pesan AI; sisa pesan {usage.messagesRemaining})</li>
+          <li>Analisis AI: <strong>{usage.aiReviewsRemaining} dari {usage.aiReviewLimit}</strong> (setiap analisis juga memakai 1 pesan AI; sisa pesan AI {usage.messagesRemaining})</li>
         </ul>
-        <p className="text-sm text-muted">Jatah dihitung ulang pukul 00.00 WIB ({reset} WIB). Analisis yang gagal tidak memakai jatah.</p>
+        <p className="text-sm text-muted">Kuota diperbarui pukul 00.00 WIB ({reset} WIB). Analisis yang gagal tidak memakai kuota.</p>
       </Card>
       <Card className="space-y-4">
         <h2 className="text-xl font-bold text-navy">Privasi</h2>
         <p>Hanya teks hasil pembacaan berkas yang dikirim ke AI, dan hanya setelah Anda mencentang persetujuan di bawah. Selama masa uji coba, gunakan dokumen contoh tanpa data pribadi asli.</p>
-        <p className="font-semibold text-amber-900">{AI_PREREVIEW_LABEL} Hasil AI bukan pemeriksaan pengacara.</p>
+        <p className="font-semibold text-amber-900">{AI_PREREVIEW_LABEL} Hasil AI bukan Legal Review.</p>
         {usage.documentsRemaining <= 0 ? (
           <p role="status" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold text-amber-900">
-            Batas dokumen baru hari ini sudah tercapai. Coba lagi setelah pukul 00.00 WIB.
+            Kuota dokumen baru hari ini sudah habis. Kuota diperbarui pukul 00.00 WIB.
           </p>
         ) : (
           <UploadForm action={uploadAction} idempotencyKey={randomUUID()} />
@@ -66,7 +66,7 @@ export default async function UploadPage() {
       </Card>
       <div className="flex flex-wrap items-center gap-x-2 text-muted">
         <span>Dokumen Anda rumit atau berisiko tinggi?</span>
-        <ButtonLink href="/cases/new" variant="quiet" className="!px-0">Ajukan penilaian khusus</ButtonLink>
+        <ButtonLink href="/cases/new" variant="quiet" className="!px-0">Ajukan Special Legal Case</ButtonLink>
       </div>
     </main>
   );

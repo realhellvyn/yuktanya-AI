@@ -10,7 +10,7 @@ import { getSessionRoles } from "@/lib/supabase/server";
 import { routeCaseAction } from "./actions";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Kasus khusus | Admin Yuktanya" };
+export const metadata = { title: "Special Legal Case | Admin Yuktanya" };
 
 // Admin melihat metadata operasional (tanpa ringkasan pemilik) dan hanya dapat merutekan ke firma. Triase/penawaran = keputusan firma.
 export default async function AdminCasesPage({ searchParams }: { searchParams: Promise<{ e?: string; ok?: string }> }) {
@@ -20,10 +20,10 @@ export default async function AdminCasesPage({ searchParams }: { searchParams: P
   const firms = [...new Map(partners.map((p) => [p.firmId, p.firmName])).entries()];
   return (
     <main className="max-w-5xl space-y-6">
-      <PageHeading title="Kasus khusus" lead="Pemantauan dan perutean ke firma. Isi ringkasan kasus hanya dibaca firma yang menangani." />
+      <PageHeading title="Special Legal Case" lead="Pemantauan dan penugasan ke firma. Ringkasan kasus hanya dapat dibaca firma yang menangani." />
       {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">Tersimpan. Firma tujuan perlu melakukan triase.</p>}
       {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{caseErrorText(q.e)}</p>}
-      {rows.length === 0 ? <EmptyState title="Belum ada kasus khusus" /> : (
+      {rows.length === 0 ? <EmptyState title="Belum ada Special Legal Case" /> : (
         <ul className="space-y-3">
           {rows.map((r) => (
             <li key={r.id}>
@@ -32,17 +32,17 @@ export default async function AdminCasesPage({ searchParams }: { searchParams: P
                   <StatusBadge tone={CASE_STATUS_TONE[r.status]}>{CASE_STATUS_LABEL[r.status]}</StatusBadge>
                   <span className="text-muted">Masuk {formatWib(r.createdAt)}</span>
                 </div>
-                <p className="break-words">Firma: <strong>{r.firmName ?? "Belum dirutekan"}</strong>{r.quoteAmountIdr != null ? ` · Penawaran ${formatIdr(r.quoteAmountIdr)}` : ""}</p>
+                <p className="break-words">Firma: <strong>{r.firmName ?? "Belum ditugaskan ke firma"}</strong>{r.quoteAmountIdr != null ? ` · Penawaran ${formatIdr(r.quoteAmountIdr)}` : ""}</p>
                 {(r.status === "SUBMITTED" || r.status === "TRIAGED") && firms.length > 0 && (
                   <form action={routeCaseAction} className="flex flex-wrap items-end gap-3">
                     <input type="hidden" name="caseId" value={r.id} />
-                    <label className="block min-w-0 flex-1"><span className={labelText}>Rutekan ke firma</span>
+                    <label className="block min-w-0 flex-1"><span className={labelText}>Tugaskan ke firma</span>
                       <select name="firmId" defaultValue={r.firmId ?? ""} required className={fieldClass}>
                         <option value="" disabled>Pilih firma</option>
                         {firms.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
                       </select>
                     </label>
-                    <button type="submit" className={buttonClass("secondary")}>Rutekan</button>
+                    <button type="submit" className={buttonClass("secondary")}>Tugaskan ke firma</button>
                   </form>
                 )}
               </Card>

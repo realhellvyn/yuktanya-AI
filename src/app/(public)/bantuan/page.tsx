@@ -15,41 +15,42 @@ const TOPICS: { id: string; title: string; body: React.ReactNode }[] = [
     title: "Cara membuat dokumen",
     body: (
       <ol className="list-decimal space-y-1.5 pl-6">
-        <li>Daftar atau masuk. AI hanya bisa dipakai setelah masuk.</li>
-        <li>Tekan Buat Dokumen, lalu pilih jenis dokumen. Belum tahu dokumen mana yang cocok? Pilih &ldquo;Saya belum tahu&rdquo;, ceritakan keperluan Anda, dan AI membantu memilih.</li>
-        <li>Jawab pertanyaan satu per satu dengan bahasa sehari-hari. Jawaban tersimpan otomatis.</li>
-        <li>Saat semua terisi, tekan Buat dokumen. Anda bisa mengunduh dokumennya.</li>
+        <li>Daftar atau masuk. AI hanya dapat dipakai setelah Anda masuk.</li>
+        <li>Tekan Buat Dokumen, lalu pilih jenis dokumen. Bila belum yakin, pilih &ldquo;Saya belum tahu&rdquo; dan ceritakan keperluan Anda. AI akan menyarankan dokumen yang sesuai.</li>
+        <li>Jawab pertanyaan AI satu per satu dengan bahasa sehari-hari. Setiap jawaban tersimpan otomatis.</li>
+        <li>Setelah semua isian lengkap, tekan Buat dokumen. Dokumen siap diunduh.</li>
       </ol>
     ),
   },
   {
     id: "batas",
-    title: "Batas pemakaian harian",
+    title: "Kuota harian",
     body: (
       <>
-        <p>Batas di-reset setiap pukul 00.00 WIB.</p>
+        <p>Kuota diperbarui setiap hari pukul 00.00 WIB.</p>
         <ul className="list-disc space-y-1.5 pl-6">
           <li>Gratis: {QUOTAS.FREE.messages} pesan, {QUOTAS.FREE.documents} dokumen baru, {QUOTAS.FREE.aiReviews} analisis awal AI.</li>
           <li>Member ({formatIdr(PRICING.membershipMonthlyIdr)} per periode tagihan): {QUOTAS.MEMBER.messages} pesan, {QUOTAS.MEMBER.documents} dokumen baru, {QUOTAS.MEMBER.aiReviews} analisis awal AI.</li>
-          <li>Satu analisis awal AI yang berhasil juga memakai satu pesan.</li>
+          <li>Setiap analisis awal AI yang berhasil juga memakai satu pesan.</li>
         </ul>
-        <p>Jika batas habis, Anda tetap bisa membuka dan mengunduh dokumen yang sudah ada.</p>
+        <p>Bila kuota habis, Anda tetap dapat membuka dan mengunduh dokumen yang sudah ada.</p>
       </>
     ),
   },
   {
     id: "pengacara",
-    title: "Cara meminta pemeriksaan pengacara",
+    title: "Cara mengajukan Legal Review",
     body: (
       <>
         <ol className="list-decimal space-y-1.5 pl-6">
-          <li>Buka dokumen Anda, lalu tekan Minta pemeriksaan pengacara.</li>
-          <li>Periksa biaya, lalu bayar. Biaya standar {formatIdr(PRICING.standard.free)}; member aktif {formatIdr(PRICING.standard.memberFirst)} untuk yang pertama pada tiap periode, lalu {formatIdr(PRICING.standard.memberLater)}.</li>
-          <li>Setelah pembayaran dikonfirmasi, pemeriksa dari mitra hukum mengerjakan pemeriksaan. Hasilnya muncul di Review Saya.</li>
+          <li>Buka dokumen Anda, lalu tekan Ajukan Legal Review.</li>
+          <li>Periksa biayanya, lalu lakukan pembayaran. Biaya untuk akun gratis {formatIdr(PRICING.standard.free)}. Member aktif membayar {formatIdr(PRICING.standard.memberFirst)} untuk Legal Review pertama dalam satu periode, lalu {formatIdr(PRICING.standard.memberLater)} untuk berikutnya.</li>
+          <li>Setelah pembayaran dikonfirmasi, pengacara dari mitra hukum memeriksa dokumen Anda. Hasilnya tampil di Legal Review Saya.</li>
         </ol>
         <p>Pembayaran adalah biaya pemeriksaan. Pembayaran tidak menjamin hasil tertentu.</p>
         <p>Hasil pemeriksaan dapat memuat Legal Note (Catatan dari pemeriksa): bagian dokumen yang menurut pengacara perlu diperbaiki atau diperhatikan, beserta saran tindakannya.</p>
-        <p>Pemeriksaan mendalam (tambahan) hanya ditawarkan setelah pemeriksaan standar selesai dan memuat Legal Note yang perlu ditindaklanjuti. {SPECIAL_CASE_NOTE}</p>
+        <p>Deep Review adalah pemeriksaan tambahan. Deep Review hanya ditawarkan setelah Legal Review selesai dan memuat Legal Note yang perlu ditindaklanjuti.</p>
+        <p>Kebutuhan hukum yang rumit dapat diajukan sebagai Kasus Hukum Khusus (Special Legal Case). {SPECIAL_CASE_NOTE}</p>
       </>
     ),
   },
@@ -58,8 +59,8 @@ const TOPICS: { id: string; title: string; body: React.ReactNode }[] = [
     title: "Cara mengecek keaslian dokumen",
     body: (
       <>
-        <p>Dokumen yang sudah diperiksa memuat kode QR dan kode verifikasi. Pindai QR atau buka tautan pengecekan yang tercetak di dokumen. Halaman itu menampilkan status terbaru: aktif, ditangguhkan, atau dicabut.</p>
-        <p>Halaman itu juga menampilkan kode versi dokumen yang diperiksa. Cocokkan kode itu dengan kode versi yang tercetak di dokumen Anda. Jika berbeda, dokumen yang Anda pegang bukan versi yang diperiksa. Halaman pengecekan tidak membaca berkas Anda, jadi tidak dapat mendeteksi perubahan dengan sendirinya.</p>
+        <p>Dokumen yang sudah diperiksa memuat kode QR dan kode verifikasi. Pindai kode QR atau buka tautan pengecekan yang tercetak di dokumen. Halaman pengecekan menampilkan status terbaru: aktif, ditangguhkan, atau dicabut.</p>
+        <p>Halaman pengecekan juga menampilkan kode versi dokumen yang diperiksa. Cocokkan kode tersebut dengan kode versi yang tercetak di dokumen Anda. Bila berbeda, dokumen yang Anda pegang bukan versi yang diperiksa. Halaman pengecekan tidak membaca berkas Anda, sehingga tidak dapat mendeteksi perubahan dengan sendirinya.</p>
         <p>{QR_NOT_SIGNATURE}</p>
       </>
     ),
@@ -67,30 +68,30 @@ const TOPICS: { id: string; title: string; body: React.ReactNode }[] = [
   {
     id: "ai",
     title: "Tentang AI",
-    body: <p>{AI_DRAFT_LABEL} Jangan memasukkan data rahasia yang sungguhan selama masa uji ini.</p>,
+    body: <p>{AI_DRAFT_LABEL} Selama masa uji coba, jangan memasukkan data rahasia yang sebenarnya.</p>,
   },
   {
     id: "akun",
     title: "Masalah akun",
     body: (
       <ul className="list-disc space-y-1.5 pl-6">
-        <li>Lupa kata sandi: pakai Lupa kata sandi di halaman masuk.</li>
-        <li>Email konfirmasi belum datang: periksa folder spam, lalu kirim ulang dari halaman masuk atau daftar.</li>
-        <li>Unduh salinan data Anda atau hapus akun: masuk, lalu buka Pengaturan.</li>
+        <li>Lupa kata sandi: tekan Lupa kata sandi di halaman masuk.</li>
+        <li>Email konfirmasi belum diterima: periksa folder spam, lalu kirim ulang dari halaman masuk atau halaman daftar.</li>
+        <li>Unduh salinan data atau hapus akun: masuk, lalu buka Pengaturan.</li>
       </ul>
     ),
   },
 ];
 
 export default async function Page() {
-  // Pengguna yang sudah masuk (dari menu aplikasi) mendapat tombol kembali ke aplikasinya, bukan "Masuk" / "Daftar Gratis".
+  // Pengguna yang sudah masuk (dari menu aplikasi) mendapat tombol kembali ke aplikasinya, bukan "Masuk" / "Daftar gratis".
   const session = await getSessionRoles().catch(() => null);
   const home = session ? homeFor(session.roles) : undefined;
   return (
     <>
       <SiteHeader home={home} />
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-8 md:px-8">
-        <PageHeading title="Bantuan" lead="Jawaban singkat untuk pertanyaan yang paling sering muncul." />
+        <PageHeading title="Bantuan" lead="Jawaban singkat untuk pertanyaan yang paling sering diajukan." />
         {TOPICS.map((t) => (
           <section key={t.id} aria-labelledby={t.id}>
             <Card className="space-y-3">
@@ -102,10 +103,10 @@ export default async function Page() {
         <section aria-labelledby="kontak">
           <Card className="space-y-2 border-amber-300 bg-amber-50">
             <h2 id="kontak" className="text-xl font-bold text-navy">Menghubungi kami</h2>
-            <p>Saluran kontak belum disiapkan. Kami akan menampilkannya di halaman ini setelah tersedia.</p>
+            <p>Saluran kontak belum tersedia. Informasi kontak akan ditampilkan di halaman ini setelah siap.</p>
           </Card>
         </section>
-        {home ? <ButtonLink href={home}>Kembali ke aplikasi</ButtonLink> : <ButtonLink href="/register">Daftar Gratis</ButtonLink>}
+        {home ? <ButtonLink href={home}>Kembali ke aplikasi</ButtonLink> : <ButtonLink href="/register">Daftar gratis</ButtonLink>}
       </main>
       <SiteFooter />
     </>

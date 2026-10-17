@@ -6,7 +6,7 @@ export function LegalNoteCard({ note }: { note: NoteView }) {
   return (
     <article className="space-y-2 rounded-lg border border-line bg-surface p-4">
       <h3 className="text-lg font-semibold">{note.title}</h3>
-      <p><span className="font-medium">Tingkat:</span> {SEVERITY[note.severity]}</p>
+      <p><span className="font-medium">Tingkat kepentingan:</span> {SEVERITY[note.severity]}</p>
       {note.quote && <blockquote className="border-l-4 border-line pl-3">{note.quote}</blockquote>}
       <p>{note.finding}</p>
       {note.recommendedAction && <p><span className="font-medium">Tindakan yang disarankan:</span> {note.recommendedAction}</p>}

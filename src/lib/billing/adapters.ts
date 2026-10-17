@@ -24,7 +24,7 @@ export function createManualAdapter(instructions: string | undefined): PaymentAd
     async createCharge() {
       return {
         providerRef: `manual-${randomUUID()}`,
-        instructions: instructions?.trim() ? instructions.trim() : "Instruksi pembayaran belum tersedia. Hubungi kami sebelum membayar.",
+        instructions: instructions?.trim() ? instructions.trim() : "Instruksi pembayaran belum tersedia. Jangan melakukan pembayaran sebelum instruksi tersedia.",
       };
     },
   };

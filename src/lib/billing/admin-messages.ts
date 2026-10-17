@@ -10,15 +10,15 @@ const RESULT = {
   ACTIVATED: "Pesanan diaktifkan setelah rekonsiliasi.", REFUND_RECORDED: "Pengembalian dana dicatat. Lakukan transfer pengembalian di luar sistem.", CLOSED: "Pesanan ditutup.",
 };
 const ERROR = {
-  DISCOUNT_TAKEN: `Harga pemeriksaan pertama ${formatIdr(PRICING.standard.memberFirst)} untuk periode ini sudah dipakai pesanan lain, jadi pesanan ini tidak dapat diaktifkan. Catat pengembalian dana.`,
+  DISCOUNT_TAKEN: `Harga Legal Review pertama ${formatIdr(PRICING.standard.memberFirst)} untuk periode ini sudah dipakai pesanan lain, sehingga pesanan ini tidak dapat diaktifkan. Catat pengembalian dana.`,
   NOT_RECONCILIATION: "Pesanan ini sudah tidak perlu direkonsiliasi.", AMOUNT_MISMATCH: "Jumlah yang diterima tidak sama dengan pesanan. Pesanan tidak dapat diaktifkan.",
-  CONFLICT: "Dokumen versi ini sudah memiliki pesanan pemeriksaan lain yang aktif.", NOT_ELIGIBLE: "Pemeriksaan standar induk sudah berubah, jadi pesanan tidak dapat diaktifkan.",
+  CONFLICT: "Versi dokumen ini sudah memiliki pesanan pemeriksaan lain yang aktif.", NOT_ELIGIBLE: "Legal Review induk sudah berubah, sehingga pesanan tidak dapat diaktifkan.",
   NOTE_REQUIRED: "Catatan wajib diisi, minimal 5 karakter.",
-  INVALID: "Data belum benar. Jumlah harus angka bulat lebih dari 0, kode bank minimal 3 karakter, dan waktu uang diterima tidak boleh di masa depan.",
+  INVALID: "Data belum benar. Jumlah harus angka bulat lebih dari 0, referensi bank minimal 3 karakter, dan waktu dana diterima tidak boleh di masa depan.",
   FORBIDDEN: "Akun Anda tidak berwenang melakukan tindakan ini.",
   NOT_FOUND: "Pembayaran atau pesanan tidak ditemukan. Muat ulang halaman.",
-  RACE: "Data ini baru saja diproses (mungkin oleh admin lain) atau kode bank sudah dipakai. Muat ulang halaman lalu periksa hasilnya sebelum mengulang.",
-  INVALID_ACTION: "Pilihan tindakan tidak dikenal. Muat ulang halaman lalu ulangi.",
+  RACE: "Data ini baru saja diproses (mungkin oleh admin lain) atau referensi bank sudah dipakai. Muat ulang halaman, lalu periksa hasilnya sebelum mengulang.",
+  INVALID_ACTION: "Pilihan tindakan tidak dikenal. Muat ulang halaman, lalu ulangi.",
 };
 const GENERIC_ERROR = "Tindakan belum berhasil. Muat ulang halaman, periksa data, lalu ulangi.";
 

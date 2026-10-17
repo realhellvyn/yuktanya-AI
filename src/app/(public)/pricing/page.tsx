@@ -6,18 +6,18 @@ import { PRICING, formatIdr } from "@/lib/pricing/catalog";
 export const metadata = { title: "Harga | Yuktanya" };
 
 const ROWS: { item: string; price: string; note?: string }[] = [
-  { item: "Membuat dokumen dengan AI", price: "Gratis", note: "Dalam batas harian. Perlu daftar atau masuk." },
-  { item: "Membership (opsional)", price: `${formatIdr(PRICING.membershipMonthlyIdr)} per periode`, note: "Kuota harian lebih besar dan harga pemeriksaan lebih rendah." },
-  { item: "Pemeriksaan standar oleh pengacara (bukan member)", price: formatIdr(PRICING.standard.free) },
-  { item: "Pemeriksaan standar, member aktif, yang pertama per periode", price: formatIdr(PRICING.standard.memberFirst) },
-  { item: "Pemeriksaan standar, member aktif, berikutnya", price: formatIdr(PRICING.standard.memberLater) },
+  { item: "Pembuatan dokumen dengan AI", price: "Gratis", note: "Sesuai kuota harian. Anda perlu mendaftar atau masuk lebih dulu." },
+  { item: "Membership (opsional)", price: `${formatIdr(PRICING.membershipMonthlyIdr)} per periode`, note: "Kuota harian lebih besar dan biaya Legal Review lebih rendah." },
+  { item: "Legal Review oleh pengacara, akun gratis", price: formatIdr(PRICING.standard.free) },
+  { item: "Legal Review, Member aktif, pertama dalam satu periode", price: formatIdr(PRICING.standard.memberFirst) },
+  { item: "Legal Review, Member aktif, berikutnya", price: formatIdr(PRICING.standard.memberLater) },
   {
-    item: "Pemeriksaan mendalam (tambahan, bukan member)",
+    item: "Deep Review (tambahan), akun gratis",
     price: formatIdr(PRICING.deepAdditional.free),
-    note: "Hanya ditawarkan setelah pemeriksaan standar selesai dan memiliki Legal Note (Catatan dari pemeriksa) yang perlu ditindaklanjuti.",
+    note: "Hanya ditawarkan setelah Legal Review selesai dan memuat Legal Note (Catatan dari pemeriksa) yang perlu ditindaklanjuti.",
   },
-  { item: "Pemeriksaan mendalam (tambahan, member aktif)", price: formatIdr(PRICING.deepAdditional.member) },
-  { item: "Kasus khusus", price: "Penawaran khusus", note: SPECIAL_CASE_NOTE },
+  { item: "Deep Review (tambahan), Member aktif", price: formatIdr(PRICING.deepAdditional.member) },
+  { item: "Kasus Hukum Khusus (Special Legal Case)", price: "Penawaran khusus", note: SPECIAL_CASE_NOTE },
 ];
 
 export default function PricingPage() {

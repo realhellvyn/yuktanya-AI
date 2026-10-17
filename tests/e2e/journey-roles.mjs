@@ -74,7 +74,7 @@ export async function journey({ step, base, vp, db, newActor }) {
 
   await step(tag("pemilik membuat NDA lewat percakapan dan meminta pemeriksaan pengacara (Rp50.000)"), async () => {
     docUrl = await createNdaVersion(ownerA.page, base);
-    await ownerA.page.click("button:has-text('Minta pemeriksaan pengacara')");
+    await ownerA.page.click("button:has-text('Ajukan Legal Review')");
     await ownerA.page.waitForURL(/\/checkout\//, { timeout: 30000 });
     const t = await ownerA.page.innerText("body");
     if (!/50\.000/.test(t)) throw new Error("harga bukan Rp50.000: " + t.slice(0, 300));
@@ -130,7 +130,7 @@ export async function journey({ step, base, vp, db, newActor }) {
     await p.click("button:has-text('Terbitkan hasil')");
     await p.locator("dialog[open]").waitFor();
     const confirmText = await p.locator("dialog[open]").innerText();
-    if (!/Versi 1/.test(confirmText) || !confirmText.includes("Dengan Legal Note") || !confirmText.includes("Kepatutan klausul kerahasiaan") || !/Catatan 1/.test(confirmText)) throw new Error("konfirmasi akhir tidak lengkap: " + confirmText.slice(0, 400));
+    if (!/versi 1/i.test(confirmText) || !confirmText.includes("dengan Legal Note") || !confirmText.includes("Kepatutan klausul kerahasiaan") || !/Catatan 1/.test(confirmText)) throw new Error("konfirmasi akhir tidak lengkap: " + confirmText.slice(0, 400));
     // Pernyataan tidak ada konflik kepentingan wajib: tombol terbit nonaktif sampai dicentang.
     if (!(await p.locator("dialog[open] button:has-text('Ya, terbitkan sekarang')").isDisabled())) throw new Error("terbit aktif tanpa pernyataan konflik");
     await p.check("dialog[open] input[name=noConflict]");
@@ -153,14 +153,17 @@ export async function journey({ step, base, vp, db, newActor }) {
     const pubText = await pub.innerText("body");
     if (!pubText.includes("Aktif")) throw new Error("tidak Aktif");
     if (!pubText.includes(VERIFIED_LABEL)) throw new Error("label Verified tidak ada di /verify");
-    // Tangkapan layar /verify dan /login (desktop dan HP) untuk tinjauan visual brand (Task 18).
-    const dir = process.env.SHOTS_DIR ?? "/tmp/yk-shots";
-    for (const [w, width, height] of [["desktop", 1280, 800], ["hp", 375, 812]]) {
-      await pub.setViewportSize({ width, height });
-      await pub.goto(base + "/verify/" + code);
-      await pub.screenshot({ path: `${dir}/publik-${w}-verify.png`, fullPage: true });
-      await pub.goto(base + "/login");
-      await pub.screenshot({ path: `${dir}/publik-${w}-login.png`, fullPage: true });
+    // Tangkapan layar /verify dan /login (desktop dan HP) untuk tinjauan visual brand (Task 18). Hanya bila SHOTS_DIR diset;
+    // kegagalan menulis berkas tidak menggagalkan perjalanan fungsional (sama dengan shot() di journey lain).
+    const dir = process.env.SHOTS_DIR;
+    if (dir) {
+      for (const [w, width, height] of [["desktop", 1280, 800], ["hp", 375, 812]]) {
+        await pub.setViewportSize({ width, height });
+        await pub.goto(base + "/verify/" + code);
+        await pub.screenshot({ path: `${dir}/publik-${w}-verify.png`, fullPage: true }).catch(() => {});
+        await pub.goto(base + "/login");
+        await pub.screenshot({ path: `${dir}/publik-${w}-login.png`, fullPage: true }).catch(() => {});
+      }
     }
     await pub.close();
   });
@@ -172,13 +175,13 @@ export async function journey({ step, base, vp, db, newActor }) {
     await submit(adminA.page, adminA.page.locator("button:has-text('Catat persetujuan')"));
     await ownerA.page.goto(base + "/reviews");
     await ownerA.page.click("a[href^='/reviews/']");
-    await ownerA.page.waitForSelector("text=Pemeriksaan mendalam (tambahan)");
+    await ownerA.page.waitForSelector("text=Deep Review (tambahan)");
     const offer = await ownerA.page.innerText("body");
     if (!/200\.000/.test(offer) || !/tidak menjamin/i.test(offer)) throw new Error("tawaran tidak lengkap: " + offer.slice(0, 400));
     await ownerA.shot("06-tawaran-deep");
     const reviewId = /\/reviews\/([0-9a-f-]{36})/.exec(ownerA.page.url())[1];
     // Halaman rincian /reviews/[id]/deep: harga, pernyataan wajib, lalu tombol menerima.
-    await ownerA.page.click("a:has-text('Lihat rincian pemeriksaan mendalam')");
+    await ownerA.page.click("a:has-text('Lihat rincian Deep Review')");
     await ownerA.page.waitForURL(/\/reviews\/[0-9a-f-]{36}\/deep$/);
     const detail = await ownerA.page.innerText("main");
     if (!detail.includes("Rp200.000") || !detail.includes(PAY_STATEMENT)) throw new Error("rincian tawaran tidak lengkap: " + detail.slice(0, 500));
@@ -215,12 +218,12 @@ export async function journey({ step, base, vp, db, newActor }) {
     const p = ownerA.page;
     await p.goto(base + "/reviews");
     await p.click("a[href^='/reviews/']");
-    await p.click("a:has-text('Lihat status pemeriksaan mendalam')");
+    await p.click("a:has-text('Lihat status Deep Review')");
     await p.waitForURL(/\/deep-reviews\/[0-9a-f-]{36}$/);
     const url = p.url();
     const t = await p.innerText("main");
-    for (const w of ["Dipesan", "Dibayar", "Ditugaskan", "Diperiksa", "Selesai", "Hasil akan muncul"]) if (!t.includes(w)) throw new Error(`status tanpa "${w}": ` + t.slice(0, 400));
-    if (!/Ditugaskan\s*— selesai/.test(t)) throw new Error("tahap Ditugaskan belum selesai: " + t.slice(0, 400));
+    for (const w of ["Dipesan", "Dibayar", "Ditugaskan", "Diperiksa", "Selesai", "Hasil akan tampil"]) if (!t.includes(w)) throw new Error(`status tanpa "${w}": ` + t.slice(0, 400));
+    if (!/Ditugaskan\s*\(selesai\)/.test(t)) throw new Error("tahap Ditugaskan belum selesai: " + t.slice(0, 400));
     if (/Yuktanya Legal Verified — Enhanced|Enhanced disetujui/.test(t)) throw new Error("Enhanced tampil sebelum diputuskan");
     for (const vp of [{ width: 375, height: 800 }, { width: 1280, height: 800 }]) {
       await p.setViewportSize(vp);
@@ -269,7 +272,7 @@ export async function journey({ step, base, vp, db, newActor }) {
   await step(tag("pemilik melihat Enhanced; pencabutan verifikasi induk menangguhkan Enhanced"), async () => {
     await ownerA.page.goto(base + "/reviews");
     await ownerA.page.click("a[href^='/reviews/']");
-    await ownerA.page.click("a:has-text('Lihat status pemeriksaan mendalam')");
+    await ownerA.page.click("a:has-text('Lihat status Deep Review')");
     await ownerA.page.waitForURL(/\/deep-reviews\//);
     const done = await ownerA.page.innerText("main");
     if (!done.includes("Enhanced disetujui") || !done.includes("Batasan:") || !done.includes("Pembayaran tidak menjamin Enhanced")) throw new Error("hasil Enhanced tidak lengkap: " + done.slice(0, 500));
@@ -296,7 +299,7 @@ export async function journey({ step, base, vp, db, newActor }) {
     // Pemilik: halaman status tidak lagi mengaku "Enhanced disetujui" setelah induk dicabut.
     await ownerA.page.goto(base + "/reviews");
     await ownerA.page.click("a[href^='/reviews/']");
-    await ownerA.page.click("a:has-text('Lihat status pemeriksaan mendalam')");
+    await ownerA.page.click("a:has-text('Lihat status Deep Review')");
     await ownerA.page.waitForURL(/\/deep-reviews\//);
     const lapsed = await ownerA.page.innerText("main");
     if (/Enhanced disetujui|memastikan semua syarat/.test(lapsed)) throw new Error("halaman pemilik masih mengaku Enhanced disetujui setelah pencabutan: " + lapsed.slice(0, 500));

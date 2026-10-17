@@ -13,9 +13,9 @@ import { fixedText } from "@/lib/query-text";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pembayaran | Yuktanya" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const NOTICE: Record<string, string> = { PROVIDER_UNAVAILABLE: "Metode pembayaran ini belum tersedia.", ORDER_NOT_PAYABLE: "Pesanan ini sudah tidak dapat dibayar.",
-  SPECIAL_CASE_OPEN: "Dokumen ini sedang dalam penilaian khusus, jadi pemeriksaan standar oleh pengacara belum dapat dibayar. Lihat status di menu Kasus Khusus, atau tarik permintaan penilaian khusus bila tidak jadi." };
-const LABEL: Record<string, string> = { MEMBERSHIP_MONTHLY: "Membership Yuktanya (1 periode)", MEMBERSHIP_ANNUAL: "Membership Yuktanya (1 tahun)", BUNDLE: "Paket kredit pemeriksaan", STANDARD_REVIEW: "Pemeriksaan Standar oleh pengacara", DEEP_REVIEW: "Pemeriksaan Mendalam oleh pengacara (tambahan)" };
+const NOTICE: Record<string, string> = { PROVIDER_UNAVAILABLE: "Metode pembayaran ini belum tersedia. Pilih metode lain.", ORDER_NOT_PAYABLE: "Pesanan ini sudah tidak dapat dibayar. Buat pengajuan baru dari halaman dokumen.",
+  SPECIAL_CASE_OPEN: "Dokumen ini sedang diajukan sebagai Special Legal Case, sehingga Legal Review belum dapat dibayar. Lihat statusnya di menu Special Legal Case, atau tarik pengajuan tersebut bila tidak jadi." };
+const LABEL: Record<string, string> = { MEMBERSHIP_MONTHLY: "Membership Yuktanya (1 periode)", MEMBERSHIP_ANNUAL: "Membership Yuktanya (1 tahun)", BUNDLE: "Paket kredit Legal Review", STANDARD_REVIEW: "Legal Review oleh pengacara", DEEP_REVIEW: "Deep Review oleh pengacara (tambahan)" };
 const btn = "min-h-12 rounded-lg px-5 font-semibold";
 
 export default async function CheckoutPage({ params, searchParams }: { params: Promise<{ orderId: string }>; searchParams: Promise<{ notice?: string }> }) {
@@ -36,21 +36,21 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
       <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">Pembayaran</h1>
       {review && (
         <section aria-labelledby="dok-h" className="space-y-2 rounded-lg border border-line bg-surface p-4">
-          <h2 id="dok-h" className="text-xl font-semibold">Yang akan diperiksa</h2>
+          <h2 id="dok-h" className="text-xl font-semibold">Dokumen yang akan diperiksa</h2>
           {subject ? (
             <dl className="space-y-1">
-              <div><dt className="inline font-semibold">Dokumen: </dt><dd className="inline break-words">{subject.title} — versi {subject.versionNo}</dd></div>
+              <div><dt className="inline font-semibold">Dokumen: </dt><dd className="inline break-words">{subject.title}, versi {subject.versionNo}</dd></div>
               <div><dt className="inline font-semibold">Kode versi: </dt><dd className="inline font-mono">{subject.sha256.slice(0, 12)}</dd></div>
             </dl>
           ) : <p>Dokumen untuk pesanan ini tidak ditemukan.</p>}
           <p>
             <strong>Ruang lingkup: </strong>
             {order.kind === "DEEP_REVIEW"
-              ? "pemeriksaan tambahan atas Legal Note (Catatan dari pemeriksa) dari pemeriksaan standar versi ini. Pemeriksa menuliskan ruang lingkup yang tepat di hasilnya."
-              : "hanya isi versi ini, persis seperti kode versi di atas. Versi lain atau perubahan sesudahnya tidak ikut diperiksa. Pemeriksa menuliskan ruang lingkup yang tepat di hasil pemeriksaan."}
+              ? "pemeriksaan tambahan atas Legal Note (Catatan dari pemeriksa) dari Legal Review versi ini. Pengacara menuliskan ruang lingkup yang tepat di hasilnya."
+              : "hanya isi versi ini, persis sesuai kode versi di atas. Versi lain atau perubahan sesudahnya tidak ikut diperiksa. Pengacara menuliskan ruang lingkup yang tepat di hasil pemeriksaan."}
           </p>
           <p><strong>Siapa yang memeriksa: </strong>profesional hukum dari firma mitra yang diberi wewenang oleh Yuktanya. AI tidak memberi persetujuan hukum.</p>
-          <p><strong>Langkah berikutnya: </strong>setelah pembayaran dikonfirmasi, permintaan masuk antrean pemeriksa. Pantau statusnya di menu Review Saya.</p>
+          <p><strong>Langkah berikutnya: </strong>setelah pembayaran dikonfirmasi, pengajuan Anda masuk antrean pemeriksaan. Pantau statusnya di menu Legal Review Saya.</p>
         </section>
       )}
       <PriceBreakdown service={LABEL[order.kind] ?? "Layanan Yuktanya"} quote={{ amountIdr: order.amountIdr, variant: order.variant ?? "", usesCredit: order.variant === "CREDIT" }} kind={order.kind} />
@@ -62,10 +62,10 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
             <div className="space-y-2 rounded-lg border border-line bg-surface p-4">
               <h2 className="text-xl font-semibold">Transfer bank</h2>
               {manualText ? <p className="whitespace-pre-line">{manualText}</p> : (
-                <p>Instruksi transfer belum tersedia. Jangan transfer dulu. <Link className="inline-flex min-h-12 items-center underline" href="/bantuan">Lihat halaman Bantuan</Link></p>
+                <p>Instruksi transfer belum tersedia. Jangan melakukan transfer sekarang. <Link className="inline-flex min-h-12 items-center underline" href="/bantuan">Lihat halaman Bantuan</Link></p>
               )}
               <p>Tulis kode berikut pada berita transfer: <strong className="font-mono text-xl">{paymentReference(pending.id)}</strong></p>
-              <p>Setelah transfer, kami mengonfirmasi pembayaran Anda secara manual. Mohon tunggu.</p>
+              <p>Setelah Anda mentransfer, tim kami mengonfirmasi pembayaran secara manual. Status di halaman ini akan berubah setelah dikonfirmasi.</p>
             </div>
           )}
           {!pending && (
@@ -92,9 +92,9 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
         </section>
       )}
       <nav className="flex flex-wrap gap-3">
-        {order.kind === "DEEP_REVIEW" && order.status === "PAID" && <Link className="inline-flex min-h-12 items-center underline" href="/reviews">Lihat Review Saya</Link>}
-        {order.kind === "STANDARD_REVIEW" && order.status === "PAID" && <Link className="inline-flex min-h-12 items-center underline" href="/reviews">Lihat Review Saya</Link>}
-        {order.kind.startsWith("MEMBERSHIP") && order.status === "PAID" && <Link className="inline-flex min-h-12 items-center underline" href="/dashboard">Kembali ke beranda</Link>}
+        {order.kind === "DEEP_REVIEW" && order.status === "PAID" && <Link className="inline-flex min-h-12 items-center underline" href="/reviews">Buka Legal Review Saya</Link>}
+        {order.kind === "STANDARD_REVIEW" && order.status === "PAID" && <Link className="inline-flex min-h-12 items-center underline" href="/reviews">Buka Legal Review Saya</Link>}
+        {order.kind.startsWith("MEMBERSHIP") && order.status === "PAID" && <Link className="inline-flex min-h-12 items-center underline" href="/dashboard">Kembali ke Beranda</Link>}
       </nav>
     </main>
   );

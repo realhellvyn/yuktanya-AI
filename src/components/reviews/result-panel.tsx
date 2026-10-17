@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { LEGAL_DISCLAIMER, LEGAL_NOTE_EXPLAINER, LEGAL_NOTE_TERM, NEW_VERSION_NOT_REVIEWED, QR_NOT_SIGNATURE, VERIFIED_LABEL, verificationStatement } from "@/lib/copy";
+import { LEGAL_DISCLAIMER, LEGAL_NOTE_EXPLAINER, LEGAL_NOTE_TERM, NEW_VERSION_NOT_REVIEWED, QR_NOT_SIGNATURE, VERIFICATION_TITLES, VERIFIED_LABEL, verificationStatement } from "@/lib/copy";
 import type { OwnerReview } from "@/lib/reviews/service";
 import { LegalNoteCard } from "./legal-note-card";
 import { VerificationSeal } from "@/components/verification/verification-seal";
 
 const OUTCOME_TITLE: Record<string, string> = {
-  WITH_NOTES: "Selesai — Dengan Legal Note",
-  WITHIN_SCOPE: "Selesai — Tanpa Legal Note",
-  INCONCLUSIVE: "Selesai — Belum dapat disimpulkan",
+  WITH_NOTES: "Selesai: dengan Legal Note",
+  WITHIN_SCOPE: "Selesai: tanpa Legal Note",
+  INCONCLUSIVE: "Selesai: belum dapat disimpulkan",
   DECLINED: "Tidak dapat diperiksa",
 };
 const link = "inline-flex min-h-12 items-center font-semibold text-link underline";
@@ -17,14 +17,14 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
   if (review.status === "CANCELLED") {
     return (
       <section aria-labelledby="hasil-h" className="space-y-3 rounded-lg border border-line bg-surface p-4">
-        <h2 id="hasil-h" className="text-2xl font-semibold">Permintaan dibatalkan</h2>
-        <p>Permintaan pemeriksaan ini dibatalkan, jadi tidak ada hasil pemeriksaan untuk versi {review.versionNo}.</p>
-        <p><Link className={link} href="/bantuan#pengacara">Baca cara meminta pemeriksaan pengacara</Link></p>
+        <h2 id="hasil-h" className="text-2xl font-semibold">Pengajuan dibatalkan</h2>
+        <p>Pengajuan Legal Review ini dibatalkan, sehingga tidak ada hasil pemeriksaan untuk versi {review.versionNo}.</p>
+        <p><Link className={link} href="/bantuan#pengacara">Baca cara mengajukan Legal Review</Link></p>
       </section>
     );
   }
   if (review.status !== "COMPLETED" && review.status !== "DECLINED") {
-    return <p role="status" className="rounded-lg border border-line bg-surface p-4">Pemeriksaan belum selesai. Hasil akan tampil di sini.</p>;
+    return <p role="status" className="rounded-lg border border-line bg-surface p-4">Legal Review belum selesai. Hasilnya akan tampil di halaman ini.</p>;
   }
   const v = review.verification;
   const badge = v && (review.outcome === "WITH_NOTES" || review.outcome === "WITHIN_SCOPE");
@@ -44,32 +44,32 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
       {!isLatestVersion && <p role="status" className="rounded-lg border border-line bg-surface p-3">{NEW_VERSION_NOT_REVIEWED}. Hasil ini hanya berlaku untuk versi {review.versionNo}.</p>}
       {declined && (
         <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-4">
-          <p className="font-semibold">Pemeriksa tidak dapat memeriksa dokumen ini, jadi tidak ada hasil pemeriksaan dan tidak ada Legal Verified.</p>
+          <p className="font-semibold">Pengacara tidak dapat memeriksa dokumen ini, sehingga tidak ada hasil pemeriksaan dan tidak ada Legal Verified.</p>
           {review.credit?.status === "AVAILABLE" && !creditLapsed && (
-            <p>Pesanan Anda dibatalkan dan pembayarannya diganti 1 kredit pemeriksaan standar, berlaku sampai {day(review.credit.expiresAt)}. Kredit ini otomatis dipakai saat Anda meminta pemeriksaan pengacara berikutnya, jadi Anda tidak membayar lagi untuk pemeriksaan itu.</p>
+            <p>Pesanan Anda dibatalkan dan pembayarannya diganti 1 kredit Legal Review, berlaku sampai {day(review.credit.expiresAt)}. Kredit ini otomatis dipakai saat Anda mengajukan Legal Review berikutnya, sehingga Anda tidak membayar lagi untuk Legal Review tersebut.</p>
           )}
           {review.credit?.status === "AVAILABLE" && creditLapsed && (
-            <p>Pesanan Anda dibatalkan dan pembayarannya diganti 1 kredit pemeriksaan standar. Kredit itu sudah kedaluwarsa pada {day(review.credit.expiresAt)}, jadi tidak bisa dipakai lagi.</p>
+            <p>Pesanan Anda dibatalkan dan pembayarannya diganti 1 kredit Legal Review. Kredit tersebut sudah kedaluwarsa pada {day(review.credit.expiresAt)}, sehingga tidak dapat dipakai lagi.</p>
           )}
           {review.credit && review.credit.status !== "AVAILABLE" && (
-            <p>Pesanan Anda dibatalkan dan pembayarannya diganti 1 kredit pemeriksaan standar. Kredit itu sudah terpakai atau sudah tidak berlaku.</p>
+            <p>Pesanan Anda dibatalkan dan pembayarannya diganti 1 kredit Legal Review. Kredit tersebut sudah terpakai atau sudah tidak berlaku.</p>
           )}
-          {review.summary && <p>Alasan dari pemeriksa: {review.summary}</p>}
-          <p>Langkah berikutnya: bila dokumen Anda rumit atau berisiko tinggi, ajukan penilaian khusus.</p>
-          <p><Link className={link} href={`/cases/new?document=${review.documentId}`}>Ajukan penilaian khusus</Link></p>
+          {review.summary && <p>Alasan dari pengacara: {review.summary}</p>}
+          <p>Langkah berikutnya: bila dokumen Anda rumit atau berisiko tinggi, ajukan Kasus Hukum Khusus (Special Legal Case).</p>
+          <p><Link className={link} href={`/cases/new?document=${review.documentId}`}>Ajukan Special Legal Case</Link></p>
         </div>
       )}
       {review.outcome === "INCONCLUSIVE" && (
         <div className="space-y-2 rounded-lg border border-line bg-surface p-4">
-          <p>Pemeriksa sudah memeriksa versi ini tetapi belum dapat menarik kesimpulan, misalnya karena informasi yang tersedia tidak cukup. Baca ringkasan pemeriksa di bawah.</p>
+          <p>Pengacara sudah memeriksa versi ini, tetapi belum dapat menarik kesimpulan, misalnya karena informasi yang tersedia tidak cukup. Baca ringkasan pengacara di bawah.</p>
           <p>Biaya pemeriksaan ini tetap tercatat lunas; sistem tidak membuat kredit atau pengembalian dana otomatis untuk hasil ini.</p>
-          <p>Langkah berikutnya: lengkapi dokumen lalu minta pemeriksaan untuk versi baru, atau ajukan penilaian khusus bila dokumen Anda rumit.</p>
-          <p><Link className={link} href={`/cases/new?document=${review.documentId}`}>Ajukan penilaian khusus</Link></p>
+          <p>Langkah berikutnya: lengkapi dokumen, lalu ajukan Legal Review untuk versi baru. Bila dokumen Anda rumit, ajukan Kasus Hukum Khusus (Special Legal Case).</p>
+          <p><Link className={link} href={`/cases/new?document=${review.documentId}`}>Ajukan Special Legal Case</Link></p>
         </div>
       )}
       {!declined && review.scope && <div><h3 className="font-semibold">Ruang lingkup pemeriksaan</h3><p>{review.scope}</p></div>}
       {!declined && review.assumptions && <div><h3 className="font-semibold">Asumsi</h3><p>{review.assumptions}</p></div>}
-      {!declined && review.summary && <div><h3 className="font-semibold">Ringkasan pemeriksa</h3><p>{review.summary}</p></div>}
+      {!declined && review.summary && <div><h3 className="font-semibold">Ringkasan pengacara</h3><p>{review.summary}</p></div>}
       {review.notes.length > 0 && (
         <div className="space-y-3">
           <h3 id="catatan" className="text-xl font-semibold">{LEGAL_NOTE_TERM}</h3>
@@ -81,7 +81,7 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
         <div className="space-y-2 rounded-lg border border-line bg-surface p-4">
           <div className="flex items-center gap-3">
             {v.status === "ACTIVE" && <VerificationSeal variant="verified" />}
-            <h3 className="text-lg font-semibold">Yuktanya Legal Verified</h3>
+            <h3 className="text-lg font-semibold">{VERIFICATION_TITLES.LEGAL}</h3>
           </div>
           <p role="status" className="font-semibold">Status: {v.status === "ACTIVE" ? "Aktif" : v.status === "REVOKED" ? "Dicabut" : "Ditangguhkan sementara"}</p>
           <p>{verificationStatement("LEGAL", review.outcome)}</p>
@@ -95,7 +95,7 @@ export function ResultPanel({ review, verifyUrl, qrDataUrl, isLatestVersion = tr
           <p>{QR_NOT_SIGNATURE}</p>
         </div>
       )}
-      {!badge && <p>Pemeriksaan ini tidak menghasilkan Yuktanya Legal Verified.</p>}
+      {!badge && <p>Legal Review ini tidak menghasilkan Yuktanya Legal Verified.</p>}
       {!declined && (
         <div className="space-y-1 rounded-lg border border-line bg-surface p-4">
           <h3 className="font-semibold">Unduh</h3>

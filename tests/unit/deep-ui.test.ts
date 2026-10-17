@@ -23,10 +23,10 @@ describe("DeepOffer", () => {
   });
   it("harga standar yang sudah dibayar dan total yang dibayar sekarang tampil dari data kelayakan", () => {
     const h = offer({ quote: { amountIdr: 150000, variant: "MEMBER" }, standardPaidIdr: 30000 });
-    expect(h).toContain("Pemeriksaan standar yang sudah dibayar");
+    expect(h).toContain("Legal Review yang sudah dibayar");
     expect(h).toContain("Rp30.000 (dihitung terpisah)");
     expect(h).toMatch(/Total dibayar sekarang<\/dt><dd[^>]*>Rp150\.000/);
-    expect(offer({ standardPaidIdr: 0 })).toContain("Memakai kredit pemeriksaan");
+    expect(offer({ standardPaidIdr: 0 })).toContain("Memakai kredit Legal Review");
   });
   it("kedua halaman tawaran memakai offerViewProps (harga standar tidak dibuang)", () => {
     for (const f of ["src/app/(app)/reviews/[id]/page.tsx", "src/app/(app)/reviews/[id]/deep/page.tsx"]) {
@@ -42,7 +42,7 @@ describe("DeepOffer", () => {
   });
   it("tidak layak menampilkan alasan yang dapat dibaca dan tanpa tombol beli", () => {
     const h = offer({ eligible: false, reason: "NO_ACTIONABLE_NOTES", quote: null, standardPaidIdr: null });
-    expect(h).toContain("tidak memiliki catatan yang perlu ditindaklanjuti");
+    expect(h).toContain("tidak memuat Legal Note yang perlu ditindaklanjuti");
     expect(h).not.toContain("<form");
   });
 });
@@ -56,15 +56,15 @@ const deep = (over: Partial<OwnerDeep> = {}): OwnerDeep => ({
 describe("DeepResult", () => {
   it("Enhanced disetujui: hasil nyata, disposisi, pernyataan wajib Enhanced, kode, penafian", () => {
     const h = renderToStaticMarkup(DeepResult({ deep: deep(), verifyUrl: "https://y.example/verify/x" }));
-    for (const s of ["Selesai — Enhanced disetujui", "Catatan 1: Sudah diselesaikan", VERIFICATION_STATEMENTS.LEGAL_ENHANCED, "e".repeat(48), LEGAL_DISCLAIMER, "Status: Aktif"]) expect(h).toContain(s);
+    for (const s of ["Selesai: Enhanced disetujui", "Catatan 1: Sudah diselesaikan", VERIFICATION_STATEMENTS.LEGAL_ENHANCED, "e".repeat(48), LEGAL_DISCLAIMER, "Status: Aktif"]) expect(h).toContain(s);
     expect(h).not.toMatch(/\bcap\b/i);
     for (const tag of links(h)) expect(tag).toContain("min-h-12");
   });
   it("hasil negatif tidak memuat pernyataan Enhanced atau kode, dan jelas bahwa Enhanced tidak terbit", () => {
-    for (const [outcome, title] of [["COMPLETED_WITH_NOTES", "tanpa Enhanced"], ["INCONCLUSIVE", "Belum dapat disimpulkan"], ["REFERRED_SPECIAL_CASE", "kasus khusus"]] as const) {
+    for (const [outcome, title] of [["COMPLETED_WITH_NOTES", "tanpa Enhanced"], ["INCONCLUSIVE", "belum dapat disimpulkan"], ["REFERRED_SPECIAL_CASE", "Special Legal Case"]] as const) {
       const h = renderToStaticMarkup(DeepResult({ deep: deep({ outcome, verification: null, decisionReason: "Kriteria M3 tidak terpenuhi" }) }));
       expect(h).toContain(title);
-      expect(h).toContain("tidak menghasilkan Yuktanya Legal Verified — Enhanced");
+      expect(h).toContain("tidak menghasilkan lencana Enhanced");
       expect(h).not.toContain(VERIFICATION_STATEMENTS.LEGAL_ENHANCED);
       expect(h).toContain("Kriteria M3 tidak terpenuhi");
     }
@@ -72,13 +72,13 @@ describe("DeepResult", () => {
   it("Enhanced dicabut atau ditangguhkan: tidak ada klaim Enhanced disetujui sebagai kondisi saat ini", () => {
     for (const status of ["SUSPENDED", "REVOKED"]) {
       const h = renderToStaticMarkup(DeepResult({ deep: deep({ verification: { code: "e".repeat(48), status } }) }));
-      expect(h).not.toContain("Selesai — Enhanced disetujui");
+      expect(h).not.toContain("Selesai: Enhanced disetujui");
       expect(h).not.toContain(VERIFICATION_STATEMENTS.LEGAL_ENHANCED);
       expect(h).toContain(status === "SUSPENDED" ? "Ditangguhkan sementara" : "Dicabut");
     }
   });
   it("ditangguhkan dan ditahan ditampilkan eksplisit", () => {
     expect(renderToStaticMarkup(DeepResult({ deep: deep({ verification: { code: "e".repeat(48), status: "SUSPENDED" } }) }))).toContain("Ditangguhkan sementara");
-    expect(renderToStaticMarkup(DeepResult({ deep: deep({ status: "ON_HOLD", outcome: null }) }))).toContain("Ditahan karena verifikasi induk dicabut");
+    expect(renderToStaticMarkup(DeepResult({ deep: deep({ status: "ON_HOLD", outcome: null }) }))).toContain("Ditahan karena verifikasi Legal Review dicabut");
   });
 });

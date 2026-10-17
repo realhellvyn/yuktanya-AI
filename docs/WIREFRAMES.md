@@ -32,7 +32,7 @@ Title `Periksa dokumen yang sudah Anda punya` → accepted formats/sizes → fil
 
 ## 9. Human review checkout
 Frozen version summary + scope + standard/special eligibility + price breakdown with membership rule + expected next step and SLA only if confirmed + payment method → confirmation → payment pending → verified payment → queued review.
-Show `AI gratis; pemeriksaan pengacara berbayar`. No prechecked membership upsell.
+Show `AI gratis; Legal Review oleh pengacara berbayar` (Task 19 wording). No prechecked membership upsell.
 
 ## 10. Review status `/reviews/[id]`
 Simple vertical timeline `Diajukan` → `Pembayaran dikonfirmasi` → `Dalam antrean` → `Sedang diperiksa` → `Selesai` with exact dates. If revisions required, show single actionable CTA. On completion show report, scope, reviewer and verified version if issued.

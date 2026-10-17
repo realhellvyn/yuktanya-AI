@@ -5,10 +5,10 @@ import { formatIdr, PRICING, QUOTAS } from "@/lib/pricing/catalog";
 export function MembershipBenefits() {
   return (
     <ul className="list-disc space-y-1.5 pl-6">
-      <li>{QUOTAS.MEMBER.messages} pesan AI per hari (non-member {QUOTAS.FREE.messages})</li>
-      <li>{QUOTAS.MEMBER.documents} dokumen baru per hari (non-member {QUOTAS.FREE.documents})</li>
-      <li>{QUOTAS.MEMBER.aiReviews} analisis awal AI per hari (non-member {QUOTAS.FREE.aiReviews})</li>
-      <li>Pemeriksaan pengacara pertama pada setiap periode: {formatIdr(PRICING.standard.memberFirst)}; berikutnya {formatIdr(PRICING.standard.memberLater)} (non-member {formatIdr(PRICING.standard.free)})</li>
+      <li>{QUOTAS.MEMBER.messages} pesan AI per hari (akun gratis: {QUOTAS.FREE.messages})</li>
+      <li>{QUOTAS.MEMBER.documents} dokumen baru per hari (akun gratis: {QUOTAS.FREE.documents})</li>
+      <li>{QUOTAS.MEMBER.aiReviews} analisis awal AI per hari (akun gratis: {QUOTAS.FREE.aiReviews})</li>
+      <li>Legal Review pertama dalam setiap periode: {formatIdr(PRICING.standard.memberFirst)}; berikutnya {formatIdr(PRICING.standard.memberLater)} (akun gratis: {formatIdr(PRICING.standard.free)})</li>
     </ul>
   );
 }

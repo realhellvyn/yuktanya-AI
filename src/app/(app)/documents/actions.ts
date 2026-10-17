@@ -107,7 +107,8 @@ export async function cloneAction(formData: FormData): Promise<void> {
   const userId = await requireUserId();
   const c = await documentsService().clone(userId, str(formData, "versionId"), randomUUID()).catch((e: unknown) => {
     if (e instanceof Error && e.message.includes("TOO_MANY_DRAFTS")) {
-      redirect(`/workspace/new?error=${encodeURIComponent("Anda punya terlalu banyak draf yang belum selesai. Selesaikan salah satunya dulu.")}`);
+      // Hanya kode: halaman memetakan kode ke kalimat tetap (teks bebas di alamat tidak pernah ditampilkan).
+      redirect("/workspace/new?error=too-many-drafts");
     }
     throw e;
   });

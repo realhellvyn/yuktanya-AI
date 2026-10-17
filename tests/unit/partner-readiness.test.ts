@@ -34,7 +34,7 @@ describe("standardReadiness (daftar persetujuan)", () => {
     expect(standardReadiness(std({ notes: [] }))).toEqual({ ready: true, reasons: [] });
     const r = standardReadiness(std({ opened: false, authorized: false, scope: "" }));
     expect(r.ready).toBe(false);
-    expect(r.reasons.join(" ")).toMatch(/Belum dibuka/);
+    expect(r.reasons.join(" ")).toMatch(/belum dibuka/);
     expect(r.reasons.join(" ")).toMatch(/Otorisasi profesional Anda tidak aktif/);
     expect(r.reasons.join(" ")).toMatch(/Isi ruang lingkup/);
   });
@@ -50,7 +50,7 @@ describe("deepReadiness dan enhancedBlockers (cermin decide_deep)", () => {
     expect(r.ready).toBe(false);
     const t = r.reasons.join(" ");
     expect(t).toContain("Catat pekerjaan tambahan");
-    expect(t).toContain("Lengkapi checklist: M3, M4, M5, M6, M7");
+    expect(t).toContain("Lengkapi daftar periksa: M3, M4, M5, M6, M7");
     expect(t).toContain("M2");
     expect(t).toContain("Beri tindak lanjut untuk catatan 1");
   });
@@ -71,8 +71,8 @@ describe("B-01: isi reviewer sebelumnya wajib dikonfirmasi (cermin REPORT/NOTE/C
     const s = std({ draftMine: false, notes: [{ ...material, mine: false }, { ...material, noteNo: 2, mine: true }] });
     for (const o of ["WITH_NOTES", "INCONCLUSIVE"] as const) {
       const b = standardOutcomeBlockers({ ...s, summary: "Ringkasan" }, o).join(" ");
-      expect(b).toContain("Laporan diisi reviewer sebelumnya");
-      expect(b).toContain("Catatan 1 dibuat reviewer sebelumnya");
+      expect(b).toContain("Laporan diisi pemeriksa sebelumnya");
+      expect(b).toContain("Catatan 1 dibuat pemeriksa sebelumnya");
       expect(b).not.toContain("Catatan 2 dibuat");
     }
     expect(standardReadiness(std({ draftMine: true, notes: [{ ...material, mine: true }] })).ready).toBe(true);
@@ -84,7 +84,7 @@ describe("B-01: isi reviewer sebelumnya wajib dikonfirmasi (cermin REPORT/NOTE/C
     const r = deepReadiness(d);
     expect(r.ready).toBe(false);
     const t = r.reasons.join(" ");
-    for (const m of ["Pekerjaan tambahan diisi reviewer sebelumnya", "Tindak lanjut catatan 1 diisi reviewer sebelumnya", "Butir M2, M5 diisi reviewer sebelumnya"]) expect(t).toContain(m);
+    for (const m of ["Pekerjaan tambahan diisi pemeriksa sebelumnya", "Tindak lanjut catatan 1 diisi pemeriksa sebelumnya", "Butir M2, M5 diisi pemeriksa sebelumnya"]) expect(t).toContain(m);
     expect(enhancedBlockers(d, { rubricApproved: true, enabled: true }).join(" ")).toContain("Butir M2, M5");
   });
 });

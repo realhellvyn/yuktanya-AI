@@ -68,17 +68,17 @@ export async function journey({ step, base, db, newActor }) {
   await step(tag("pemilik: dari halaman dokumen ke /cases/new, salinan wajib, consent, kirim → status Diajukan"), async () => {
     const p = actors.pemilik.page;
     await p.goto(docUrl);
-    await Promise.all([p.waitForURL(/\/cases\/new\?document=/), p.click("a:has-text('Ajukan penilaian khusus')")]);
+    await Promise.all([p.waitForURL(/\/cases\/new\?document=/), p.click("a:has-text('Ajukan Special Legal Case')")]);
     const text = await p.innerText("main");
     if (!text.includes(NOTE)) throw new Error("salinan wajib tidak tampil persis di /cases/new");
     await p.fill("textarea[name=summary]", SUMMARY);
     await p.check("input[name=consent]");
-    await submit(p, p.locator("button:has-text('Kirim permintaan penilaian')"));
+    await submit(p, p.locator("button:has-text('Kirim pengajuan')"));
     const m = /\/cases\/([0-9a-f-]{36})/.exec(p.url());
     if (!m) throw new Error("tidak diarahkan ke halaman kasus: " + p.url());
     caseId = m[1];
     const t = await p.innerText("main");
-    for (const s of ["Permintaan terkirim", "Diajukan, menunggu penilaian firma", NOTE]) if (!t.includes(s)) throw new Error(`halaman kasus tanpa "${s}"`);
+    for (const s of ["Pengajuan terkirim", "Diajukan, menunggu penilaian firma", NOTE]) if (!t.includes(s)) throw new Error(`halaman kasus tanpa "${s}"`);
     const ev = (await db.query("select count(*)::int as n from product_events where entity_id = $1 and event_name = 'special_case_requested'", [caseId])).rows[0].n;
     if (ev !== 1) throw new Error("event special_case_requested: " + ev);
   });
@@ -87,8 +87,8 @@ export async function journey({ step, base, db, newActor }) {
     const p = actors.pemilik.page;
     await p.goto(docUrl);
     const t = await p.innerText("main");
-    if (!t.includes("Dokumen ini memerlukan penilaian khusus")) throw new Error("pesan penilaian khusus tidak tampil di halaman dokumen");
-    if (await p.locator("button:has-text('Minta pemeriksaan pengacara')").count()) throw new Error("tombol Review Standar masih tampil");
+    if (!t.includes("Dokumen ini sedang diajukan sebagai Special Legal Case")) throw new Error("pesan penilaian khusus tidak tampil di halaman dokumen");
+    if (await p.locator("button:has-text('Ajukan Legal Review')").count()) throw new Error("tombol Review Standar masih tampil");
   });
 
   await step(tag("pengguna lain mendapat 404; koordinator tidak memakai /cases; admin tidak melihat ringkasan"), async () => {
@@ -99,7 +99,7 @@ export async function journey({ step, base, db, newActor }) {
     if (new URL(actors.koordinator.page.url()).pathname.startsWith("/cases")) throw new Error("koordinator membuka permukaan pemilik");
     await actors.admin.page.goto(base + "/admin/cases");
     const t = await actors.admin.page.innerText("main");
-    if (!t.includes("Kasus khusus") || !t.includes(`Firma Kasus ${n}`)) throw new Error("admin tidak melihat daftar kasus");
+    if (!t.includes("Special Legal Case") || !t.includes(`Firma Kasus ${n}`)) throw new Error("admin tidak melihat daftar kasus");
     if (t.includes("distribusi")) throw new Error("ringkasan pemilik tampil di admin");
     const r2 = await actors.admin.page.goto(base + `/partner/cases/${caseId}`);
     if (new URL(actors.admin.page.url()).pathname.startsWith("/partner")) throw new Error("admin membuka halaman kasus mitra: " + r2?.status());
@@ -147,7 +147,7 @@ export async function journey({ step, base, db, newActor }) {
     await p.goto(base + "/cases/new");
     await p.fill("textarea[name=summary]", SUMMARY);
     await p.check("input[name=consent]");
-    await submit(p, p.locator("button:has-text('Kirim permintaan penilaian')"));
+    await submit(p, p.locator("button:has-text('Kirim pengajuan')"));
     const id = /\/cases\/([0-9a-f-]{36})/.exec(p.url())?.[1];
     if (!id || id === caseId) throw new Error("kasus kedua tidak dibuat: " + p.url());
     if (await p.locator("button:has-text('Ya, tarik permintaan')").isVisible()) throw new Error("tombol konfirmasi tarik terlihat sebelum langkah pertama");
@@ -161,14 +161,14 @@ export async function journey({ step, base, db, newActor }) {
 
   await step(tag("@375px: /cases, /cases/new, /cases/[id], /partner/cases, /partner/cases/[id], /admin/cases tanpa overflow, target sentuh, error konsol"), async () => {
     const o = await open("pemilik", HP);
-    await checkPage(o, HP, "/cases", ["Kasus Khusus", NOTE]);
-    await checkPage(o, HP, "/cases/new", [NOTE, "Kirim permintaan penilaian"]);
+    await checkPage(o, HP, "/cases", ["Special Legal Case", NOTE]);
+    await checkPage(o, HP, "/cases/new", [NOTE, "Kirim pengajuan"]);
     await checkPage(o, HP, `/cases/${caseId}`, ["Penawaran diterima"]);
     const k = await open("koordinator", HP);
-    await checkPage(k, HP, "/partner/cases", ["Kasus khusus", "Penawaran diterima"]);
+    await checkPage(k, HP, "/partner/cases", ["Special Legal Case", "Penawaran diterima"]);
     await checkPage(k, HP, `/partner/cases/${caseId}`, ["Diterima pemilik", "Tutup kasus"]);
     const a = await open("admin", HP);
-    await checkPage(a, HP, "/admin/cases", ["Kasus khusus"]);
+    await checkPage(a, HP, "/admin/cases", ["Special Legal Case"]);
   });
 
   for (const c of contexts) await c.close();

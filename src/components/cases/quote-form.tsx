@@ -29,7 +29,7 @@ export function QuoteForm({ action, caseId, minDate, maxDate, isRevision }: {
         <span className={labelText}>Penawaran berlaku sampai</span>
         <input type="date" name="expiresOn" required min={minDate} max={maxDate} defaultValue={state.values?.expiresOn ?? ""} className={fieldClass} />
       </label>
-      <p className="text-muted">Pemilik menerima atau menolak secara eksplisit. Penerimaan tidak membuat tagihan otomatis dan bukan persetujuan atas dokumen.</p>
+      <p className="text-muted">Pemilik dokumen menerima atau menolak penawaran secara eksplisit. Penerimaan tidak membuat tagihan otomatis dan bukan persetujuan atas dokumen.</p>
       {state.error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{state.error}</p>}
       <Button type="submit" disabled={pending}>{pending ? "Mengirim…" : isRevision ? "Kirim penawaran baru" : "Kirim penawaran"}</Button>
     </form>

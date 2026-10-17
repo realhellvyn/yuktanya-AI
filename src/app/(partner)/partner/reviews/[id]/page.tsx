@@ -17,26 +17,26 @@ import { deleteNoteAction, publishAction, saveDraftAction, upsertNoteAction } fr
 import { fixedText } from "@/lib/query-text";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Review Standar — Editor reviewer | Mitra Hukum Yuktanya" };
+export const metadata = { title: "Editor Legal Review | Mitra Hukum Yuktanya" };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ERR: Record<string, string> = {
-  STALE_REVISION: "Laporan sudah berubah di tab lain. Muat ulang halaman ini lalu ulangi.",
-  VERSION_MISMATCH: "Isi versi tidak cocok dengan hash yang dibayar. Penerbitan dihentikan; hubungi koordinator.",
+  STALE_REVISION: "Laporan sudah berubah di tab lain. Muat ulang halaman ini, lalu ulangi.",
+  VERSION_MISMATCH: "Isi versi tidak cocok dengan kode versi yang dibayar. Penerbitan dihentikan; hubungi koordinator.",
   ATTESTATION_REQUIRED: "Centang pernyataan profesional sebelum menerbitkan.",
-  REVIEWER_NOT_AUTHORIZED: "Otorisasi profesional Anda tidak aktif.",
-  VALIDATION_FAILED: "Belum memenuhi syarat penerbitan.",
+  REVIEWER_NOT_AUTHORIZED: "Otorisasi profesional Anda tidak aktif. Hubungi koordinator.",
+  VALIDATION_FAILED: "Hasil belum memenuhi syarat penerbitan.",
   CONFLICT_ATTESTATION_REQUIRED: "Centang pernyataan tidak ada konflik kepentingan sebelum menerbitkan.",
   CONFLICT_OF_INTEREST: "Firma Anda mencatat konflik kepentingan dengan pemilik dokumen ini. Hasil tidak dapat diterbitkan; hubungi koordinator.",
   INVALID_REQUEST: INVALID_FORM_TEXT,
 };
 const REASON: Record<string, string> = {
-  SCOPE_REQUIRED: "Isi ruang lingkup pemeriksaan.", NOTES_REQUIRED: "Hasil “Dengan Legal Note” memerlukan minimal satu catatan.",
+  SCOPE_REQUIRED: "Isi ruang lingkup pemeriksaan.", NOTES_REQUIRED: "Hasil “dengan Legal Note” memerlukan minimal satu catatan.",
   NOTE_ACTION_REQUIRED: "Catatan yang perlu ditindaklanjuti harus memuat tindakan yang disarankan.",
   NOTE_RATIONALE_REQUIRED: "Catatan Penting/Sangat penting harus memuat tindakan, alasan, dan langkah lanjutan.",
-  NOTES_PRESENT: "Hasil “Tanpa Legal Note” tidak boleh memiliki catatan.", NO_NOTES_DECLARATION_REQUIRED: "Centang pernyataan bahwa tidak ada catatan.",
+  NOTES_PRESENT: "Hasil “tanpa Legal Note” tidak boleh memiliki catatan.", NO_NOTES_DECLARATION_REQUIRED: "Centang pernyataan bahwa tidak ada catatan.",
   SUMMARY_REQUIRED: "Isi ringkasan untuk hasil ini.", INVALID_OUTCOME: "Pilih hasil pemeriksaan.",
-  REPORT_NOT_CONFIRMED: "Laporan terakhir disimpan reviewer sebelumnya. Periksa lalu tekan Simpan draf.",
-  NOTE_NOT_CONFIRMED: "Ada catatan buatan reviewer sebelumnya. Periksa lalu tekan Konfirmasi catatan pada catatan itu.",
+  REPORT_NOT_CONFIRMED: "Laporan terakhir disimpan pemeriksa sebelumnya. Periksa isinya, lalu tekan Simpan draf.",
+  NOTE_NOT_CONFIRMED: "Ada catatan buatan pemeriksa sebelumnya. Periksa catatan tersebut, lalu tekan Konfirmasi catatan.",
 };
 const OK: Record<string, string> = { draft: "Tersimpan. Laporan sudah diperbarui.", note: "Tersimpan. Daftar catatan sudah diperbarui." };
 const H2 = "text-xl font-bold text-navy md:text-2xl";
@@ -60,15 +60,15 @@ export default async function ReviewEditorPage({ params, searchParams }: { param
     <main className="space-y-6">
       <header className="space-y-2">
         <Link href="/partner" className="inline-flex min-h-12 items-center font-semibold text-link underline underline-offset-4">Kembali ke antrean</Link>
-        <p className="text-sm font-semibold uppercase tracking-wide text-muted">Review Standar · {categoryLabel(review.category)}</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-muted">Legal Review · {categoryLabel(review.category)}</p>
         <h1 className="break-words text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">{review.title}</h1>
         <div className="flex flex-wrap items-center gap-2">
-          <StatusBadge tone="neutral">{`Versi ${review.versionNo} · hanya-baca`}</StatusBadge>
-          <span className="break-all font-mono text-sm text-muted" title="Sidik jari SHA-256 versi yang dibayar">SHA-256 {review.sha256.slice(0, 16)}…</span>
+          <StatusBadge tone="neutral">{`Versi ${review.versionNo} · hanya dapat dibaca`}</StatusBadge>
+          <span className="break-all font-mono text-sm text-muted" title="Kode versi (SHA-256) yang dibayar">Kode versi {review.sha256.slice(0, 16)}…</span>
         </div>
       </header>
       {q.ok && <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 font-semibold text-green-900">{fixedText(OK, q.ok) ?? "Tersimpan."}</p>}
-      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{fixedText(ERR, q.e) ?? "Terjadi kendala."}{fixedText(REASON, q.r) ? ` ${fixedText(REASON, q.r)}` : ""}</p>}
+      {q.e && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 font-semibold text-danger">{fixedText(ERR, q.e) ?? "Tindakan belum berhasil. Muat ulang halaman, lalu coba lagi."}{fixedText(REASON, q.r) ? ` ${fixedText(REASON, q.r)}` : ""}</p>}
 
       <EditorTabs key={`${q.ok ?? ""}${q.e ?? ""}${review.revision}`} initial={initial} panels={[
         {
@@ -89,7 +89,7 @@ export default async function ReviewEditorPage({ params, searchParams }: { param
                   <LegalNoteCard note={n} />
                   {!n.mine && (
                     <form action={upsertNoteAction} className="space-y-2 rounded-xl border border-amber-400 bg-amber-50 p-3 text-amber-950">
-                      <p className="font-semibold">Catatan {n.noteNo} dibuat reviewer sebelumnya. Catatan ini baru ikut terbit atas nama Anda setelah Anda memeriksanya dan menekan Konfirmasi.</p>
+                      <p className="font-semibold">Catatan {n.noteNo} dibuat pemeriksa sebelumnya. Catatan ini baru ikut terbit atas nama Anda setelah Anda memeriksanya dan menekan Konfirmasi catatan.</p>
                       <input type="hidden" name="requestId" value={id} /><input type="hidden" name="revision" value={review.revision} />
                       <input type="hidden" name="noteNo" value={n.noteNo} /><input type="hidden" name="title" value={n.title} />
                       <input type="hidden" name="finding" value={n.finding} /><input type="hidden" name="quote" value={n.quote ?? ""} />
@@ -119,10 +119,10 @@ export default async function ReviewEditorPage({ params, searchParams }: { param
                   <label className="block"><span className={labelText}>Bagian dokumen</span>
                     <select name="blockId" className={input}><option value="">Tidak spesifik</option>{review.doc.blocks.map((b) => <option key={b.id} value={b.id}>{b.id}</option>)}</select>
                   </label>
-                  <label className="block"><span className={labelText}>Tingkat</span>
+                  <label className="block"><span className={labelText}>Tingkat kepentingan</span>
                     <select name="severity" className={input} defaultValue="MINOR"><option value="INFO">Informasi</option><option value="MINOR">Perlu diperhatikan</option><option value="MATERIAL">Penting</option><option value="CRITICAL">Sangat penting</option></select>
                   </label>
-                  <label className="flex min-h-12 items-center gap-3"><input type="checkbox" name="actionable" value="yes" className="h-6 w-6 shrink-0" /><span>Perlu ditindaklanjuti pemilik</span></label>
+                  <label className="flex min-h-12 items-center gap-3"><input type="checkbox" name="actionable" value="yes" className="h-6 w-6 shrink-0" /><span>Perlu ditindaklanjuti pemilik dokumen</span></label>
                   <label className="block"><span className={labelText}>Tindakan yang disarankan</span><textarea name="recommendedAction" rows={2} className={input} /></label>
                   <label className="block"><span className={labelText}>Alasan (wajib untuk Penting/Sangat penting)</span><textarea name="rationale" rows={2} className={input} /></label>
                   <label className="block"><span className={labelText}>Langkah lanjutan (wajib untuk Penting/Sangat penting)</span><textarea name="escalation" rows={2} className={input} /></label>
@@ -137,7 +137,7 @@ export default async function ReviewEditorPage({ params, searchParams }: { param
             <>
               <h2 className={H2}>Laporan pemeriksaan</h2>
               {!review.draftMine && review.scope.trim() !== "" && (
-                <p role="status" className="rounded-xl border border-amber-400 bg-amber-50 p-3 font-semibold text-amber-950">Isi laporan ini disimpan reviewer sebelumnya. Periksa lalu tekan Simpan draf agar menjadi laporan Anda.</p>
+                <p role="status" className="rounded-xl border border-amber-400 bg-amber-50 p-3 font-semibold text-amber-950">Isi laporan ini disimpan pemeriksa sebelumnya. Periksa isinya, lalu tekan Simpan draf agar menjadi laporan Anda.</p>
               )}
               <Card>
                 <form action={saveDraftAction} className="space-y-3">
@@ -145,7 +145,7 @@ export default async function ReviewEditorPage({ params, searchParams }: { param
                   <input type="hidden" name="revision" value={review.revision} />
                   <label className="block"><span className={labelText}>Ruang lingkup pemeriksaan (Wajib)</span><textarea name="scope" rows={3} defaultValue={review.scope} className={input} /></label>
                   <label className="block"><span className={labelText}>Asumsi</span><textarea name="assumptions" rows={3} defaultValue={review.assumptions} className={input} /></label>
-                  <label className="block"><span className={labelText}>Ringkasan (wajib bila belum dapat disimpulkan atau menolak)</span><textarea name="summary" rows={3} defaultValue={review.summary} className={input} /></label>
+                  <label className="block"><span className={labelText}>Ringkasan (wajib bila hasil belum dapat disimpulkan atau Anda tidak dapat memeriksa)</span><textarea name="summary" rows={3} defaultValue={review.summary} className={input} /></label>
                   <Button type="submit" variant="secondary">Simpan draf</Button>
                 </form>
               </Card>
@@ -156,7 +156,7 @@ export default async function ReviewEditorPage({ params, searchParams }: { param
           id: "hasil", label: "Hasil", content: (
             <>
               <h2 className={H2}>Konfirmasi akhir</h2>
-              <p>Anda akan menyelesaikan pemeriksaan versi ini. Setelah diterbitkan, laporan dan catatan tidak dapat diubah.</p>
+              <p>Langkah ini menyelesaikan pemeriksaan versi ini. Setelah diterbitkan, laporan dan catatan tidak dapat diubah.</p>
               <Card>
                 <PublishPanel action={publishAction} requestId={id} revision={review.revision} title={review.title} versionNo={review.versionNo} sha256={review.sha256}
                   scope={review.scope} summary={review.summary} authorized={review.authorized} draftMine={review.draftMine}

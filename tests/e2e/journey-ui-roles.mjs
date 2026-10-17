@@ -122,16 +122,16 @@ export async function journey({ step, base, db, newActor }) {
   for (const w of WIDTHS) {
     await step(tag(`@${w.width}px koordinator: /partner dan /partner/team (email reviewer, pekerjaan aktif, otorisasi aktif)`), async () => {
       const a = await open("koordinator", w);
-      await checkPage(a, w, "/partner", { title: "Review Standar", markers: ["Dashboard Mitra Hukum"] });
-      await checkPage(a, w, "/partner/team", { title: "Tim Firma", markers: ["Tim firma", mail("reviewer"), "Otorisasi aktif", "Pekerjaan aktif di firma ini: 2", "Tugaskan permintaan"] });
+      await checkPage(a, w, "/partner", { title: "Legal Review", markers: ["Dashboard Mitra Hukum"] });
+      await checkPage(a, w, "/partner/team", { title: "Tim firma", markers: ["Tim firma", mail("reviewer"), "Otorisasi aktif", "Pekerjaan aktif di firma ini: 2", "Tugaskan permintaan"] });
       if (await a.page.locator("main form").count()) throw new Error("halaman tim tidak boleh punya form pemberian peran/otorisasi");
     });
 
     await step(tag(`@${w.width}px reviewer: /partner/approvals menjelaskan yang belum siap; tanpa tombol bayar`), async () => {
       const a = await open("reviewer", w);
-      await checkPage(a, w, "/partner/approvals", { title: "Review Standar", markers: ["Siap diputuskan", "Review Standar", "Pemeriksaan Mendalam", "Belum dibuka", "Belum siap"] });
+      await checkPage(a, w, "/partner/approvals", { title: "Legal Review", markers: ["Siap diputuskan", "Legal Review", "Deep Review", "belum dibuka", "Belum siap"] });
       if (await a.page.locator("main button:has-text('Bayar'), main a:has-text('Bayar')").count()) throw new Error("ada kontrol bayar di halaman persetujuan");
-      await checkPage(a, w, "/partner", { markers: ["Review Standar saya", "Pemeriksaan mendalam saya"] });
+      await checkPage(a, w, "/partner", { markers: ["Legal Review saya", "Deep Review saya"] });
     });
   }
 
@@ -140,7 +140,7 @@ export async function journey({ step, base, db, newActor }) {
 
     await step(tag(`@${w.width}px reviewer: editor Review Standar dan Pemeriksaan Mendalam (judul memuat jenis review, tab HP)`), async () => {
       const a = await open("reviewer", w);
-      await checkPage(a, w, `/partner/reviews/${req1}`, { title: "Review Standar", markers: ["Versi 1", "Isi dokumen yang diperiksa"] });
+      await checkPage(a, w, `/partner/reviews/${req1}`, { title: "Legal Review", markers: ["Versi 1", "Isi dokumen yang diperiksa"] });
       const tabs = a.page.locator("[role=tablist] [role=tab]");
       if (w.width < 1280) {
         const labels = (await tabs.allInnerTexts()).map((t) => t.trim());
@@ -158,12 +158,12 @@ export async function journey({ step, base, db, newActor }) {
         if (await a.page.locator("[role=tablist]").isVisible()) throw new Error("tab HP tampil di desktop");
         for (const p of ["dokumen", "catatan", "pemeriksaan", "hasil"]) if (!(await a.page.locator(`#panel-${p}`).isVisible())) throw new Error(`panel ${p} tersembunyi di desktop`);
       }
-      await checkPage(a, w, `/partner/deep/${deepId}`, { title: "Pemeriksaan Mendalam", markers: ["Pemeriksaan mendalam", "Isi dokumen yang diperiksa"] });
+      await checkPage(a, w, `/partner/deep/${deepId}`, { title: "Deep Review", markers: ["Deep Review", "Isi dokumen yang diperiksa"] });
       if (w.width < 1280) {
         await a.page.click("[role=tab]:has-text('Hasil')");
         await a.page.selectOption("#panel-hasil select[name=decision]", "APPROVE");
         const t = await a.page.locator("#panel-hasil").innerText();
-        if (!t.includes("Enhanced belum dapat disetujui") || !t.includes("Lengkapi checklist")) throw new Error("Setujui Enhanced nonaktif tanpa alasan: " + t.slice(0, 300));
+        if (!t.includes("Enhanced belum dapat disetujui") || !t.includes("Lengkapi daftar periksa")) throw new Error("Setujui Enhanced nonaktif tanpa alasan: " + t.slice(0, 300));
         if (!(await a.page.locator("#panel-hasil button:text-is('Simpan keputusan')").isDisabled())) throw new Error("Simpan keputusan aktif padahal syarat Enhanced belum lengkap");
       }
     });
@@ -194,7 +194,7 @@ export async function journey({ step, base, db, newActor }) {
     const dlg = a.page.locator("dialog[open]");
     await dlg.waitFor();
     const t = await dlg.innerText();
-    for (const m of ["Versi 1", sha1, "Tanpa Legal Note", "Kepatutan klausul kerahasiaan", "Catatan yang belum diselesaikan pemilik", "Tidak ada"]) if (!t.includes(m)) throw new Error(`konfirmasi tanpa "${m}": ${t.slice(0, 400)}`);
+    for (const m of ["versi 1", sha1, "tanpa Legal Note", "Kepatutan klausul kerahasiaan", "Catatan yang belum diselesaikan pemilik", "Tidak ada"]) if (!t.includes(m)) throw new Error(`konfirmasi tanpa "${m}": ${t.slice(0, 400)}`);
     await dlg.locator("button:has-text('Kembali memeriksa')").click();
     await dlg.waitFor({ state: "detached" }).catch(() => {});
     if (await a.page.locator("dialog[open]").count()) throw new Error("dialog tidak tertutup");

@@ -9,7 +9,7 @@ import { confirmManualAction, resolveReconciliationAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pembayaran | Admin Yuktanya" };
-const KIND: Record<string, string> = { MEMBERSHIP_MONTHLY: "Membership 1 periode", MEMBERSHIP_ANNUAL: "Membership 1 tahun", BUNDLE: "Paket kredit", STANDARD_REVIEW: "Pemeriksaan Standar", DEEP_REVIEW: "Deep Review" };
+const KIND: Record<string, string> = { MEMBERSHIP_MONTHLY: "Membership 1 periode", MEMBERSHIP_ANNUAL: "Membership 1 tahun", BUNDLE: "Paket kredit", STANDARD_REVIEW: "Legal Review", DEEP_REVIEW: "Deep Review" };
 
 export default async function AdminPaymentsPage({ searchParams }: { searchParams: Promise<{ r?: string; e?: string }> }) {
   const q = await searchParams;

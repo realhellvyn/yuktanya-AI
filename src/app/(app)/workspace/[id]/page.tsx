@@ -17,15 +17,15 @@ import { CHAT_NOTICES } from "@/lib/vault/messages";
 import { freezeAction, sendMessageAction } from "../../documents/actions";
 import { fixedText } from "@/lib/query-text";
 
-export const metadata = { title: "Percakapan Dokumen | Yuktanya" };
+export const metadata = { title: "Isi dokumen | Yuktanya" };
 
 // Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
 export const dynamic = "force-dynamic";
 
 const GREETING: Record<string, string> = {
-  UTANG_PIUTANG: "Halo! Ceritakan saja kebutuhan Anda, misalnya siapa yang meminjamkan, siapa yang meminjam, berapa jumlahnya, dan kapan dikembalikan. Saya akan menanyakan hal yang belum jelas, satu per satu.",
-  NDA: "Halo! Ceritakan saja kebutuhan Anda, misalnya siapa yang membagikan informasi rahasia, siapa penerimanya, dan informasi apa yang dijaga. Saya akan menanyakan hal yang belum jelas, satu per satu.",
-  PKS: "Halo! Ceritakan saja kebutuhan Anda, misalnya siapa saja pihak yang bekerja sama, kerja sama apa, dan berapa lama. Saya akan menanyakan hal yang belum jelas, satu per satu.",
+  UTANG_PIUTANG: "Selamat datang. Ceritakan pinjaman yang ingin dicatat: siapa yang meminjamkan, siapa yang meminjam, berapa jumlahnya, dan kapan harus dilunasi. Bagian yang belum jelas akan saya tanyakan satu per satu.",
+  NDA: "Selamat datang. Ceritakan informasi yang ingin dijaga: siapa yang membagikan informasi rahasia, siapa penerimanya, dan informasi apa yang dirahasiakan. Bagian yang belum jelas akan saya tanyakan satu per satu.",
+  PKS: "Selamat datang. Ceritakan kerja sama yang direncanakan: siapa saja pihaknya, bentuk kerja samanya, dan berapa lama berlangsung. Bagian yang belum jelas akan saya tanyakan satu per satu.",
 };
 const PLACEHOLDER: Record<string, string> = {
   UTANG_PIUTANG: "Contoh: Saya Sinta Dewi meminjamkan Rp5.000.000 kepada Budi Santoso, dikembalikan 16 April 2027.",
@@ -57,10 +57,10 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
     <main className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-8">
       <div className="max-w-2xl space-y-5">
         <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-3xl">{t.title}</h1>
-        <StepIndicator current={bar.done} total={bar.total} percent={bar.percent} label={`${bar.done} dari ${bar.total} kolom wajib terisi`} />
+        <StepIndicator current={bar.done} total={bar.total} percent={bar.percent} label={`${bar.done} dari ${bar.total} isian wajib terisi`} />
         {notice && <p role="alert" className="rounded-xl border border-amber-400 bg-amber-50 p-4 font-semibold">{notice} <Link className="inline-flex min-h-12 items-center underline" href="/bantuan">Bantuan</Link></p>}
         {missing.length === 0 && conflicts.length > 0 && (
-          <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">Ada isian yang belum cocok: {conflicts.join(" ")} Sebutkan koreksinya di percakapan.</p>
+          <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">Ada isian yang belum sesuai: {conflicts.join(" ")} Tulis perbaikannya di percakapan.</p>
         )}
 
         {ready && (
@@ -77,12 +77,12 @@ export default async function WorkspacePage({ params, searchParams }: { params: 
                 ))}
               </dl>
             </details>
-            <p>Ada yang perlu diubah? Tulis saja di percakapan di bawah, misalnya “ganti nama pihak kedua jadi …”.</p>
+            <p>Untuk mengubah isian, tulis perubahannya di percakapan di bawah, misalnya “ganti nama pihak kedua menjadi …”.</p>
             <form action={freezeAction} className="space-y-3">
               <input type="hidden" name="documentId" value={id} />
               <input type="hidden" name="token" value={randomUUID()} />
               <Button type="submit" className="w-full text-lg">Buat dokumen</Button>
-              <p className="text-sm text-muted">Dokumen yang dibuat tidak dapat diubah. Jika perlu perubahan, Anda membuat versi baru.</p>
+              <p className="text-sm text-muted">Dokumen yang sudah dibuat tidak dapat diubah. Perubahan berikutnya disimpan sebagai versi baru.</p>
             </form>
           </Card>
         )}

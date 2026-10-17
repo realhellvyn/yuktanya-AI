@@ -21,10 +21,10 @@ export async function createShareAction(_prev: CreateShareState, formData: FormD
     const { token } = await shareService().create(userId, str(formData, "versionId"), days * 24 * 3600);
     return { link: `${appOrigin()}/s/${token}` };
   } catch (e) {
-    if (e instanceof FeatureNotAvailableError) return { error: "Fitur ini tersedia untuk Member." };
-    if (e instanceof NotFoundError) return { error: "Versi tidak ditemukan." };
-    if (e instanceof InvalidExpiryError) return { error: "Masa berlaku tautan tidak valid." };
-    if (e instanceof TooManySharesError) return { error: "Tautan aktif untuk versi ini sudah 20. Cabut tautan yang tidak dipakai lebih dulu." };
+    if (e instanceof FeatureNotAvailableError) return { error: "Fitur ini hanya tersedia untuk Member." };
+    if (e instanceof NotFoundError) return { error: "Versi dokumen tidak ditemukan. Muat ulang halaman, lalu coba lagi." };
+    if (e instanceof InvalidExpiryError) return { error: "Masa berlaku tautan tidak valid. Pilih 1, 7, atau 30 hari." };
+    if (e instanceof TooManySharesError) return { error: "Versi ini sudah memiliki 20 tautan aktif. Cabut tautan yang tidak dipakai lebih dulu." };
     throw e;
   }
 }

@@ -2,7 +2,7 @@
 // menjadi galat server mentah: aksi mengalihkan dengan kode INVALID_REQUEST yang ditampilkan sebagai kalimat biasa.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export const INVALID_FORM_TEXT = "Data formulir tidak valid. Muat ulang halaman lalu coba lagi.";
+export const INVALID_FORM_TEXT = "Data formulir tidak valid. Muat ulang halaman, lalu coba lagi.";
 
 export function formUuid(f: FormData, key: string): string | null {
   const v = f.get(key);

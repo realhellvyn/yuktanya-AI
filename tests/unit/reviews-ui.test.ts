@@ -21,7 +21,8 @@ const links = (h: string) => h.match(/<(a|button) [^>]*>/g) ?? [];
 describe("ReviewTimeline", () => {
   it("status ditulis sebagai teks, bukan warna saja", () => {
     const h = renderToStaticMarkup(ReviewTimeline({ status: "IN_REVIEW" }));
-    for (const s of ["Diajukan", "Pembayaran dikonfirmasi", "Dalam antrean", "Sedang diperiksa", "Selesai", "tahap ini", "belum"]) expect(h).toContain(s);
+    for (const s of ["Diajukan", "Pembayaran dikonfirmasi", "Dalam antrean", "Sedang diperiksa", "Selesai", "(tahap saat ini)", "(belum)"]) expect(h).toContain(s);
+    expect(h).not.toContain("—");
   });
 });
 
@@ -33,7 +34,8 @@ describe("ReviewTimeline dengan tanggal (D-14)", () => {
     expect(h).toContain("17 Oktober 2026");
     const c = renderToStaticMarkup(ReviewTimeline({ status: "CANCELLED", timeline: { ...t, assignedAt: null, completedAt: null } }));
     expect(c).toContain("Dibatalkan");
-    expect(c).not.toContain("Diajukan — tahap ini");
+    // Dibatalkan tidak pernah menandai tahap mana pun sebagai tahap saat ini.
+    expect(c).not.toContain("tahap saat ini");
   });
 });
 
@@ -50,13 +52,13 @@ describe("LegalNoteCard", () => {
 describe("ResultPanel", () => {
   it("dengan catatan: judul hasil, ruang lingkup, versi, catatan, kode, URL, QR bukan tanda tangan, penafian", () => {
     const h = renderToStaticMarkup(ResultPanel({ review: review(), verifyUrl: "https://y.example/verify/abc", qrDataUrl: "data:image/png;base64,AAAA" }));
-    for (const s of ["Selesai — Dengan Legal Note", "Klausul kerahasiaan", "versi 2", "Jangka waktu", "c".repeat(48), "https://y.example/verify/abc", "data:image/png;base64,AAAA", "bukan tanda tangan", LEGAL_DISCLAIMER, "Pemeriksaan selesai dengan catatan"]) expect(h).toContain(s);
+    for (const s of ["Selesai: dengan Legal Note", "Klausul kerahasiaan", "versi 2", "Jangka waktu", "c".repeat(48), "https://y.example/verify/abc", "data:image/png;base64,AAAA", "bukan tanda tangan", LEGAL_DISCLAIMER, "Pemeriksaan selesai dengan catatan"]) expect(h).toContain(s);
     expect(h).not.toMatch(/\bcap\b/i);
     for (const tag of links(h)) expect(tag).toContain("min-h-12");
   });
   it("tanpa catatan memakai pernyataan WITHIN_SCOPE", () => {
     const h = renderToStaticMarkup(ResultPanel({ review: review({ outcome: "WITHIN_SCOPE", notes: [] }) }));
-    expect(h).toContain("Selesai — Tanpa Legal Note");
+    expect(h).toContain("Selesai: tanpa Legal Note");
     expect(h).toContain("memenuhi kriteria dalam ruang lingkup pemeriksaan");
   });
   it("INCONCLUSIVE tanpa badge dan tanpa kode", () => {
@@ -79,7 +81,7 @@ describe("ResultPanel", () => {
   });
   it("DECLINED: menjelaskan kredit pemeriksaan sesuai database dan langkah berikutnya", () => {
     const h = renderToStaticMarkup(ResultPanel({ review: review({ status: "DECLINED", outcome: "DECLINED", notes: [], verification: null, credit: { status: "AVAILABLE", expiresAt: "2027-01-14T05:00:00.000Z" } }), now: new Date("2026-10-16T05:00:00.000Z") }));
-    expect(h).toContain("1 kredit pemeriksaan");
+    expect(h).toContain("1 kredit Legal Review");
     expect(h).toContain("14 Januari 2027");
     expect(h).toContain("tidak membayar lagi");
     expect(h).not.toMatch(/dikembalikan ke rekening|refund/i);

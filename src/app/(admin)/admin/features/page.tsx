@@ -4,10 +4,10 @@ import { getPool } from "@/lib/db";
 import { setFeatureAction } from "./actions";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Kunci fitur per plan | Admin Yuktanya" };
+export const metadata = { title: "Fitur per paket | Admin Yuktanya" };
 
 const FEATURES = [
-  { key: "vault.share", label: "Berbagi ke pihak lawan" },
+  { key: "vault.share", label: "Berbagi ke pihak lain" },
   { key: "vault.reminders", label: "Pengingat tenggat" },
   { key: "vault.evidence_pack", label: "Paket bukti" },
 ];
@@ -18,8 +18,8 @@ export default async function FeaturesPage() {
   const on = new Set(rows.map((r) => `${r.feature_key}:${r.plan}`));
   return (
     <main className="max-w-5xl space-y-6">
-      <PageHeading title="Pemetaan fitur Vault" />
-      <p>Pengaturan awal untuk fitur Vault hanya usulan dan dapat diubah di sini. Setiap perubahan tercatat di audit.</p>
+      <PageHeading title="Fitur Legal Vault per paket" />
+      <p>Pengaturan awal fitur Legal Vault masih berupa usulan dan dapat diubah di halaman ini. Setiap perubahan tercatat di audit.</p>
       <ul className="space-y-3">
         {FEATURES.map((f) => (
           <li key={f.key} className="space-y-3 rounded-2xl border border-line bg-surface p-5">
@@ -32,8 +32,8 @@ export default async function FeaturesPage() {
                     <input type="hidden" name="feature" value={f.key} />
                     <input type="hidden" name="plan" value={p} />
                     <input type="hidden" name="enabled" value={String(!active)} />
-                    <span className="font-semibold">{p === "FREE" ? "Gratis" : "Member"}: {active ? "aktif" : "mati"}</span>
-                    <button type="submit" className={buttonClass("secondary")}>{active ? "Matikan" : "Aktifkan"}</button>
+                    <span className="font-semibold">{p === "FREE" ? "Gratis" : "Member"}: {active ? "aktif" : "nonaktif"}</span>
+                    <button type="submit" className={buttonClass("secondary")}>{active ? "Nonaktifkan" : "Aktifkan"}</button>
                   </form>
                 );
               })}

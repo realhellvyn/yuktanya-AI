@@ -13,18 +13,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     <AuthShell title="Lupa kata sandi" footer={<Link className={linkClass} href="/login">Kembali ke halaman masuk</Link>}>
       {q.sent === "1" ? (
         <p role="status" className="rounded-xl border border-green-300 bg-green-50 p-4 text-green-900">
-          <strong>Permintaan diterima.</strong> Jika email itu terdaftar, kami mengirim tautan untuk membuat kata sandi baru. Periksa kotak masuk dan folder spam. Tautan hanya berlaku sementara.
+          <strong>Permintaan diterima.</strong> Bila email tersebut terdaftar, tautan untuk membuat kata sandi baru sudah dikirim. Periksa kotak masuk dan folder spam. Tautan hanya berlaku dalam waktu terbatas.
         </p>
       ) : (
         <>
-          <p className="text-muted">Tulis email akun Anda. Kami akan mengirim tautan untuk membuat kata sandi baru.</p>
-          {q.error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{q.error === "invalid" ? "Email belum sesuai. Periksa penulisannya." : fixedText(AUTH_MESSAGES, q.error) ?? AUTH_MESSAGES.failed}</p>}
+          <p className="text-muted">Masukkan email akun Anda. Tautan untuk membuat kata sandi baru akan dikirim ke email tersebut.</p>
+          {q.error && <p role="alert" className="rounded-xl border border-danger bg-red-50 p-4 font-semibold text-danger">{q.error === "invalid" ? "Format email tidak sesuai. Periksa penulisannya, misalnya nama@contoh.com." : fixedText(AUTH_MESSAGES, q.error) ?? AUTH_MESSAGES.failed}</p>}
           <form action={requestPasswordReset} className="space-y-5">
             <label className="block">
               <span className="font-semibold">Email <span className="font-normal text-muted">(Wajib)</span></span>
               <input name="email" type="email" required autoComplete="email" className="mt-2 block min-h-12 w-full rounded-xl border border-border-strong bg-surface px-4 text-lg" />
             </label>
-            <Button type="submit" className="w-full text-lg">Kirim tautan</Button>
+            <Button type="submit" className="w-full text-lg">Kirim tautan atur ulang</Button>
           </form>
         </>
       )}

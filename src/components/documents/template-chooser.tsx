@@ -24,7 +24,7 @@ function SendButton() {
   );
 }
 
-const GREETING = "Halo! Ceritakan keperluan Anda dengan bahasa sehari-hari, misalnya “Saya mau meminjamkan uang ke saudara” atau “Saya mau bekerja sama membuka warung”. Saya bantu memilih dokumen yang cocok.";
+const GREETING = "Selamat datang. Ceritakan keperluan Anda dengan bahasa sehari-hari, misalnya “Saya mau meminjamkan uang ke saudara” atau “Saya mau bekerja sama membuka warung”. Saya akan menyarankan dokumen yang sesuai.";
 
 // Percakapan "Saya belum tahu" (D-01). Saran hanya tampil untuk dokumen dari katalog server; memulai dokumen tetap lewat
 // aksi pembuatan dokumen biasa, lalu berlanjut di percakapan dokumen.
@@ -56,19 +56,19 @@ export function TemplateChooser({ options, initialKey, chooseAction, createActio
       {suggested && (
         <div data-testid="saran-dokumen" className="space-y-3 rounded-2xl border border-border-strong bg-tint p-5">
           <p className="text-lg font-bold text-navy">Saran AI: {suggested.title}</p>
-          <p>Dokumen ini {suggested.text}. Anda akan bercakap dengan AI untuk mengisinya; setiap pesan tersimpan otomatis.</p>
+          <p>Dokumen ini {suggested.text}. AI akan menanyakan detail dokumen satu per satu. Setiap jawaban tersimpan otomatis.</p>
           <form action={createAction}>
             <input type="hidden" name="category" value={suggested.category} />
             <button type="submit" className="inline-flex min-h-[52px] items-center justify-center rounded-xl bg-primary px-6 text-lg font-semibold text-on-primary hover:bg-primary-hover">Mulai {suggested.title}</button>
           </form>
-          <p className="text-muted">Bukan ini? Ceritakan lebih banyak di bawah, atau <Link className="inline-flex min-h-12 items-center underline" href="/workspace/new">pilih sendiri</Link>.</p>
+          <p className="text-muted">Bukan dokumen ini? Ceritakan lebih rinci di bawah, atau <Link className="inline-flex min-h-12 items-center underline" href="/workspace/new">pilih sendiri</Link>.</p>
         </div>
       )}
       {state.choice === "SPECIAL_CASE" && (
         <div data-testid="saran-kasus-khusus" className="space-y-3 rounded-2xl border border-amber-300 bg-amber-50/60 p-5">
-          <p className="text-lg font-bold text-navy">Keperluan Anda mungkin perlu penilaian khusus</p>
-          <p>Tiga dokumen Yuktanya tidak cocok untuk keperluan ini. Firma hukum mitra dapat menilainya lebih dulu. {specialCaseNote}</p>
-          <Link href="/cases/new" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border-strong bg-surface px-5 font-semibold text-navy hover:bg-subtle">Ajukan penilaian khusus</Link>
+          <p className="text-lg font-bold text-navy">Keperluan Anda mungkin perlu diajukan sebagai Special Legal Case</p>
+          <p>Dokumen yang tersedia di Yuktanya belum sesuai untuk keperluan ini. Ajukan sebagai Kasus Hukum Khusus (Special Legal Case) agar firma hukum mitra menilainya lebih dulu. {specialCaseNote}</p>
+          <Link href="/cases/new" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border-strong bg-surface px-5 font-semibold text-navy hover:bg-subtle">Ajukan Special Legal Case</Link>
         </div>
       )}
       <form action={formAction} className="space-y-3">

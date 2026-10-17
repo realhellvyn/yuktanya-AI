@@ -30,7 +30,7 @@ const when = (iso: string) => new Intl.DateTimeFormat("id-ID", { dateStyle: "lon
 const btn = "min-h-12 rounded-lg border border-border-strong bg-surface px-5 font-medium";
 const primary = "min-h-12 rounded-lg bg-primary hover:bg-primary-hover px-5 font-semibold text-on-primary";
 
-const Locked = () => <p className="rounded-lg border border-line bg-subtle p-3">Tersedia untuk Member</p>;
+const Locked = () => <p className="rounded-lg border border-line bg-subtle p-3">Fitur ini hanya tersedia untuk Member.</p>;
 
 function shareStatus(s: ShareRow): string {
   if (s.revokedAt) return "Dicabut";
@@ -43,13 +43,13 @@ export function VaultPanel({ documentId, versionId, features, shares, acks, remi
       {fixedText(PANEL_NOTICES, notice) && <p role="alert" className="rounded-lg border border-red-700 bg-surface p-4 text-danger">{fixedText(PANEL_NOTICES, notice)}</p>}
 
       <section aria-labelledby="share-h" className="space-y-3">
-        <h2 id="share-h" className="text-2xl font-semibold">Bagikan ke pihak lawan</h2>
+        <h2 id="share-h" className="text-2xl font-semibold">Bagikan ke pihak lain</h2>
         {!features.share ? <Locked /> : (
           <>
-            <p>Siapa pun yang punya link dapat membaca dokumen ini. Bagikan hanya kepada pihak yang Anda percaya. Anda dapat mencabut link kapan saja.</p>
+            <p>Siapa pun yang memiliki tautan dapat membaca dokumen ini. Bagikan hanya kepada pihak yang Anda percayai. Anda dapat mencabut tautan kapan saja.</p>
             {emailAvailable
-              ? <p>Pihak lawan dapat menekan konfirmasi baca lewat email. Konfirmasi baca hanya menyatakan seseorang sudah membaca versi ini dan bukan tanda tangan elektronik.</p>
-              : <p>Konfirmasi baca lewat email belum tersedia karena layanan email belum aktif. Pihak lawan tetap dapat membaca dokumen lewat link. (Konfirmasi baca nantinya hanya menyatakan seseorang sudah membaca versi ini dan bukan tanda tangan elektronik.)</p>}
+              ? <p>Penerima tautan dapat memberikan konfirmasi baca lewat email. Konfirmasi baca hanya menyatakan seseorang sudah membaca versi ini dan bukan tanda tangan elektronik.</p>
+              : <p>Konfirmasi baca lewat email belum tersedia karena layanan email belum aktif. Penerima tetap dapat membaca dokumen lewat tautan. (Konfirmasi baca nantinya hanya menyatakan seseorang sudah membaca versi ini dan bukan tanda tangan elektronik.)</p>}
             <CreateShareForm action={actions.createShare} versionId={versionId} documentId={documentId} />
             {shares.length > 0 && (
               <ul className="space-y-2">
@@ -80,8 +80,8 @@ export function VaultPanel({ documentId, versionId, features, shares, acks, remi
 
       <section aria-labelledby="rem-h" className="space-y-3">
         <h2 id="rem-h" className="text-2xl font-semibold">Pengingat tenggat</h2>
-        {features.reminders && !emailAvailable && <p role="status" className="rounded-lg border border-line bg-subtle p-3">Pengingat lewat email belum dapat dikirim karena layanan email belum aktif. Pengingat yang Anda atur tersimpan, tetapi belum ada email yang terkirim.</p>}
-        {!features.reminders ? <Locked /> : reminderOptions.length === 0 ? <p>Dokumen ini tidak punya tenggat yang bisa diingatkan.</p> : (
+        {features.reminders && !emailAvailable && <p role="status" className="rounded-lg border border-line bg-subtle p-3">Pengingat lewat email belum dapat dikirim karena layanan email belum aktif. Pengingat yang Anda atur tetap tersimpan, tetapi belum ada email yang terkirim.</p>}
+        {!features.reminders ? <Locked /> : reminderOptions.length === 0 ? <p>Dokumen ini tidak memiliki tenggat yang dapat diingatkan.</p> : (
           reminderOptions.map((o) => (
             <form key={o.specId} action={actions.setReminder} className="space-y-2 rounded-lg border border-line bg-surface p-3">
               <input type="hidden" name="documentId" value={documentId} />
@@ -109,7 +109,7 @@ export function VaultPanel({ documentId, versionId, features, shares, acks, remi
         <h2 id="pack-h" className="text-2xl font-semibold">Paket bukti</h2>
         {!features.evidence ? <Locked /> : (
           <>
-            <p>Paket bukti berisi riwayat versi, kode hash, ekspor, dan konfirmasi baca. Paket ini adalah kumpulan catatan sistem, bukan jaminan nilai pembuktian di pengadilan.</p>
+            <p>Paket bukti berisi riwayat versi, kode versi (SHA-256), ekspor, dan konfirmasi baca. Paket ini adalah kumpulan catatan sistem, bukan jaminan nilai pembuktian di pengadilan.</p>
             <form action={actions.buildPack}>
               <input type="hidden" name="documentId" value={documentId} />
               <input type="hidden" name="versionId" value={versionId} />

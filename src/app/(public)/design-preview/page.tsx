@@ -5,7 +5,7 @@ import { Card, EmptyState, PageHeading } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { StepIndicator } from "@/components/ui/step-indicator";
 
-export const metadata = { title: "Pratinjau Desain | Yuktanya", robots: { index: false, follow: false } };
+export const metadata = { title: "Pratinjau desain | Yuktanya", robots: { index: false, follow: false } };
 
 const field = "mt-2 block min-h-12 w-full rounded-xl border bg-surface px-4 text-lg";
 const TONES = ["info", "success", "warning", "danger", "neutral"] as const;
@@ -24,7 +24,7 @@ export default function Page() {
     <>
       <SiteHeader />
       <main className="mx-auto max-w-3xl space-y-10 px-4 py-8 md:px-8">
-        <PageHeading title="Pratinjau Desain" lead="Halaman internal untuk memeriksa komponen. Tidak berisi data pengguna." />
+        <PageHeading title="Pratinjau desain" lead="Halaman internal untuk memeriksa komponen. Halaman ini tidak memuat data pengguna." />
 
         <Section id="tombol" title="Tombol">
           <div className="flex flex-wrap gap-3">
@@ -39,7 +39,7 @@ export default function Page() {
         <Section id="kartu" title="Kartu dan keadaan kosong">
           <Card><p>Kartu biasa dengan isi singkat.</p></Card>
           <Card className="border-amber-300 bg-amber-50"><p>Kartu peringatan.</p></Card>
-          <EmptyState title="Belum ada dokumen" text="Mulai dengan membuat dokumen pertama Anda." action={<Button>Buat Dokumen</Button>} />
+          <EmptyState title="Belum ada dokumen" text="Buat dokumen pertama Anda untuk memulai." action={<Button>Buat dokumen</Button>} />
         </Section>
 
         <Section id="status" title="Lencana status">
@@ -67,7 +67,7 @@ export default function Page() {
             </label>
             <label className="block"><span className="font-semibold">Salah isi</span>
               <input className={`${field} border-danger`} defaultValue="abc" aria-invalid="true" aria-describedby="err-demo" />
-              <span id="err-demo" role="alert" className="mt-1 block font-semibold text-danger">Tanggal belum sesuai. Tulis seperti 16 Oktober 2026.</span>
+              <span id="err-demo" role="alert" className="mt-1 block font-semibold text-danger">Format tanggal belum sesuai. Tulis seperti contoh: 16 Oktober 2026.</span>
             </label>
             <label className="block"><span className="font-semibold">Pilihan</span>
               <select className={`${field} border-border-strong`}><option>Perjanjian Kerahasiaan</option><option>Surat Utang Piutang</option></select>

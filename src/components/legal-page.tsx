@@ -17,7 +17,7 @@ export function LegalPage({ title, lead, sections }: { title: string; lead: stri
         <PageHeading title={title} lead={lead} />
         <Card className="space-y-2 border-amber-300 bg-amber-50">
           <StatusBadge tone="warning">{LEGAL_PENDING}</StatusBadge>
-          <p>Halaman ini masih draf. Isinya menjelaskan cara kerja sistem saat ini, bukan nasihat hukum. Wording hukumnya belum disetujui mitra hukum kami.</p>
+          <p>Halaman ini masih draf. Isinya menjelaskan cara kerja sistem saat ini, bukan nasihat hukum. Rumusan hukumnya belum disetujui mitra hukum kami.</p>
         </Card>
         {sections.map((s) => (
           <section key={s.id} aria-labelledby={s.id}>

@@ -12,13 +12,13 @@ describe("tampilan kasus khusus", () => {
     for (const c of CASE_ERROR_CODES) expect(CASE_ERROR_TEXT[c]).toBeTruthy();
     for (const t of [...Object.values(CASE_ERROR_TEXT), ...Object.values(CASE_STATUS_LABEL)]) expect(t).not.toMatch(/\bcap\b/i);
     expect(caseErrorText(undefined)).toBeNull();
-    expect(caseErrorText("ANEH")).toBe("Terjadi kendala. Coba lagi.");
+    expect(caseErrorText("ANEH")).toBe("Tindakan belum berhasil. Muat ulang halaman, lalu coba lagi.");
   });
   it("kode dari alamat (?e=) tidak pernah membaca properti bawaan objek (halaman /cases/[id], /partner/cases/[id], /admin/cases)", () => {
     for (const hostile of ["__proto__", "constructor", "toString", "hasOwnProperty", "valueOf"]) {
-      expect(caseErrorText(hostile)).toBe("Terjadi kendala. Coba lagi.");
+      expect(caseErrorText(hostile)).toBe("Tindakan belum berhasil. Muat ulang halaman, lalu coba lagi.");
     }
-    expect(caseErrorText("NOT_FOUND")).toBe("Kasus atau dokumen tidak ditemukan.");
+    expect(caseErrorText("NOT_FOUND")).toBe("Kasus atau dokumen tidak ditemukan. Muat ulang halaman, lalu coba lagi.");
     expect(caseErrorText("SPECIAL_CASE_OPEN")).toBe(CASE_ERROR_TEXT.SPECIAL_CASE_OPEN);
     expect(caseErrorText("")).toBeNull();
     expect(typeof caseErrorText("__proto__")).toBe("string");

@@ -18,6 +18,6 @@ describe("/pricing", () => {
 
   it("tidak menyediakan tombol beli Deep mandiri", () => {
     expect(html()).not.toMatch(/<button/i);
-    expect(html()).not.toMatch(/Beli pemeriksaan mendalam/i);
+    expect(html()).not.toMatch(/Beli (pemeriksaan mendalam|Deep Review)/i);
   });
 });

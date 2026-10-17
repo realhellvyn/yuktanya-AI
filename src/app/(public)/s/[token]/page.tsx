@@ -17,7 +17,7 @@ export default async function SharePage({ params, searchParams }: { params: Prom
     return (
       <>
         <SiteHeader />
-        <main className="mx-auto max-w-3xl p-6"><p role="status">Terlalu banyak permintaan. Coba lagi sebentar.</p></main>
+        <main className="mx-auto max-w-3xl p-6"><p role="status">Terlalu banyak permintaan. Tunggu sebentar, lalu muat ulang halaman ini.</p></main>
       </>
     );
   }

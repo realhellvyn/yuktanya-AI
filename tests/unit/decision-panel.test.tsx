@@ -39,8 +39,8 @@ describe("pernyataan tidak ada konflik kepentingan (B-02)", () => {
   it("keputusan selain Setujui menampilkan isi reviewer sebelumnya yang belum dikonfirmasi", () => {
     const h = renderToStaticMarkup(createElement(DecisionPanel, {
       action: async () => {}, deepId: "d1", revision: 1, title: "Dokumen", versionNo: 1, sha256: "a".repeat(64),
-      parentScope: "Ruang lingkup", approveBlockers: [], unresolved: [], authorized: true, confirmBlockers: ["Tindak lanjut catatan 1 diisi reviewer sebelumnya. Periksa lalu simpan ulang."],
+      parentScope: "Ruang lingkup", approveBlockers: [], unresolved: [], authorized: true, confirmBlockers: ["Tindak lanjut catatan 1 diisi pemeriksa sebelumnya. Periksa isinya, lalu simpan ulang."],
     }));
-    expect(h).toContain("Tindak lanjut catatan 1 diisi reviewer sebelumnya");
+    expect(h).toContain("Tindak lanjut catatan 1 diisi pemeriksa sebelumnya");
   });
 });

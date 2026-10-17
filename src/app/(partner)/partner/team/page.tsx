@@ -7,13 +7,13 @@ import { partnerService } from "@/lib/partner/runtime";
 import { getSessionRoles } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Tim Firma — Penugasan Review Standar & Pemeriksaan Mendalam | Mitra Hukum Yuktanya" };
+export const metadata = { title: "Tim firma: penugasan Legal Review dan Deep Review | Mitra Hukum Yuktanya" };
 const CAPACITY = 10;
 
 function authStatus(m: { authorized: boolean; authorization: { validFrom: string; validTo: string; revoked: boolean } | null }) {
   if (m.authorized && m.authorization) return { tone: "success" as const, text: "Otorisasi aktif", detail: `Berlaku ${formatDateId(m.authorization.validFrom)} s/d ${formatDateId(m.authorization.validTo)}` };
   if (!m.authorization) return { tone: "danger" as const, text: "Belum berotorisasi", detail: "Belum dapat ditugaskan. Hubungi admin platform." };
-  if (m.authorization.revoked) return { tone: "danger" as const, text: "Otorisasi dicabut", detail: "Tidak dapat ditugaskan. Pindahkan pekerjaannya." };
+  if (m.authorization.revoked) return { tone: "danger" as const, text: "Otorisasi dicabut", detail: "Tidak dapat ditugaskan. Pindahkan pekerjaannya ke pemeriksa lain." };
   return { tone: "warning" as const, text: "Otorisasi tidak berlaku", detail: `Masa berlaku ${formatDateId(m.authorization.validFrom)} s/d ${formatDateId(m.authorization.validTo)}` };
 }
 
@@ -25,10 +25,10 @@ export default async function TeamPage() {
   const firms = [...new Map(team.map((m) => [m.firmId, m.firmName])).entries()];
   return (
     <main className="max-w-4xl space-y-8">
-      <PageHeading title="Tim firma" lead="Reviewer di firma Anda, beban kerja aktif, dan masa berlaku otorisasi profesional."
+      <PageHeading title="Tim firma" lead="Pemeriksa di firma Anda, beban kerja aktif, dan masa berlaku otorisasi profesional."
         actions={<ButtonLink href="/partner#penugasan">Tugaskan permintaan</ButtonLink>} />
       <p className="rounded-xl border border-line bg-surface p-4">Koordinator menugaskan pekerjaan, tetapi tidak memberi peran atau otorisasi. Penambahan anggota dan otorisasi profesional dilakukan oleh admin platform setelah verifikasi.</p>
-      {firms.length === 0 && <EmptyState title="Belum ada reviewer" text="Belum ada reviewer di firma Anda. Minta admin platform menambahkan reviewer." />}
+      {firms.length === 0 && <EmptyState title="Belum ada pemeriksa" text="Belum ada pemeriksa di firma Anda. Minta admin platform menambahkan pemeriksa." />}
       {firms.map(([firmId, firmName]) => (
         <section key={firmId} aria-label={firmName} className="space-y-3">
           <h2 className="break-words text-xl font-bold text-navy md:text-2xl">{firmName}</h2>
@@ -44,7 +44,7 @@ export default async function TeamPage() {
                       <StatusBadge tone={a.tone}>{a.text}</StatusBadge>
                     </div>
                     <p className="text-muted">{a.detail}</p>
-                    <p>Pekerjaan aktif di firma ini: <strong>{total}</strong> ({m.activeStandard} Review Standar, {m.activeDeep} Pemeriksaan Mendalam){total >= CAPACITY ? " — penuh" : ""}</p>
+                    <p>Pekerjaan aktif di firma ini: <strong>{total}</strong> ({m.activeStandard} Legal Review, {m.activeDeep} Deep Review){total >= CAPACITY ? " (kapasitas penuh)" : ""}</p>
                   </Card>
                 </li>
               );
