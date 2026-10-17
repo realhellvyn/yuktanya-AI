@@ -1,5 +1,5 @@
 // Perjalanan lintas peran (E01/E02 di SCENARIOS): admin -> koordinator -> reviewer -> pemilik, dengan sesi browser terpisah.
-import { createNdaVersion, register, say, submit } from "./helpers.mjs";
+import { createNdaVersion, payWithMidtrans, register, say, submit } from "./helpers.mjs";
 
 export const onlyViewport = "desktop";
 const RUBRIC_PENDING = "Saat ini lencana Legal Verified Enhanced belum dapat diterbitkan karena pedoman pemeriksaan Enhanced belum disetujui.";
@@ -82,21 +82,19 @@ export async function journey({ step, base, vp, db, newActor }) {
     await ownerA.shot("02-checkout");
   });
 
-  await step(tag("transfer bank menampilkan kode referensi; status belum lunas"), async () => {
-    await ownerA.page.click("button:has-text('Bayar dengan transfer bank')");
-    await ownerA.page.waitForSelector("text=Tulis kode berikut");
-    const t = await ownerA.page.innerText("body");
-    if (/lunas|dibayar/i.test(t) && !/belum/i.test(t)) throw new Error("terlihat lunas sebelum dikonfirmasi admin");
-  });
-
-  await step(tag("admin mengonfirmasi pembayaran; permintaan muncul untuk koordinator"), async () => {
-    const p = adminA.page;
-    await p.goto(base + "/admin/payments");
-    const f = p.locator("section[aria-labelledby=menunggu-h] form").first();
-    await f.locator("input[name=bankRef]").fill("BANK-UJI-001");
-    await Promise.all([p.waitForLoadState("networkidle"), f.locator("button:has-text('Konfirmasi pembayaran')").click()]);
-    const left = await p.locator("section[aria-labelledby=menunggu-h] form").count();
-    if (left !== 0) throw new Error("pembayaran masih menunggu");
+  await step(tag("Legal Review dibayar lewat Midtrans (palsu): tanpa opsi transfer bank; lunas hanya setelah webhook terverifikasi"), async () => {
+    const p = ownerA.page;
+    if (await p.locator("button:has-text('transfer bank')").count()) throw new Error("opsi transfer bank masih tampil untuk pengguna");
+    const orderId = /\/checkout\/([0-9a-f-]{36})/.exec(p.url())[1];
+    const { result } = await payWithMidtrans(p, base);
+    if (!/notifikasi HTTP 200/.test(result)) throw new Error("webhook tidak 200: " + result);
+    const t = await p.innerText("main");
+    if (!t.includes("Pembayaran dikonfirmasi")) throw new Error("checkout belum lunas setelah webhook: " + t.slice(0, 400));
+    const o = (await db.query("select o.status, p.provider, p.status as ps from orders o join payments p on p.order_id = o.id where o.id = $1", [orderId])).rows;
+    if (JSON.stringify(o) !== JSON.stringify([{ status: "PAID", provider: "midtrans", ps: "VERIFIED" }])) throw new Error(JSON.stringify(o));
+    // Pelunasan hanya membuka pemeriksaan: belum ada lencana Legal apa pun sebelum reviewer menerbitkan.
+    const n = (await db.query("select count(*)::int as n from document_verifications v join review_requests r on r.version_id = v.version_id where r.order_id = $1 and v.kind <> 'AI'", [orderId])).rows[0].n;
+    if (n !== 0) throw new Error("lencana terbit karena pembayaran");
   });
 
   await step(tag("koordinator menugaskan ke reviewer (dipilih dengan email, bukan kode acak)"), async () => {
@@ -224,15 +222,12 @@ export async function journey({ step, base, vp, db, newActor }) {
     await ownerA.page.click("button:has-text('Lanjut ke pembayaran')");
     await ownerA.page.waitForURL(/\/checkout\//);
     if ((await ownerA.page.innerText("main")).includes(RUBRIC_PENDING)) throw new Error("rincian checkout Deep Review menampilkan pemberitahuan rubrik padahal sudah disetujui");
-    await ownerA.page.click("button:has-text('Bayar dengan transfer bank')");
-    await ownerA.page.waitForSelector("text=Tulis kode berikut");
+    const { result } = await payWithMidtrans(ownerA.page, base);
+    if (!/notifikasi HTTP 200/.test(result)) throw new Error("webhook Deep Review tidak 200: " + result);
+    if (!(await ownerA.page.innerText("main")).includes("Pembayaran dikonfirmasi")) throw new Error("Deep Review belum lunas setelah webhook");
   });
 
-  await step(tag("admin konfirmasi bayar; koordinator menugaskan"), async () => {
-    const a = adminA.page;
-    await a.goto(base + "/admin/payments");
-    await a.locator("section[aria-labelledby=menunggu-h] form input[name=bankRef]").first().fill("BANK-UJI-DEEP");
-    await submit(a, a.locator("section[aria-labelledby=menunggu-h] form button:has-text('Konfirmasi pembayaran')").first());
+  await step(tag("Deep Review lunas lewat Midtrans; koordinator menugaskan"), async () => {
     const c = coordA.page;
     await c.goto(base + "/partner");
     await submit(c, c.locator("section[aria-labelledby=deepc-h] form button:has-text('Simpan')").first());

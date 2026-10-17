@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { SERVICE_KEY, startFakeLlm, startFakeSupabase } from "./fake-supabase.mjs";
+import { MIDTRANS_TEST_KEY, startFakeMidtrans } from "./fake-midtrans.mjs";
 
 const require = createRequire(import.meta.url);
 // Urutan: PLAYWRIGHT_MODULE (jalur eksplisit) -> paket `playwright` di node_modules repo -> jalur global sandbox.
@@ -27,12 +28,16 @@ const step = async (name, fn) => {
 try { await fetch(`http://localhost:${APP}/`); console.error(`Port ${APP} sudah dipakai proses lain; hentikan dulu.`); process.exit(2); } catch {}
 const fake = await startFakeSupabase({ databaseUrl: process.env.TEST_DATABASE_URL, port: FAKE });
 const llm = await startFakeLlm({ port: 54998 });
+// Midtrans palsu (Task 21): Snap, halaman bayar simulasi yang mengirim webhook bertanda tangan, dan Get Status API.
+const midtrans = await startFakeMidtrans({ port: 54997, appBase: `http://localhost:${APP}` });
 const env = {
   ...process.env, PORT: String(APP),
   NEXT_PUBLIC_SUPABASE_URL: `http://127.0.0.1:${FAKE}`, NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: SERVICE_KEY,
   DATABASE_URL: process.env.TEST_DATABASE_URL, AI_MOCK_MODE: "false", FREELLM_BASE_URL: "http://127.0.0.1:54998", FREELLM_API_KEY: "uji", ALLOW_UNAPPROVED_TEMPLATES: "true",
   NEXT_PUBLIC_APP_URL: `http://localhost:${APP}`, DOCUMENT_BLOB_DIR: mkdtempSync(path.join(tmpdir(), "yk-blob-")),
   MANUAL_PAYMENT_INSTRUCTIONS: "Transfer ke rekening uji 000-000", NEXT_TELEMETRY_DISABLED: "1",
+  // MIDTRANS_TEST_BASE_URL hanya diterima untuk alamat loopback (src/lib/billing/midtrans.ts), juga di build produksi.
+  MIDTRANS_SERVER_KEY: MIDTRANS_TEST_KEY, MIDTRANS_ENV: "sandbox", MIDTRANS_TEST_BASE_URL: midtrans.origin,
   // Ketiga flag fitur menyala di dev DAN produksi harness, sama dengan produksi sejak 17 Okt 2026 (keputusan pemilik).
   DEEP_REVIEW_PURCHASE: "true", ENHANCED_ISSUANCE: "true", AI_PREREVIEW_ENABLED: "true",
 };
@@ -45,7 +50,7 @@ if (PROD) {
   const nextEnv = existsSync("next-env.d.ts") ? readFileSync("next-env.d.ts", "utf8") : null;
   const b = spawnSync("npx", ["next", "build"], { env: { ...env, NODE_ENV: "production" }, stdio: "inherit" });
   if (nextEnv !== null) writeFileSync("next-env.d.ts", nextEnv);
-  if (b.status !== 0) { llm.close(); await fake.close(); console.error("next build gagal"); process.exit(1); }
+  if (b.status !== 0) { llm.close(); await midtrans.close(); await fake.close(); console.error("next build gagal"); process.exit(1); }
 }
 const db = new Pool({ connectionString: process.env.TEST_DATABASE_URL, max: 2 });
 if (PROD) {
@@ -61,13 +66,13 @@ if (PROD) {
 const dev = spawn("npx", PROD ? ["next", "start", "-p", String(APP)] : ["next", "dev", "-p", String(APP)], { env: PROD ? { ...env, NODE_ENV: "production" } : env, stdio: ["ignore", "pipe", "pipe"], detached: true });
 let devLog = "";
 dev.stdout.on("data", (d) => (devLog += d)); dev.stderr.on("data", (d) => (devLog += d));
-const stop = async () => { try { process.kill(-dev.pid, "SIGKILL"); } catch {} llm.close(); await db.end(); await fake.close(); };
+const stop = async () => { try { process.kill(-dev.pid, "SIGKILL"); } catch {} llm.close(); await midtrans.close(); await db.end(); await fake.close(); };
 
 try {
   for (let i = 0; i < 90; i++) { try { const r = await fetch(`http://localhost:${APP}/login`); if (r.ok) break; } catch {} await new Promise((r) => setTimeout(r, 1000)); }
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM ?? undefined });
   const viewports = JSON.parse(process.env.VIEWPORTS ?? '[{"name":"desktop","width":1280,"height":800}]');
-  const files = (process.env.JOURNEY ?? "./journey.mjs,./journey-roles.mjs,./journey-public.mjs,./journey-ui-roles.mjs,./journey-cases.mjs,./journey-ai-review.mjs,./journey-admin-analytics.mjs,./journey-data-rights.mjs,./journey-ux.mjs,./journey-prod-ai.mjs").split(",");
+  const files = (process.env.JOURNEY ?? "./journey.mjs,./journey-roles.mjs,./journey-public.mjs,./journey-ui-roles.mjs,./journey-cases.mjs,./journey-ai-review.mjs,./journey-admin-analytics.mjs,./journey-data-rights.mjs,./journey-ux.mjs,./journey-prod-ai.mjs,./journey-midtrans.mjs").split(",");
   for (const file of files) {
     const mod = await import(file);
     for (const vp of viewports.filter((v) => !mod.onlyViewport || v.name === mod.onlyViewport)) {
@@ -101,7 +106,7 @@ try {
         return { page, shot, issues };
       };
       const main = await newActor("main");
-      await mod.journey({ ...main, step, base: `http://localhost:${APP}`, vp, llm, db, newActor, fake });
+      await mod.journey({ ...main, step, base: `http://localhost:${APP}`, vp, llm, db, newActor, fake, midtrans });
       for (const c of opened) await c.close();
     }
   }

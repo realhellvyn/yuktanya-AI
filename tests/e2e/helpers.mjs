@@ -59,3 +59,19 @@ export async function submit(page, clickable) {
   }
   await page.waitForLoadState("networkidle");
 }
+
+// Bayar di Midtrans palsu (tests/e2e/fake-midtrans.mjs): tombol bayar di checkout → halaman bayar simulasi → pilih hasil →
+// kembali lewat tautan finish (dengan parameter status seperti Midtrans asli; halaman checkout mengabaikannya). Tautan
+// finish memakai NEXT_PUBLIC_APP_URL (https di harness produksi), jadi yang dibuka adalah path-nya di `base`.
+export async function payWithMidtrans(page, base, choice = "Bayar (berhasil)") {
+  const checkout = new URL(page.url()).pathname;
+  const pay = page.locator("button", { hasText: /^(Bayar dengan Midtrans|Lanjutkan pembayaran di Midtrans)$/ });
+  await Promise.all([page.waitForURL(/\/snap\/v4\/redirection\//, { timeout: 30000 }), pay.click()]);
+  const orderRef = await page.getAttribute("[data-order]", "data-order");
+  await Promise.all([page.waitForSelector("#kembali", { timeout: 20000 }), page.click(`button:has-text('${choice}')`)]);
+  const result = await page.innerText("#hasil");
+  const back = new URL(await page.getAttribute("#kembali", "href"));
+  if (back.pathname !== checkout) throw new Error(`finish ${back.pathname} bukan ${checkout}`);
+  await page.goto(base + back.pathname + back.search);
+  return { orderRef, result, back };
+}
