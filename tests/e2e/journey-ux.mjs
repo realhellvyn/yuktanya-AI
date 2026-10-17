@@ -116,8 +116,19 @@ export async function journey({ page, step, shot, base, vp, issues, llm }) {
     const before = llm.control.chooser ?? 0;
     await page.goto(base + "/workspace/pilih");
     await page.fill("textarea[name=message]", "Saya sedang digugat cerai dan bingung harus buat dokumen apa.");
-    await page.click("button:has-text('Kirim')");
-    await page.waitForSelector("[data-testid=saran-kasus-khusus]", { timeout: 60000 });
+    // Task 24 (A04): LLM palsu ditunda 12 detik; teks progres tenang muncul setelah ±10 detik di wilayah aria-live polite.
+    llm.control.delayMs = 12_000;
+    try {
+      await page.click("button:has-text('Kirim')");
+      const progress = page.locator("section[aria-label='Percakapan memilih dokumen'] [data-testid=ai-lambat][aria-live=polite]");
+      await page.waitForTimeout(3000);
+      if ((await progress.innerText()).trim() !== "") throw new Error("teks progres muncul sebelum ambang 10 detik");
+      await page.waitForSelector("section[aria-label='Percakapan memilih dokumen'] [data-testid=ai-lambat]:has-text('AI masih menyusun jawaban. Ini bisa memakan waktu hingga satu menit.')", { timeout: 11000 });
+      await page.waitForSelector("[data-testid=saran-kasus-khusus]", { timeout: 60000 });
+      if ((await progress.innerText()).trim() !== "") throw new Error("teks progres tetap tampil setelah balasan");
+    } finally {
+      llm.control.delayMs = 0;
+    }
     if (await page.locator("[data-testid=saran-dokumen]").count()) throw new Error("dokumen katalog ditawarkan untuk kasus khusus");
     if ((llm.control.chooser ?? 0) - before !== 1) throw new Error("panggilan LLM pemilih: " + ((llm.control.chooser ?? 0) - before));
     await layoutOk();

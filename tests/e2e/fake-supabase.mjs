@@ -154,6 +154,8 @@ export function startFakeLlm({ port }) {
     for await (const c of req) d += c;
     const body = d ? JSON.parse(d) : {};
     seen.push({ path: req.url, model: body.model, auth: req.headers.authorization });
+    // Task 24: balasan ditunda (uji teks progres "AI masih menyusun jawaban" setelah 10 detik).
+    if (control.delayMs > 0) await new Promise((r) => setTimeout(r, control.delayMs));
     if (control.fail > 0) {
       control.fail--;
       res.writeHead(500, { "content-type": "application/json" });

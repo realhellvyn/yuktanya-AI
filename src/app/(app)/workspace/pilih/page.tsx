@@ -8,6 +8,8 @@ import { requireUserId } from "@/lib/documents/session";
 import { createDocumentAction } from "../../documents/actions";
 import { chooseTemplateAction } from "./actions";
 
+// Task 24 (A04): fungsi tidak boleh dipotong sebelum tenggat giliran AI 75 detik (+ baca berkas/DB); harus literal untuk Next.
+export const maxDuration = 120;
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Bantu memilih dokumen | Yuktanya" };
 

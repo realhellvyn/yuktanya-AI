@@ -5,6 +5,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import type { ChooserState } from "@/app/(app)/workspace/pilih/actions";
 import type { Category } from "@/lib/documents/types";
+import { SlowProgress } from "./slow-progress";
 
 type Option = { category: Category; title: string; text: string };
 type Props = {
@@ -80,6 +81,7 @@ export function TemplateChooser({ options, initialKey, chooseAction, createActio
             className="mt-2 block w-full rounded-xl border border-border-strong bg-surface px-4 py-3 text-lg" />
         </label>
         <SendButton />
+        <SlowProgress />
       </form>
     </section>
   );

@@ -46,7 +46,8 @@ export async function sendMessageAction(formData: FormData): Promise<void> {
   if (res.status !== 200) {
     const code = ((await res.json().catch(() => ({}))) as { code?: string }).code;
     notice =
-      res.status === 502 ? "down"
+      res.status === 504 ? "slow"
+      : res.status === 502 ? "down"
       : code === "STALE_REVISION" ? "stale"
       : code === "AI_BUSY" || code === "DUPLICATE_REQUEST" ? "busy"
       : code === "TOO_MANY_ATTEMPTS" ? "limit"

@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
-import { GatewayError, chat } from "@/lib/ai/gateway";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { GatewayError, MIN_ATTEMPT_MS, chat } from "@/lib/ai/gateway";
 import { flags } from "@/lib/flags";
 
 const env = { FREELLM_BASE_URL: "https://gw.test/v1", FREELLM_API_KEY: "k-test" };
@@ -115,6 +115,59 @@ describe("gateway chat", () => {
 
   it("tanpa base URL/kunci → UNAVAILABLE", async () => {
     expect(await code(chat(msgs, { env: {} }))).toBe("UNAVAILABLE");
+  });
+});
+
+describe("gateway: tenggat total per giliran (Task 24, A04)", () => {
+  afterEach(() => vi.useRealTimers());
+  const hang = (counter: { n: number }) => (async (_u: string, init: RequestInit) => {
+    counter.n++;
+    return new Promise((_r, rej) => init.signal!.addEventListener("abort", () => rej(new DOMException("x", "AbortError"))));
+  }) as unknown as typeof fetch;
+
+  it("sisa waktu kurang dari satu percobaan bermakna: tidak ada fetch, langsung TIMEOUT", async () => {
+    const f = fakeFetch(ok());
+    const t = 1_000_000;
+    expect(await code(chat(msgs, { fetchImpl: f.impl, env, deadline: t + MIN_ATTEMPT_MS - 1, now: () => t }))).toBe("TIMEOUT");
+    expect(f.bodies).toHaveLength(0);
+  });
+
+  it("5xx: ulang TIDAK dimulai bila sisa waktu tidak cukup", async () => {
+    let t = 1_000_000;
+    const slow500 = fakeFetch(async () => {
+      t += 50_000; // percobaan pertama memakan 50 detik
+      return new Response("", { status: 503 });
+    });
+    expect(await code(chat(msgs, { fetchImpl: slow500.impl, env, deadline: 1_000_000 + 60_000, now: () => t }))).toBe("UPSTREAM_5XX");
+    expect(slow500.bodies).toHaveLength(1);
+    // Sisa cukup: satu ulang tetap dilakukan (perilaku lama).
+    t = 1_000_000;
+    const quick500 = fakeFetch(new Response("", { status: 503 }));
+    expect(await code(chat(msgs, { fetchImpl: quick500.impl, env, deadline: t + 75_000, now: () => t }))).toBe("UPSTREAM_5XX");
+    expect(quick500.bodies).toHaveLength(2);
+  });
+
+  it("batas waktu percobaan dipotong ke sisa tenggat; timeout pertama yang menghabiskan tenggat tidak diulang", async () => {
+    vi.useFakeTimers();
+    const n = { n: 0 };
+    const start = Date.now();
+    const p = code(chat(msgs, { fetchImpl: hang(n), env, deadline: start + 30_000 }));
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(n.n).toBe(1);
+    await vi.advanceTimersByTimeAsync(2);
+    expect(await p).toBe("TIMEOUT");
+    expect(n.n).toBe(1);
+    expect(Date.now() - start).toBeLessThanOrEqual(30_001);
+  });
+
+  it("tanpa tenggat: perilaku lama (timeout 60 detik + satu ulang)", async () => {
+    vi.useFakeTimers();
+    const n = { n: 0 };
+    const p = code(chat(msgs, { fetchImpl: hang(n), env }));
+    await vi.advanceTimersByTimeAsync(60_001);
+    expect(n.n).toBe(2);
+    await vi.advanceTimersByTimeAsync(60_001);
+    expect(await p).toBe("TIMEOUT");
   });
 });
 

@@ -74,8 +74,18 @@ describe("analisis awal AI", () => {
     const u = await createUser(pool);
     const v = await kit.frozen(u);
     const before = await usage(u);
-    const failing = setup(u, {}, async () => { throw new GatewayError("TIMEOUT"); });
+    const failing = setup(u, {}, async () => { throw new GatewayError("UPSTREAM_5XX"); });
     expect((await failing.call(v.versionId)).status).toBe(502);
+    // Task 24 (A04): timeout/tenggat habis → 504 AI_TIMEOUT; perbaikan JSON tidak dimulai bila sisa tenggat tidak cukup.
+    let clock = 0;
+    const slow = setup(u, { clock: () => clock }, async () => {
+      clock += 60_000;
+      return { text: "bukan json", requestId: "r" };
+    });
+    const timedOut = await slow.call(v.versionId);
+    expect([timedOut.status, (await timedOut.json()).code]).toEqual([504, "AI_TIMEOUT"]);
+    expect(slow.chat).toHaveBeenCalledTimes(1);
+    expect(slow.chat.mock.calls[0][1]).toEqual({ deadline: 75_000 });
     const bad = setup(u, {}, async () => ({ text: "bukan json", requestId: "r" }));
     expect((await bad.call(v.versionId)).status).toBe(502);
     const after = await usage(u);

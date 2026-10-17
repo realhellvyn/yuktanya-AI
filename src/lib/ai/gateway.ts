@@ -15,8 +15,14 @@ export class GatewayError extends Error {
 const MAX_TEXT_CHARS = 200_000;
 const MAX_BODY_CHARS = 1_000_000;
 const DEFAULT_TIMEOUT_MS = 60_000;
+// Task 24 (A04): satu percobaan (pertama, ulang, atau perbaikan JSON) hanya dimulai bila sisa tenggat giliran minimal
+// 20 detik. Data produksi: p95 28 detik; percobaan yang lebih pendek hampir pasti terpotong dan hanya memperlama kegagalan.
+export const MIN_ATTEMPT_MS = 20_000;
 
-type Opts = { fetchImpl?: typeof fetch; timeoutMs?: number; env?: GatewayEnv };
+// deadline = batas waktu total (epoch ms) untuk seluruh giliran, termasuk ulang dan perbaikan. Batas waktu tiap percobaan
+// dipotong ke sisa tenggat. now hanya untuk uji.
+export type ChatOpts = { fetchImpl?: typeof fetch; timeoutMs?: number; env?: GatewayEnv; deadline?: number; now?: () => number };
+type Opts = ChatOpts;
 
 function mock(messages: ChatMessage[]) {
   const id = createHash("sha256").update(JSON.stringify(messages)).digest("hex").slice(0, 8);
@@ -94,12 +100,24 @@ export async function chat(messages: ChatMessage[], opts: Opts = {}): Promise<{ 
 
   const f = opts.fetchImpl ?? fetch;
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const now = opts.now ?? Date.now;
+  // null = sisa tenggat tidak cukup untuk satu percobaan bermakna (percobaan tidak dimulai).
+  const budget = (): number | null => {
+    if (opts.deadline === undefined) return timeoutMs;
+    const left = opts.deadline - now();
+    return left < MIN_ATTEMPT_MS ? null : Math.min(timeoutMs, left);
+  };
+  const first = budget();
+  if (first === null) throw new GatewayError("TIMEOUT");
   try {
-    return await attempt(messages, base, key, f, timeoutMs);
+    return await attempt(messages, base, key, f, first);
   } catch (err) {
     // Satu percobaan ulang hanya untuk timeout/5xx; tidak untuk 429 agar tidak memperburuk rate limit.
+    // Ulang tidak dimulai bila sisa tenggat giliran tidak cukup; galat asli yang dilaporkan.
     if (err instanceof GatewayError && (err.code === "TIMEOUT" || err.code === "UPSTREAM_5XX")) {
-      return attempt(messages, base, key, f, timeoutMs);
+      const again = budget();
+      if (again === null) throw err;
+      return attempt(messages, base, key, f, again);
     }
     throw err;
   }

@@ -20,6 +20,8 @@ import { fixedText } from "@/lib/query-text";
 export const metadata = { title: "Isi dokumen | Yuktanya" };
 
 // Halaman memakai sesi dan DB: tidak boleh diprarender saat build.
+// Task 24 (A04): fungsi tidak boleh dipotong sebelum tenggat giliran AI 75 detik (+ baca berkas/DB); harus literal untuk Next.
+export const maxDuration = 120;
 export const dynamic = "force-dynamic";
 
 const GREETING: Record<string, string> = {

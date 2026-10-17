@@ -11,6 +11,7 @@ export type ChooserState = { lines: ChooserTurn[]; choice: ChooserChoice | null;
 const NOTICE: Partial<Record<ChooserErrorCode, string>> = {
   AI_MESSAGE_QUOTA_REACHED: "Kuota pesan AI hari ini sudah habis. Pesan terakhir Anda belum terkirim. Anda tetap dapat memilih dokumen sendiri di halaman Buat Dokumen. Kuota diperbarui pukul 00.00 WIB.",
   AI_UNAVAILABLE: "Layanan AI sedang sibuk. Kuota AI Anda tidak terpakai, dan tulisan Anda masih ada di kotak pesan. Tekan Kirim lagi, atau pilih dokumen sendiri.",
+  AI_TIMEOUT: "AI sedang lambat. Pesan Anda belum diproses dan kuota AI Anda tidak terpakai. Tulisan Anda masih ada di kotak pesan. Tekan Kirim lagi, atau pilih dokumen sendiri.",
   AI_BUSY: "Pesan sebelumnya masih diproses. Tunggu sebentar, lalu kirim lagi.",
   DUPLICATE_REQUEST: "Pesan ini sudah diproses. Bila balasannya belum tampil, kirim lagi.",
   TOO_MANY_ATTEMPTS: "Terlalu banyak percobaan dalam waktu singkat. Tunggu satu menit, lalu kirim lagi.",

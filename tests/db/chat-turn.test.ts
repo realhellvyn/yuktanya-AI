@@ -108,10 +108,32 @@ describe("handleChatTurn", () => {
     expect((await store.snapshot(u, NOW)).messagesUsed).toBe(1);
   });
 
+  it("Task 24 (A04): tenggat giliran habis sebelum perbaikan JSON → 504 AI_TIMEOUT, pesan tersimpan belum terjawab, kuota dilepas", async () => {
+    const u = await createUser(pool);
+    const id = await newDoc(u);
+    let clock = 0;
+    const t = setup(u, async () => {
+      clock += 60_000; // panggilan pertama memakan 60 detik dan keluarannya rusak; sisa 15 detik tidak cukup untuk perbaikan
+      return { text: "bukan json", requestId: "r" };
+    });
+    t.deps.clock = () => clock;
+    const res = await t.call(id, { message: "Saya Sinta Dewi ingin NDA dengan Budi Santoso." });
+    expect(res.status).toBe(504);
+    expect(await res.json()).toMatchObject({ code: "AI_TIMEOUT", preserved: true });
+    expect(t.chat).toHaveBeenCalledTimes(1);
+    expect(t.chat.mock.calls[0][1]).toEqual({ deadline: 75_000 });
+    expect((await listMessages(pool, u, id)).map((m) => [m.role, m.answered])).toEqual([["user", false]]);
+    expect((await store.snapshot(u, NOW)).messagesUsed).toBe(0);
+    // Gateway yang timeout (mis. satu percobaan 60 detik tanpa ulang) juga 504 AI_TIMEOUT.
+    const t2 = setup(u, async () => { throw new GatewayError("TIMEOUT"); });
+    expect((await t2.call(id, { retry: true })).status).toBe(504);
+    expect((await store.snapshot(u, NOW)).messagesUsed).toBe(0);
+  });
+
   it("gateway gagal: 502, pesan tersimpan belum terjawab, kuota tidak terpakai; coba lagi memakai pesan itu", async () => {
     const u = await createUser(pool);
     const id = await newDoc(u);
-    const t = setup(u, async () => { throw new GatewayError("TIMEOUT"); });
+    const t = setup(u, async () => { throw new GatewayError("UPSTREAM_5XX"); });
     const res = await t.call(id, { message: "Saya Sinta Dewi ingin NDA dengan Budi Santoso." });
     expect(res.status).toBe(502);
     expect(await res.json()).toMatchObject({ code: "AI_UNAVAILABLE", preserved: true });

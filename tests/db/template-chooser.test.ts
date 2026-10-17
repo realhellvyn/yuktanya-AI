@@ -120,6 +120,19 @@ describe("chooseTemplateTurn", () => {
     expect(await used(u)).toBe(0);
   });
 
+  it("Task 24 (A04): tenggat giliran habis sebelum perbaikan JSON → AI_TIMEOUT, kuota dilepas, AI tidak dipanggil lagi", async () => {
+    const u = await createUser(pool);
+    let clock = 0;
+    const t = setup(u, async () => {
+      clock += 60_000;
+      return { text: "bukan json", requestId: "r" };
+    }, { clock: () => clock });
+    expect(await t.call("Saya butuh dokumen.")).toMatchObject({ ok: false, code: "AI_TIMEOUT" });
+    expect(t.chat).toHaveBeenCalledTimes(1);
+    expect(t.chat.mock.calls[0][1]).toEqual({ deadline: 75_000 });
+    expect(await used(u)).toBe(0);
+  });
+
   it("kunci idempoten sama tidak memanggil AI dua kali dan tidak memotong kuota dua kali", async () => {
     const u = await createUser(pool);
     const t = setup(u, answer({ reply: "NDA cocok.", choice: "NDA" }));

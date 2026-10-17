@@ -12,9 +12,9 @@ import type { AttemptLimiter } from "./attempts";
 import { GatewayError, type ChatMessage, type chat as gatewayChat } from "./gateway";
 import { buildSystemPrompt } from "./chat-prompt";
 import { groundSuggestions } from "./grounding";
-import { parseInterviewJson } from "./interview";
 import { FIELD_CUES, normalizeSpecialCaseTerm, reconcileReply } from "./reply-guard";
 import type { UsageStore } from "./quota";
+import { chatJsonWithinDeadline, turnDeadline } from "./turn";
 
 export type ChatTurnDeps = {
   getUserId: () => Promise<string | null>;
@@ -24,6 +24,8 @@ export type ChatTurnDeps = {
   chat: typeof gatewayChat;
   inflight: Set<string>;
   now?: () => Date;
+  // Jam dinding untuk tenggat giliran (Task 24); hanya diganti dalam uji.
+  clock?: () => number;
   attempts?: AttemptLimiter;
 };
 
@@ -71,6 +73,8 @@ function sameAsFinal(t: Template, f: FieldSpec, proposed: unknown, final: unknow
 }
 
 export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: { id: string }): Promise<Response> {
+  const clock = deps.clock ?? Date.now;
+  const deadline = turnDeadline(clock);
   let userId: string | null;
   try {
     userId = await deps.getUserId();
@@ -134,10 +138,7 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
       });
     await aiEvent("ai_request_started");
     try {
-      const first = await deps.chat(messages);
-      const result = await parseInterviewJson(reply, first.text, async (rawText, error) =>
-        (await deps.chat([...messages, { role: "assistant", content: rawText }, { role: "user", content: `Keluaran tidak valid (${error}). Balas ulang HANYA dengan objek JSON yang benar.` }])).text,
-      );
+      const result = await chatJsonWithinDeadline(deps.chat, reply, messages, deadline, clock);
       if (!result.ok) {
         await aiEvent("ai_request_failed", "MALFORMED_OUTPUT");
         await deps.store.release(reservation.groupId);
@@ -220,6 +221,8 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
       }
       if (e instanceof GatewayError) {
         await aiEvent("ai_request_failed", e.code);
+        // Tenggat giliran habis / gateway timeout: pesan "AI sedang lambat"; pesan pengguna tetap tersimpan, kuota dilepas.
+        if (e.code === "TIMEOUT") return json({ code: "AI_TIMEOUT", preserved: true }, 504);
         return json({ code: "AI_UNAVAILABLE", preserved: true }, 502);
       }
       await aiEvent("ai_request_failed", "INTERNAL");

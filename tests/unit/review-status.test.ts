@@ -9,4 +9,10 @@ describe("status analisis AI di halaman dokumen", () => {
     expect(AI_REVIEW_STATUS_TEXT.khusus).toContain("Kuota Anda tidak terpakai.");
     for (const t of Object.values(AI_REVIEW_STATUS_TEXT)) expect(t).not.toMatch(/Kasus Khusus/i);
   });
+
+  it("504 → 'slow' (Task 24): AI lambat, kuota tidak terpakai; status lain tetap", () => {
+    expect(aiReviewStatus(504)).toBe("slow");
+    expect(AI_REVIEW_STATUS_TEXT.slow).toBe("AI sedang lambat. Analisis belum diproses dan kuota Anda tidak terpakai. Silakan coba lagi.");
+    expect([aiReviewStatus(200), aiReviewStatus(429), aiReviewStatus(502), aiReviewStatus(500)]).toEqual(["ok", "quota", "down", "down"]);
+  });
 });

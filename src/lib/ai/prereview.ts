@@ -11,8 +11,8 @@ import { verifyUrl } from "@/lib/verification/qr";
 import type { VerificationService } from "@/lib/verification/service";
 import type { AttemptLimiter } from "./attempts";
 import { GatewayError, type ChatMessage, type chat as gatewayChat } from "./gateway";
-import { parseInterviewJson } from "./interview";
 import type { UsageStore } from "./quota";
+import { chatJsonWithinDeadline, turnDeadline } from "./turn";
 
 export const AI_ANALYZER_POLICY = "ai-prereview-v1";
 
@@ -25,6 +25,8 @@ export type AiReviewDeps = {
   verification: VerificationService;
   inflight: Set<string>;
   now?: () => Date;
+  // Jam dinding untuk tenggat giliran (Task 24); hanya diganti dalam uji.
+  clock?: () => number;
   enabled?: () => boolean;
   attempts?: AttemptLimiter;
   baseUrl?: string;
@@ -74,6 +76,8 @@ const logicalId = (userId: string, versionId: string, key: string): string => {
 };
 
 export async function handleAiReview(deps: AiReviewDeps, req: Request, params: { versionId: string }): Promise<Response> {
+  const clock = deps.clock ?? Date.now;
+  const deadline = turnDeadline(clock);
   if (!(deps.enabled ?? (() => flags.aiPreReview))()) return json({ code: "FEATURE_DISABLED" }, 404);
   let userId: string | null;
   try {
@@ -127,10 +131,7 @@ export async function handleAiReview(deps: AiReviewDeps, req: Request, params: {
       });
     await aiEvent("ai_request_started");
     try {
-      const first = await deps.chat(base);
-      const parsed = await parseInterviewJson(reportSchema, first.text, async (rawText, error) =>
-        (await deps.chat([...base, { role: "assistant", content: rawText }, { role: "user", content: `Keluaran tidak valid (${error}). Balas ulang HANYA dengan objek JSON yang benar.` }])).text,
-      );
+      const parsed = await chatJsonWithinDeadline(deps.chat, reportSchema, base, deadline, clock);
       if (!parsed.ok) {
         await aiEvent("ai_request_failed", "MALFORMED_OUTPUT");
         await deps.store.release(reservation.groupId);
@@ -153,6 +154,7 @@ export async function handleAiReview(deps: AiReviewDeps, req: Request, params: {
       await deps.store.release(reservation.groupId).catch(() => undefined);
       if (e instanceof GatewayError) {
         await aiEvent("ai_request_failed", e.code);
+        if (e.code === "TIMEOUT") return json({ code: "AI_TIMEOUT", preserved: true }, 504);
         return json({ code: "AI_UNAVAILABLE", preserved: true }, 502);
       }
       return json({ code: "INTERNAL" }, 500);

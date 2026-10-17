@@ -10,6 +10,8 @@ import { flags } from "@/lib/flags";
 import { UPLOAD_LIMITS } from "@/lib/uploads/limits";
 import { uploadAction } from "./actions";
 
+// Task 24 (A04): fungsi tidak boleh dipotong sebelum tenggat giliran AI 75 detik (+ baca berkas/DB); harus literal untuk Next.
+export const maxDuration = 120;
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Analisis dokumen | Yuktanya" };
 

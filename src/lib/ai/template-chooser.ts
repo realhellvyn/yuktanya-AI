@@ -6,9 +6,9 @@ import { TEMPLATES } from "@/lib/documents/templates/registry";
 import type { Category } from "@/lib/documents/types";
 import type { AttemptLimiter } from "./attempts";
 import { GatewayError, type ChatMessage, type chat as gatewayChat } from "./gateway";
-import { parseInterviewJson } from "./interview";
 import { normalizeSpecialCaseTerm } from "./reply-guard";
 import type { QuotaCode, UsageStore } from "./quota";
+import { chatJsonWithinDeadline, turnDeadline } from "./turn";
 
 // D-01 "Saya belum tahu": percakapan singkat agar AI membantu memilih SATU template katalog. Aturan sama dengan percakapan
 // dokumen: wajib masuk, satu pesan AI per giliran (reservasi atomik + kunci idempoten), dilepas bila gagal, keluaran JSON
@@ -22,11 +22,13 @@ export type ChooserDeps = {
   chat: typeof gatewayChat;
   inflight: Set<string>;
   now?: () => Date;
+  // Jam dinding untuk tenggat giliran (Task 24); hanya diganti dalam uji.
+  clock?: () => number;
   attempts?: AttemptLimiter;
 };
 export type ChooserTurn = { role: "user" | "assistant"; content: string };
 export type ChooserChoice = Category | "SPECIAL_CASE";
-export type ChooserErrorCode = "AUTH_REQUIRED" | "FORBIDDEN" | "INVALID_REQUEST" | "AI_BUSY" | "DUPLICATE_REQUEST" | "TOO_MANY_ATTEMPTS" | "AI_UNAVAILABLE" | "INTERNAL" | QuotaCode;
+export type ChooserErrorCode = "AUTH_REQUIRED" | "FORBIDDEN" | "INVALID_REQUEST" | "AI_BUSY" | "DUPLICATE_REQUEST" | "TOO_MANY_ATTEMPTS" | "AI_UNAVAILABLE" | "AI_TIMEOUT" | "INTERNAL" | QuotaCode;
 export type ChooserResult =
   | { ok: true; reply: string; choice: ChooserChoice | null; notCharged?: boolean }
   | { ok: false; code: ChooserErrorCode; resetAt?: string };
@@ -65,6 +67,8 @@ function systemPrompt(): string {
 }
 
 export async function chooseTemplateTurn(deps: ChooserDeps, raw: { message: unknown; key: unknown; history: unknown }): Promise<ChooserResult> {
+  const clock = deps.clock ?? Date.now;
+  const deadline = turnDeadline(clock);
   let userId: string | null;
   try {
     userId = await deps.getUserId();
@@ -96,10 +100,7 @@ export async function chooseTemplateTurn(deps: ChooserDeps, raw: { message: unkn
       });
     await aiEvent("ai_request_started");
     try {
-      const first = await deps.chat(messages);
-      const result = await parseInterviewJson(reply, first.text, async (rawText, error) =>
-        (await deps.chat([...messages, { role: "assistant", content: rawText }, { role: "user", content: `Keluaran tidak valid (${error}). Balas ulang HANYA dengan objek JSON yang benar.` }])).text,
-      );
+      const result = await chatJsonWithinDeadline(deps.chat, reply, messages, deadline, clock);
       if (!result.ok) {
         await aiEvent("ai_request_failed", "MALFORMED_OUTPUT");
         await deps.store.release(reservation.groupId);
@@ -122,7 +123,7 @@ export async function chooseTemplateTurn(deps: ChooserDeps, raw: { message: unkn
       await deps.store.release(reservation.groupId).catch(() => undefined);
       if (e instanceof GatewayError) {
         await aiEvent("ai_request_failed", e.code);
-        return { ok: false, code: "AI_UNAVAILABLE" };
+        return { ok: false, code: e.code === "TIMEOUT" ? "AI_TIMEOUT" : "AI_UNAVAILABLE" };
       }
       await aiEvent("ai_request_failed", "INTERNAL");
       return { ok: false, code: "INTERNAL" };

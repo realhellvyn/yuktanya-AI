@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { SlowProgress } from "./slow-progress";
 import { claimDrafts, clearDraft, loadDraft, reconcileDraft, safeLocalStorage, saveDraft } from "@/lib/documents/chat-draft";
 
 export type ChatLine = { id: string; role: "user" | "assistant"; content: string };
@@ -112,6 +113,7 @@ export function ChatPanel({ documentId, lines, greeting, action, sendKey, retryK
           <input type="hidden" name="key" value={retryKey} />
           <p className="flex-1">Pesan terakhir Anda belum dibalas AI.</p>
           <RetryButton />
+          <div className="basis-full"><SlowProgress /></div>
         </form>
       )}
       <form action={action} onReset={onReset} className="space-y-3">
@@ -136,6 +138,7 @@ export function ChatPanel({ documentId, lines, greeting, action, sendKey, retryK
         </label>
         {restored && <p role="status" className="text-muted">Tulisan Anda yang belum terkirim sudah dikembalikan ke kotak pesan.</p>}
         <SendButton offline={offline} />
+        <SlowProgress />
       </form>
     </section>
   );

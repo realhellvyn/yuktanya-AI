@@ -26,6 +26,7 @@ export const CHAT_NOTICES: Record<string, string> = {
   quota: "Kuota pesan AI hari ini sudah habis. Pesan terakhir Anda belum terkirim. Riwayat percakapan tetap tersimpan, dan kuota diperbarui pukul 00.00 WIB.",
   busy: "Permintaan AI sebelumnya masih diproses. Pesan terakhir Anda belum terkirim. Tunggu sebentar, lalu kirim lagi.",
   down: "Layanan AI sedang sibuk. Pesan Anda sudah tersimpan dan kuota AI Anda tidak terpakai. Tekan Coba lagi.",
+  slow: "AI sedang lambat, jadi pesan Anda belum diproses. Pesan Anda sudah tersimpan dan kuota AI Anda tidak terpakai. Tekan Coba lagi.",
   stale: "Draf berubah di tab lain, sehingga pesan Anda belum diproses. Tekan Coba lagi.",
   error: "Pesan belum dapat diproses. Periksa isinya, lalu kirim ulang.",
   limit: "Terlalu banyak percobaan dalam waktu singkat. Pesan terakhir Anda belum terkirim. Tunggu satu menit, lalu kirim lagi.",
