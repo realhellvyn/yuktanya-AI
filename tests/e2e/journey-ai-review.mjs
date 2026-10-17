@@ -85,7 +85,7 @@ export async function journey({ step, base, db, llm, newActor }) {
     const p = actors.a.page;
     await Promise.all([p.waitForURL("**/documents/upload"), p.click("a:has-text('Analisis dokumen yang sudah Anda miliki')")]);
     const t = await p.innerText("main");
-    for (const s of ["Analisis dokumen yang sudah Anda miliki", "Dokumen baru: 1 dari 1", "Analisis AI: 2 dari 2", "FreeLLMAPI", "5 MB"]) if (!t.includes(s)) throw new Error(`halaman unggah tanpa "${s}"`);
+    for (const s of ["Analisis dokumen yang sudah Anda miliki", "Dokumen baru: 1 dari 1", "Analisis AI: 2 dari 2", "FreeLLMAPI", "4 MB"]) if (!t.includes(s)) throw new Error(`halaman unggah tanpa "${s}"`);
   });
 
   await step(tag("A: unggah DOCX sintetis + persetujuan → versi beku, hasil berkelompok, label wajib, AI Verified terpisah"), async () => {

@@ -24,6 +24,7 @@ import { aiReviewAction } from "../ai-review-action";
 import { casesService } from "@/lib/cases/runtime";
 import { AI_REVIEW_CONSENT, SPECIAL_CASE_NOTE } from "@/lib/copy";
 import { AiReviewResult } from "@/components/ai-review/ai-review-result";
+import { AiReviewForm } from "@/components/ai-review/ai-review-form";
 import { UploadHashes } from "@/components/ai-review/upload-hashes";
 import { latestAiReport } from "@/lib/ai/prereview";
 import { AI_REVIEW_STATUS_TEXT, type AiReviewStatus } from "@/lib/ai/review-status";
@@ -177,15 +178,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
               {aiReport && <AiReviewResult report={aiReport.report} completedAt={aiReport.completedAt} verified={aiVerified} />}
               {flags.aiPreReview && !highRisk && (
                 <Card>
-                  <form action={aiReviewAction} className="space-y-3">
-                    <input type="hidden" name="versionId" value={selected.id} />
-                    <input type="hidden" name="documentId" value={id} />
-                    <label className="flex min-h-12 items-start gap-3">
-                      <input type="checkbox" name="consent" value="yes" required className="mt-1 h-6 w-6 shrink-0" />
-                      <span>{AI_REVIEW_CONSENT}</span>
-                    </label>
-                    <Button type="submit" variant="secondary">{aiReport ? "Ulangi analisis awal AI" : "Mulai analisis awal AI"}</Button>
-                  </form>
+                  <AiReviewForm action={aiReviewAction} versionId={selected.id} documentId={id} consentText={AI_REVIEW_CONSENT} again={Boolean(aiReport)} />
                 </Card>
               )}
             </div>

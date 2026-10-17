@@ -64,8 +64,10 @@ describe("validasi unggahan: isi + ekstensi + ukuran", () => {
     expect(detectUpload("kosong.txt", new Uint8Array())).toEqual({ ok: false, code: "EMPTY" });
   });
 
-  it("batas ukuran: tepat 5 MB diterima, 1 byte lebih ditolak", () => {
-    expect(MAX_UPLOAD_BYTES).toBe(5 * 1024 * 1024);
+  // Fix round 1 (I1): batas badan permintaan fungsi Vercel ±4,5 MB, jadi batas unggah 4 MB (bukan 5 MB).
+  it("batas ukuran: tepat 4 MB diterima, 1 byte lebih ditolak; pesan menyebut 4 MB", () => {
+    expect(MAX_UPLOAD_BYTES).toBe(4 * 1024 * 1024);
+    expect(UPLOAD_MESSAGES.TOO_LARGE).toBe("Berkas terlalu besar. Ukuran maksimal 4 MB.");
     const atLimit = new Uint8Array(MAX_UPLOAD_BYTES).fill(0x61);
     expect(detectUpload("besar.txt", atLimit)).toEqual({ ok: true, kind: "TXT" });
     const over = new Uint8Array(MAX_UPLOAD_BYTES + 1).fill(0x61);

@@ -44,7 +44,7 @@ export default async function UploadPage() {
         <h2 className="text-xl font-bold text-navy">Berkas yang dapat diperiksa</h2>
         <ul className="list-disc space-y-1 pl-6">
           <li>PDF yang teksnya dapat dipilih (bukan hasil pindai atau foto), Word (DOCX), atau teks (TXT).</li>
-          <li>Ukuran maksimal 5 MB dan paling banyak {limits.maxPages} halaman{usage.plan === "FREE" ? " (Member: 20 halaman)" : ""}.</li>
+          <li>Ukuran maksimal 4 MB dan paling banyak {limits.maxPages} halaman{usage.plan === "FREE" ? " (Member: 20 halaman)" : ""}.</li>
           <li>Setiap unggahan disimpan sebagai satu dokumen baru yang tidak dapat diubah. Berkas asli disimpan secara privat di akun Anda.</li>
         </ul>
         <h2 className="pt-2 text-xl font-bold text-navy">Sisa kuota hari ini</h2>

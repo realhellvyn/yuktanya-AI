@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createPgRateLimiter, RATE_RULES, rateLimitKey } from "@/lib/security/rate-limit";
+import { createPgRateLimiter, RATE_LIMIT_TIMEOUT_MS, RATE_RULES, rateLimitKey } from "@/lib/security/rate-limit";
 
 // Task 24 (A07): pembatas laju umum berbasis DB. Uji DB (batas, jendela, kunci, serentak): tests/db/rate-limit.test.ts.
 describe("createPgRateLimiter", () => {
@@ -23,6 +23,24 @@ describe("createPgRateLimiter", () => {
     expect(rateLimitKey("verify_page", "x")).not.toBe(rateLimitKey("share_page", "x"));
     const denied = vi.fn(async () => ({ rows: [{ ok: false }] }));
     expect(await createPgRateLimiter({ query: denied }, "share_ack").allow("k")).toBe(false);
+  });
+
+  it("Fix round 1 (M5): kueri pembatas yang menggantung dipotong 2 detik lalu memakai kebijakan cakupan", async () => {
+    vi.useFakeTimers();
+    try {
+      const hang = { query: vi.fn(() => new Promise<never>(() => {})) };
+      const log = vi.fn();
+      const open = createPgRateLimiter(hang, "midtrans_webhook", RATE_RULES.midtrans_webhook, log).allow("k");
+      const closed = createPgRateLimiter(hang, "account_export", RATE_RULES.account_export, log).allow("k");
+      await vi.advanceTimersByTimeAsync(1_999);
+      expect(log).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(2);
+      expect([await open, await closed]).toEqual([true, false]);
+      expect(log).toHaveBeenCalledWith({ event: "rate_limit_unavailable", scope: "midtrans_webhook", policy: "open", error: "TIMEOUT" });
+      expect(RATE_LIMIT_TIMEOUT_MS).toBe(2_000);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("DB gagal: fail-open untuk halaman publik/webhook/perbarui status, fail-closed untuk konfirmasi baca/ekspor; log tanpa kunci", async () => {

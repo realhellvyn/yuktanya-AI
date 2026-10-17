@@ -36,16 +36,32 @@ export const rateLimitKey = (scope: RateScope, key: string): string =>
 
 const defaultLog = (entry: Record<string, string>) => console.warn(JSON.stringify(entry));
 
-export function createPgRateLimiter(pool: Queryable, scope: RateScope, rule: RateRule = RATE_RULES[scope], log = defaultLog): RateLimiter {
+// Fix round 1 (M5): kueri pembatas yang tidak selesai dalam 2 detik (DB lambat, pool penuh) diperlakukan sama dengan DB gagal,
+// sehingga webhook dan halaman publik tidak tertahan pembatas. Kueri itu tetap berjalan di latar dan hasilnya diabaikan.
+export const RATE_LIMIT_TIMEOUT_MS = 2_000;
+class LimiterTimeout extends Error {
+  constructor() {
+    super("TIMEOUT");
+    this.name = "TIMEOUT";
+  }
+}
+
+export function createPgRateLimiter(pool: Queryable, scope: RateScope, rule: RateRule = RATE_RULES[scope], log = defaultLog, timeoutMs = RATE_LIMIT_TIMEOUT_MS): RateLimiter {
   return {
     async allow(key) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
       try {
-        const { rows } = await pool.query("select rate_limit_allowed($1, $2, $3, $4) as ok", [scope, rateLimitKey(scope, key), rule.limit, rule.windowSeconds]);
+        const query = pool.query("select rate_limit_allowed($1, $2, $3, $4) as ok", [scope, rateLimitKey(scope, key), rule.limit, rule.windowSeconds]);
+        query.catch(() => undefined); // kueri yang kalah balapan tidak boleh menjadi penolakan tak tertangani
+        const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new LimiterTimeout()), timeoutMs); });
+        const { rows } = await Promise.race([query, timeout]);
         return rows[0]?.ok === true;
       } catch (e) {
         // Hanya cakupan, kebijakan, dan nama galat; kunci/IP tidak pernah dicatat.
         log({ event: "rate_limit_unavailable", scope, policy: rule.onDbError, error: e instanceof Error ? e.name : "unknown" });
         return rule.onDbError === "open";
+      } finally {
+        clearTimeout(timer);
       }
     },
   };

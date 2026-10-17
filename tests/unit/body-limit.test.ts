@@ -9,7 +9,7 @@ describe("batas badan server action (Task 24, A24 M1)", () => {
     expect(oversizedActionBody("POST", "/workspace/abc", String(MB + 1))).toBe(true);
     expect(oversizedActionBody("POST", "/settings", String(5 * MB))).toBe(true);
     expect(oversizedActionBody("POST", "/workspace/abc", String(MB))).toBe(false);
-    expect(oversizedActionBody("POST", "/documents/upload", String(5 * MB + 20_000))).toBe(false);
+    expect(oversizedActionBody("POST", "/documents/upload", String(4 * MB + 20_000))).toBe(false);
     expect(oversizedActionBody("POST", "/documents/upload/", String(5 * MB))).toBe(false);
   });
   it("GET, rute API, dan permintaan tanpa Content-Length yang sah tidak diperiksa di sini", () => {
@@ -20,6 +20,6 @@ describe("batas badan server action (Task 24, A24 M1)", () => {
   });
   it("proxy memakai pemeriksaan ini sebelum hal lain; batas global Next tetap 6 MB untuk unggahan", () => {
     expect(readFileSync("src/proxy.ts", "utf8")).toMatch(/oversizedActionBody\(request\.method, pathname, request\.headers\.get\("content-length"\)\)/);
-    expect(readFileSync("next.config.ts", "utf8")).toContain('bodySizeLimit: "6mb"');
+    expect(readFileSync("next.config.ts", "utf8")).toContain('bodySizeLimit: "5mb"');
   });
 });

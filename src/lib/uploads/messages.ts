@@ -5,7 +5,7 @@ export const UPLOAD_MESSAGES = {
   NO_FILE: "Belum ada berkas yang dipilih. Pilih berkas, lalu coba lagi.",
   NO_CONSENT: "Persetujuan belum dicentang. Tanpa persetujuan, dokumen tidak dikirim ke AI.",
   EMPTY: "Berkas ini kosong. Pilih berkas lain.",
-  TOO_LARGE: "Berkas terlalu besar. Ukuran maksimal 5 MB.",
+  TOO_LARGE: "Berkas terlalu besar. Ukuran maksimal 4 MB.",
   UNSUPPORTED_TYPE: "Jenis berkas belum didukung. Gunakan PDF, Word (DOCX), atau teks (TXT).",
   TYPE_MISMATCH: "Isi berkas tidak sesuai dengan jenisnya. Simpan ulang berkas sebagai PDF, DOCX, atau TXT lalu coba lagi.",
   PARSE_FAILED: "Berkas tidak dapat dibaca, kemungkinan rusak. Simpan ulang berkas, lalu unggah lagi.",
@@ -20,6 +20,7 @@ export const UPLOAD_MESSAGES = {
   DOCUMENT_DAILY_QUOTA_REACHED: "Kuota dokumen baru hari ini sudah habis. Kuota diperbarui pukul 00.00 WIB.",
   AI_REVIEW_QUOTA_REACHED: "Kuota analisis AI atau pesan AI hari ini sudah habis. Berkas belum diunggah, dan kuota dokumen baru Anda tidak terpakai. Kuota diperbarui pukul 00.00 WIB.",
   CONSENT_NOT_RECORDED: "Dokumen sudah tersimpan, tetapi persetujuan Anda belum dapat dicatat. Tidak ada yang dikirim ke AI. Buka dokumen Anda lalu coba analisis lagi nanti.",
+  BUSY: "Sistem sedang memproses berkas lain. Silakan coba lagi sebentar lagi.",
   INTERNAL: "Terjadi gangguan sistem. Berkas belum tersimpan. Silakan coba lagi.",
 } as const;
 export type UploadCode = keyof typeof UPLOAD_MESSAGES;

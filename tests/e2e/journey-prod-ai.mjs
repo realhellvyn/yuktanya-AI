@@ -36,7 +36,12 @@ export async function journey({ page, step, shot, base, db, issues, newActor }) 
   await step(tag("unggah TXT sintetis + persetujuan → analisis awal AI selesai → AI Verified terbit; laporan dengan medali bronze"), async () => {
     await page.goto(base + "/documents/upload");
     await clean("/documents/upload");
+    // Fix round 1 (I1): berkas > 4 MB ditolak di perangkat (sebelum batas ±4,5 MB platform), tombol kirim nonaktif.
+    await page.setInputFiles("input[name=file]", { name: "besar.txt", mimeType: "text/plain", buffer: Buffer.alloc(4 * 1024 * 1024 + 1, 0x61) });
+    await page.waitForSelector("[role=alert]:has-text('Berkas terlalu besar. Ukuran maksimal 4 MB.')", { timeout: 5000 });
+    if (!(await page.locator("button:has-text('Mulai analisis awal')").isDisabled())) throw new Error("tombol kirim tetap aktif untuk berkas > 4 MB");
     await page.setInputFiles("input[name=file]", { name: "sewa-gerobak.txt", mimeType: "text/plain", buffer: Buffer.from(TXT) });
+    if (await page.locator("text=Berkas terlalu besar").count()) throw new Error("pesan terlalu besar tidak hilang setelah memilih berkas kecil");
     await page.check("input[name=consent]");
     await Promise.all([page.waitForURL(/\/documents\/[0-9a-f-]{36}\?/, { timeout: 60000 }), page.click("button:has-text('Mulai analisis awal')")]);
     const text = await clean("halaman dokumen");

@@ -15,7 +15,9 @@ import type { UploadKind } from "./validate";
 
 export type ParseLimits = { maxPages: number; maxChars: number; timeoutMs?: number };
 export type ParseCode =
-  | "PARSE_FAILED" | "ENCRYPTED" | "SCANNED_PDF" | "TOO_MANY_PAGES" | "TOO_LONG" | "EMPTY_TEXT" | "ZIP_LIMIT" | "DOCX_TOO_LARGE" | "TIMEOUT";
+  | "PARSE_FAILED" | "ENCRYPTED" | "SCANNED_PDF" | "TOO_MANY_PAGES" | "TOO_LONG" | "EMPTY_TEXT" | "ZIP_LIMIT" | "DOCX_TOO_LARGE" | "TIMEOUT"
+  // BUSY hanya dari parse-isolated.ts (semua slot worker proses ini terpakai); fungsi murni tidak pernah mengembalikannya.
+  | "BUSY";
 export type ParseResult = { ok: true; paragraphs: string[]; pages: number | null; chars: number } | { ok: false; code: ParseCode };
 
 export class TimeoutError extends Error {
@@ -213,7 +215,7 @@ export async function extractUploadText(kind: UploadKind, bytes: Uint8Array, lim
         : kind === "DOCX" ? parseDocx(bytes, limits.maxChars)
           : parsePdf(bytes, limits, Date.now() + timeout);
     // withTimeout hanya menghentikan MENUNGGU pekerjaan asinkron; kerja sinkron tidak dapat dipotong. Karena itu semua
-    // pembacaan dibuat linear dan dibatasi ukurannya (5 MB berkas, 2 MB XML DOCX, batas halaman/karakter).
+    // pembacaan dibuat linear dan dibatasi ukurannya (4 MB berkas, 2 MB XML DOCX, batas halaman/karakter).
     const { paragraphs, pages } = await withTimeout(run, timeout);
     const chars = paragraphs.reduce((n, p) => n + p.length, 0);
     if (chars === 0) return { ok: false, code: "EMPTY_TEXT" };

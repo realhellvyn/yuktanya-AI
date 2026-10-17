@@ -2,7 +2,9 @@ import type { PlanKey } from "@/lib/pricing/catalog";
 
 // Batas unggahan untuk analisis awal AI (docs/AI_FAIR_USAGE.md): ukuran berkas, halaman per paket, dan panjang teks.
 // Batas karakter adalah default rekayasa (±3.000 karakter per halaman) sampai ada benchmark nyata.
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+// Fix round 1 (I1): 4 MB, bukan 5 MB. Fungsi Vercel menolak badan permintaan > ±4,5 MB dengan 413 milik platform (halaman
+// galat umum, berkas hilang) sebelum aplikasi sempat memberi pesan; 4 MB + overhead multipart tetap di bawah batas itu.
+export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 export const UPLOAD_LIMITS: Record<PlanKey, { maxPages: number; maxChars: number }> = {
   FREE: { maxPages: 10, maxChars: 30_000 },
   MEMBER: { maxPages: 20, maxChars: 60_000 },

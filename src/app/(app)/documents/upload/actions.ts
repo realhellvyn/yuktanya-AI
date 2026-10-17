@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { handleAiReview } from "@/lib/ai/prereview";
-import { aiReviewStatus } from "@/lib/ai/review-status";
+import { aiReviewStatusOf } from "@/lib/ai/review-status";
 import { requireUserId } from "@/lib/documents/session";
 import { flags } from "@/lib/flags";
 import { handleUpload } from "@/lib/uploads/handler";
@@ -55,5 +55,5 @@ export async function uploadAction(_prev: UploadState, formData: FormData): Prom
     { versionId: result.versionId },
   );
   if (res.status !== 200) logUploadIssue("ai_review", String((await res.clone().json().catch(() => ({})))?.code ?? res.status));
-  redirect(`${base}&ai=${aiReviewStatus(res.status)}#analisis-ai`);
+  redirect(`${base}&ai=${await aiReviewStatusOf(res)}#analisis-ai`);
 }

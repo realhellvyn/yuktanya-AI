@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { handleAiReview } from "@/lib/ai/prereview";
-import { aiReviewStatus } from "@/lib/ai/review-status";
+import { aiReviewStatusOf } from "@/lib/ai/review-status";
 import { requireUserId } from "@/lib/documents/session";
 import { aiReviewDeps } from "@/lib/vault/runtime";
 
@@ -20,5 +20,5 @@ export async function aiReviewAction(formData: FormData): Promise<void> {
     }),
     { versionId },
   );
-  redirect(`/documents/${documentId}?version=${versionId}&ai=${aiReviewStatus(res.status)}#analisis-ai`);
+  redirect(`/documents/${documentId}?version=${versionId}&ai=${await aiReviewStatusOf(res)}#analisis-ai`);
 }

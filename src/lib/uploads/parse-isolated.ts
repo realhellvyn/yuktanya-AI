@@ -14,7 +14,14 @@ import type { UploadKind } from "./validate";
 //   Lapis kedua perlu karena NODE_OPTIONS=--max-old-space-size (bendera V8 global proses) mengalahkan resourceLimits worker;
 //   terbukti di lingkungan pengembangan (heap worker tumbuh > 2 GB walau batas 16 MB). Lewat batas → PARSE_FAILED.
 // - Env worker hanya NODE_ENV (rahasia server tidak terlihat oleh pembaca berkas).
-export const PARSE_WORKER_LIMITS = { maxOldGenerationSizeMb: 512, maxYoungGenerationSizeMb: 32, stackSizeMb: 4 } as const;
+// - Fix round 1 (M2): batas 256 MB. Pengukuran heap worker (puncak used_heap_size, polling 20 ms): PDF 20 halaman ±57 rb
+//   karakter 18 MB; PDF 20 halaman + lampiran 3,4 MB 19 MB; PDF 10 halaman + lampiran 17 MB; DOCX ±52 rb karakter 7 MB;
+//   TXT 7 MB; berkas yang melewati batas karakter (TOO_LONG) ≤ 22 MB. Jadi 256 MB memberi ruang > 10 kali.
+// - Fix round 1 (M2): paling banyak MAX_PARSE_WORKERS worker serentak per proses; permintaan lain menunggu slot paling lama
+//   PARSE_QUEUE_WAIT_MS lalu mendapat BUSY ("Sistem sedang memproses berkas lain…"), tanpa membuat worker.
+export const MAX_PARSE_WORKERS = 2;
+export const PARSE_QUEUE_WAIT_MS = 5_000;
+export const PARSE_WORKER_LIMITS = { maxOldGenerationSizeMb: 256, maxYoungGenerationSizeMb: 32, stackSizeMb: 4 } as const;
 const HEAP_CAP_BYTES = PARSE_WORKER_LIMITS.maxOldGenerationSizeMb * 1024 * 1024;
 const HEAP_POLL_MS = 100;
 
@@ -25,6 +32,32 @@ export type SpawnParseWorker = (input: WorkerInput, options: WorkerOptions) => W
 // beserta dependensinya (unpdf, jszip) sebagai berkas tersendiri di build produksi.
 const spawnDefault: SpawnParseWorker = (input, options) =>
   new Worker(new URL("./parse-worker.ts", import.meta.url), { ...options, workerData: input });
+
+let active = 0;
+const waiters: (() => void)[] = [];
+function acquireSlot(waitMs: number): Promise<boolean> {
+  if (active < MAX_PARSE_WORKERS) {
+    active++;
+    return Promise.resolve(true);
+  }
+  return new Promise((resolve) => {
+    const take = () => {
+      clearTimeout(timer);
+      active++;
+      resolve(true);
+    };
+    const timer = setTimeout(() => {
+      const i = waiters.indexOf(take);
+      if (i >= 0) waiters.splice(i, 1);
+      resolve(false);
+    }, waitMs);
+    waiters.push(take);
+  });
+}
+function releaseSlot(): void {
+  active--;
+  waiters.shift()?.();
+}
 
 const CODES = new Set<ParseCode>(["PARSE_FAILED", "ENCRYPTED", "SCANNED_PDF", "TOO_MANY_PAGES", "TOO_LONG", "EMPTY_TEXT", "ZIP_LIMIT", "DOCX_TOO_LARGE", "TIMEOUT"]);
 
@@ -42,14 +75,19 @@ export async function extractUploadTextIsolated(
   kind: UploadKind,
   bytes: Uint8Array,
   limits: ParseLimits,
-  opts: { spawn?: SpawnParseWorker; heapCapBytes?: number } = {},
+  opts: { spawn?: SpawnParseWorker; heapCapBytes?: number; queueWaitMs?: number } = {},
 ): Promise<ParseResult> {
+  if (!(await acquireSlot(opts.queueWaitMs ?? PARSE_QUEUE_WAIT_MS))) {
+    logUploadIssue("upload", "BUSY");
+    return { ok: false, code: "BUSY" };
+  }
   const timeout = limits.timeoutMs ?? PARSE_TIMEOUT_MS;
   const options: WorkerOptions = { resourceLimits: { ...PARSE_WORKER_LIMITS }, stdout: true, stderr: true, env: { NODE_ENV: process.env.NODE_ENV } };
   let worker: Worker;
   try {
     worker = (opts.spawn ?? spawnDefault)({ kind, bytes, limits }, options);
   } catch (e) {
+    releaseSlot();
     logUploadIssue("upload", "PARSE_WORKER_START", e);
     return { ok: false, code: "PARSE_FAILED" };
   }
@@ -64,7 +102,8 @@ export async function extractUploadTextIsolated(
       clearTimeout(timer);
       clearInterval(watch);
       worker.removeAllListeners("message");
-      void worker.terminate().catch(() => undefined);
+      // Slot dilepas setelah worker benar-benar berhenti, agar worker yang sedang dihentikan tetap terhitung.
+      void worker.terminate().catch(() => undefined).finally(releaseSlot);
       resolve(r);
     };
     // Batas keras: pembacaan di dalam worker juga punya tenggat kooperatif dengan nilai sama (TIMEOUT dari worker sendiri);

@@ -6,7 +6,8 @@ import { PDFDocument, StandardFonts } from "pdf-lib";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { UPLOAD_LIMITS } from "@/lib/uploads/limits";
 import { extractUploadText } from "@/lib/uploads/parse";
-import { extractUploadTextIsolated, PARSE_WORKER_LIMITS, type SpawnParseWorker, type WorkerInput } from "@/lib/uploads/parse-isolated";
+import { extractUploadTextIsolated, MAX_PARSE_WORKERS, PARSE_QUEUE_WAIT_MS, PARSE_WORKER_LIMITS, type SpawnParseWorker, type WorkerInput } from "@/lib/uploads/parse-isolated";
+import { UPLOAD_MESSAGES } from "@/lib/uploads/messages";
 
 // Task 24 (A05): pembacaan berkas di worker_threads dengan batas waktu keras. Berkas worker asli (src/lib/uploads/parse-worker.ts)
 // dibundel dengan rolldown (dependensi vitest) agar dapat dijalankan Node di uji; build produksi Next membundelnya sendiri
@@ -127,6 +128,35 @@ describe("pembacaan berkas terisolasi (worker_threads)", () => {
     await new Promise((r) => setTimeout(r, 200));
     expect(JSON.stringify([...out.mock.calls, ...err.mock.calls])).not.toContain(SECRET);
   });
+
+  it("Fix round 1 (M2): paling banyak 2 worker serentak per proses; permintaan lain menunggu ≤ 5 detik lalu BUSY", async () => {
+    expect(MAX_PARSE_WORKERS).toBe(2);
+    expect(PARSE_QUEUE_WAIT_MS).toBe(5_000);
+    // Pengawas heap 256 MB: pengukuran (laporan) PDF 20 halaman + lampiran 3,4 MB memuncak ±19 MB, DOCX/TXT < 7 MB.
+    expect(PARSE_WORKER_LIMITS.maxOldGenerationSizeMb).toBe(256);
+    expect(UPLOAD_MESSAGES.BUSY).toBe("Sistem sedang memproses berkas lain. Silakan coba lagi sebentar lagi.");
+    let started = 0;
+    const slow: SpawnParseWorker = (input, options) => {
+      started++;
+      return fake(`setTimeout(() => require("node:worker_threads").parentPort.postMessage({ ok: false, code: "EMPTY_TEXT" }), 400)`)(input, options);
+    };
+    const opts = { spawn: slow, queueWaitMs: 150 };
+    const all = await Promise.all([1, 2, 3].map(() => extractUploadTextIsolated("TXT", enc("x"), LIMITS, opts)));
+    // Dua pertama jalan; yang ketiga menunggu 150 ms (worker masih sibuk 400 ms) lalu BUSY tanpa membuat worker.
+    expect(all).toEqual([{ ok: false, code: "EMPTY_TEXT" }, { ok: false, code: "EMPTY_TEXT" }, { ok: false, code: "BUSY" }]);
+    expect(started).toBe(2);
+    // Slot dibebaskan setelah selesai: antrean yang cukup sabar mendapat giliran.
+    const patient = { spawn: slow, queueWaitMs: 2_000 };
+    const r = await Promise.all([1, 2, 3].map(() => extractUploadTextIsolated("TXT", enc("x"), LIMITS, patient)));
+    expect(r.every((x) => !x.ok && x.code === "EMPTY_TEXT")).toBe(true);
+    expect(started).toBe(5);
+    // Slot juga dibebaskan saat worker gagal start / timeout.
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    for (let i = 0; i < 3; i++) await extractUploadTextIsolated("TXT", enc("x"), LIMITS, { spawn: () => { throw new Error("x"); } });
+    await extractUploadTextIsolated("TXT", enc("x"), { ...LIMITS, timeoutMs: 100 }, { spawn: fake("for (;;) {}") });
+    await extractUploadTextIsolated("TXT", enc("x"), { ...LIMITS, timeoutMs: 100 }, { spawn: fake("for (;;) {}") });
+    expect(await extractUploadTextIsolated("TXT", enc("x"), LIMITS, { spawn: slow, queueWaitMs: 50 })).toEqual({ ok: false, code: "EMPTY_TEXT" });
+  }, 30_000);
 
   it("runtime unggahan memakai pembaca terisolasi; worker tidak memakai log", async () => {
     const { readFileSync } = await import("node:fs");
