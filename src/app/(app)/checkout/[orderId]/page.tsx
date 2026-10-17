@@ -9,6 +9,8 @@ import { requireUserId } from "@/lib/documents/session";
 import { paymentReference } from "@/lib/reviews/paths";
 import { mockSettleAction, payAction } from "../actions";
 import { fixedText } from "@/lib/query-text";
+import { EnhancedRubricNotice } from "@/components/deep/enhanced-availability";
+import { deepService } from "@/lib/deep/runtime";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Pembayaran | Yuktanya" };
@@ -30,6 +32,8 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
   const subject = await orderSubject(getPool(), userId, order);
   const pastDue = isPastDue(order);
   const review = order.kind === "STANDARD_REVIEW" || order.kind === "DEEP_REVIEW";
+  // Rincian Deep Review: beri tahu sebelum membayar bila Enhanced saat ini belum dapat terbit (rubrik belum disetujui).
+  const rubricApproved = order.kind === "DEEP_REVIEW" ? await deepService().rubricApproved() : true;
   const production = process.env.NODE_ENV === "production";
   return (
     <main className="max-w-3xl space-y-6">
@@ -49,6 +53,7 @@ export default async function CheckoutPage({ params, searchParams }: { params: P
               ? "pemeriksaan tambahan atas Legal Note (Catatan dari pemeriksa) dari Legal Review versi ini. Pengacara menuliskan ruang lingkup yang tepat di hasilnya."
               : "hanya isi versi ini, persis sesuai kode versi di atas. Versi lain atau perubahan sesudahnya tidak ikut diperiksa. Pengacara menuliskan ruang lingkup yang tepat di hasil pemeriksaan."}
           </p>
+          {order.kind === "DEEP_REVIEW" && <EnhancedRubricNotice rubricApproved={rubricApproved} />}
           <p><strong>Siapa yang memeriksa: </strong>profesional hukum dari firma mitra yang diberi wewenang oleh Yuktanya. AI tidak memberi persetujuan hukum.</p>
           <p><strong>Langkah berikutnya: </strong>setelah pembayaran dikonfirmasi, pengajuan Anda masuk antrean pemeriksaan. Pantau statusnya di menu Legal Review Saya.</p>
         </section>

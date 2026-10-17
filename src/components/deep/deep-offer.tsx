@@ -1,6 +1,7 @@
 import { CHECKOUT_NOTE, DEEP_PAYMENT_STATEMENT } from "@/lib/copy";
 import { formatIdr, PRICING } from "@/lib/pricing/catalog";
 import { fixedText } from "@/lib/query-text";
+import { EnhancedRubricNotice } from "./enhanced-availability";
 
 const REASON: Record<string, string> = {
   PARENT_NOT_COMPLETED: "Legal Review belum selesai.",
@@ -11,10 +12,11 @@ const REASON: Record<string, string> = {
   SPECIAL_CASE_OPEN: "Dokumen ini sedang ditangani sebagai Kasus Hukum Khusus (Special Legal Case), sehingga Deep Review tidak ditawarkan.",
 };
 
-type Props = { eligible: boolean; reason: string; quote: { amountIdr: number; variant: string } | null; action: (formData: FormData) => Promise<void>; parentRequestId: string; standardPaidIdr?: number };
+type Props = { eligible: boolean; reason: string; quote: { amountIdr: number; variant: string } | null; action: (formData: FormData) => Promise<void>; parentRequestId: string; standardPaidIdr?: number; rubricApproved: boolean };
 
-// Tawaran hanya dirender oleh halaman bila fitur aktif. Tidak menjanjikan hasil Enhanced.
-export function DeepOffer({ eligible, reason, quote, action, parentRequestId, standardPaidIdr }: Props) {
+// Tawaran hanya dirender oleh halaman bila fitur aktif. Tidak menjanjikan hasil Enhanced. rubricApproved dari server:
+// selama rubrik belum disetujui, Enhanced tidak disebut sebagai hasil yang mungkin dan pemberitahuan tampil sebelum bayar.
+export function DeepOffer({ eligible, reason, quote, action, parentRequestId, standardPaidIdr, rubricApproved }: Props) {
   if (!eligible || !quote) {
     return <p role="status" className="rounded-lg border border-line bg-surface p-4">{fixedText(REASON, reason) ?? "Deep Review belum tersedia untuk Legal Review ini."}</p>;
   }
@@ -23,6 +25,7 @@ export function DeepOffer({ eligible, reason, quote, action, parentRequestId, st
     <section aria-labelledby="deep-h" className="space-y-3 rounded-lg border border-line bg-surface p-4">
       <h2 id="deep-h" className="text-xl font-semibold">Deep Review (tambahan)</h2>
       <p>Deep Review adalah pemeriksaan tambahan oleh profesional hukum atas Legal Note (Catatan dari pemeriksa) yang ditemukan dalam Legal Review Anda. Deep Review bersifat opsional.</p>
+      <EnhancedRubricNotice rubricApproved={rubricApproved} />
       <dl className="space-y-1">
         <div><dt className="font-medium">Biaya tambahan</dt><dd className="text-2xl font-semibold">{formatIdr(quote.amountIdr)}</dd></div>
         <div><dt className="font-medium">Keterangan</dt><dd>{member ? "Harga Member aktif" : `Harga akun gratis. Member aktif membayar ${formatIdr(PRICING.deepAdditional.member)}.`}</dd></div>
@@ -32,7 +35,9 @@ export function DeepOffer({ eligible, reason, quote, action, parentRequestId, st
       <p>Membership ({formatIdr(PRICING.membershipMonthlyIdr)} per periode) adalah biaya terpisah dan tidak termasuk dalam biaya ini.</p>
       <p>{CHECKOUT_NOTE}</p>
       <p className="font-semibold">{DEEP_PAYMENT_STATEMENT}</p>
-      <p>Hasil Deep Review dapat berupa persetujuan Enhanced, selesai dengan catatan, belum dapat disimpulkan, atau dirujuk sebagai Special Legal Case. Pembayaran tidak menjamin salah satunya.</p>
+      <p>{rubricApproved
+        ? "Hasil Deep Review dapat berupa persetujuan Enhanced, selesai dengan catatan, belum dapat disimpulkan, atau dirujuk sebagai Special Legal Case. Pembayaran tidak menjamin salah satunya."
+        : "Hasil Deep Review dapat berupa selesai dengan catatan, belum dapat disimpulkan, atau dirujuk sebagai Special Legal Case. Pembayaran tidak menjamin salah satunya."}</p>
       <form action={action}>
         <input type="hidden" name="parentRequestId" value={parentRequestId} />
         <button type="submit" className="min-h-12 rounded-lg bg-primary hover:bg-primary-hover px-5 font-semibold text-on-primary">Lanjut ke pembayaran</button>

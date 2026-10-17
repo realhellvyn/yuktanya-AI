@@ -11,6 +11,16 @@ const service = createPgDeepService(pool);
 const on = { service, flag: true };
 
 describe("halaman Deep Review pemilik", () => {
+  it("rubricApproved: false tanpa rubric_approvals untuk RUBRIC_VERSION, true setelah admin mencatat persetujuan", async () => {
+    await pool.query("delete from rubric_approvals where policy_version = 'v8-proposed'");
+    expect(await service.rubricApproved()).toBe(false);
+    // Versi rubrik lain tidak dihitung.
+    const admin = await kit.admin();
+    await pool.query("select admin_approve_rubric($1, 'versi-lain', 'Persetujuan uji', now())", [admin]);
+    expect(await service.rubricApproved()).toBe(false);
+    await pool.query("select admin_approve_rubric($1, 'v8-proposed', 'Persetujuan uji', now())", [admin]);
+    expect(await service.rubricApproved()).toBe(true);
+  });
   it("flag mati: halaman tawaran 404 walau pemilik sah", async () => {
     const c = await kit.completedStandard();
     expect((await loadDeepOfferPage({ service, flag: false }, c.owner, c.req)).kind).toBe("notFound");

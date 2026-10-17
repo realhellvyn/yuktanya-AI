@@ -258,6 +258,8 @@ describe("medali hanya di tempat verifikasi tampil", () => {
       "src/components/verification/verification-medal.tsx",
       "src/components/verification/verification-panel.tsx",
     ]);
+    // Daftar admin: medali bronze disertai pernyataan AI (bukan pemeriksaan profesional).
+    expect(readFileSync(join(ROOT, "src/app/(admin)/admin/verifications/page.tsx"), "utf8")).toContain('{r.kind === "AI" && <p>{VERIFICATION_STATEMENTS.AI}</p>}');
     // Header dan logo tetap memakai mark polos, tanpa medali.
     expect(readFileSync(join(ROOT, "src/components/brand-logo.tsx"), "utf8")).not.toMatch(/medal/i);
   });

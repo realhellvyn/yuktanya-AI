@@ -48,10 +48,16 @@ export interface DeepService {
   inflight(actorId: string, now?: Date): Promise<{ deepId: string; status: string; createdAt: string; category: string; reviewerId: string; reviewerAuthorized: boolean }[]>;
   assign(actorId: string, deepId: string, reviewerId: string, now?: Date): Promise<void>;
   reassign(actorId: string, deepId: string, reviewerId: string, now?: Date): Promise<void>;
+  // Sumber yang sama dengan editor reviewer dan decide_deep: rubric_approvals untuk RUBRIC_VERSION.
+  rubricApproved(): Promise<boolean>;
 }
 
 export function createPgDeepService(pool: Pool): DeepService {
   return {
+    async rubricApproved() {
+      const { rows } = await pool.query("select exists (select 1 from rubric_approvals where policy_version = $1) as ok", [RUBRIC_VERSION]);
+      return Boolean(rows[0]?.ok);
+    },
     async eligibility(userId, parent, now = new Date()) {
       const { rows } = await pool.query("select * from deep_eligibility($1, $2, $3)", [userId, parent, now]);
       const r = rows[0] as { eligible: boolean; reason: string };

@@ -2,6 +2,7 @@
 import { createNdaVersion, register, say, submit } from "./helpers.mjs";
 
 export const onlyViewport = "desktop";
+const RUBRIC_PENDING = "Saat ini lencana Legal Verified Enhanced belum dapat diterbitkan karena pedoman pemeriksaan Enhanced belum disetujui.";
 const overflow = (page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 // Logika sama dengan journey-ui-roles.mjs: elemen interaktif terlihat yang tingginya < 43.5px.
 const smallTargets = (page) =>
@@ -175,6 +176,21 @@ export async function journey({ step, base, vp, db, newActor }) {
   });
 
 
+  await step(tag("rubrik belum disetujui: tawaran Deep Review jujur (Enhanced belum dapat terbit) tanpa menyebut persetujuan Enhanced"), async () => {
+    // Data uji: belum ada rubric_approvals pada titik ini. Pembelian tetap dibuka (keputusan pemilik), tawaran memberi tahu.
+    await ownerA.page.goto(base + "/reviews");
+    await ownerA.page.click("a[href^='/reviews/']");
+    await ownerA.page.waitForSelector("text=Deep Review (tambahan)");
+    const before = await ownerA.page.innerText("main");
+    if (!before.includes(RUBRIC_PENDING)) throw new Error("pemberitahuan rubrik belum disetujui tidak tampil: " + before.slice(0, 600));
+    if (/persetujuan Enhanced/.test(before)) throw new Error("tawaran masih menyebut persetujuan Enhanced padahal rubrik belum disetujui");
+    await ownerA.page.click("a:has-text('Lihat rincian Deep Review')");
+    await ownerA.page.waitForURL(/\/reviews\/[0-9a-f-]{36}\/deep$/);
+    const detail = await ownerA.page.innerText("main");
+    if (!detail.includes(RUBRIC_PENDING) || /persetujuan Enhanced/.test(detail)) throw new Error("rincian tawaran tidak sesuai keadaan rubrik: " + detail.slice(0, 600));
+    await ownerA.shot("06a-tawaran-deep-rubrik-belum");
+  });
+
   await step(tag("admin mencatat persetujuan rubrik; pemilik melihat tawaran Deep Review Rp200.000 dan memesan"), async () => {
     await adminA.page.goto(base + "/admin/rubric");
     await adminA.page.fill("input[name=signoffRef]", "SIGNOFF-UJI-E2E");
@@ -184,6 +200,7 @@ export async function journey({ step, base, vp, db, newActor }) {
     await ownerA.page.waitForSelector("text=Deep Review (tambahan)");
     const offer = await ownerA.page.innerText("body");
     if (!/200\.000/.test(offer) || !/tidak menjamin/i.test(offer)) throw new Error("tawaran tidak lengkap: " + offer.slice(0, 400));
+    if (offer.includes(RUBRIC_PENDING) || !offer.includes("dapat berupa persetujuan Enhanced")) throw new Error("tawaran setelah rubrik disetujui tidak kembali ke teks normal");
     await ownerA.shot("06-tawaran-deep");
     const reviewId = /\/reviews\/([0-9a-f-]{36})/.exec(ownerA.page.url())[1];
     // Halaman rincian /reviews/[id]/deep: harga, pernyataan wajib, lalu tombol menerima.
@@ -206,6 +223,7 @@ export async function journey({ step, base, vp, db, newActor }) {
     ownerA.deepStranger = stranger;
     await ownerA.page.click("button:has-text('Lanjut ke pembayaran')");
     await ownerA.page.waitForURL(/\/checkout\//);
+    if ((await ownerA.page.innerText("main")).includes(RUBRIC_PENDING)) throw new Error("rincian checkout Deep Review menampilkan pemberitahuan rubrik padahal sudah disetujui");
     await ownerA.page.click("button:has-text('Bayar dengan transfer bank')");
     await ownerA.page.waitForSelector("text=Tulis kode berikut");
   });

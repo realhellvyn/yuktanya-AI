@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { DeepResult } from "@/components/deep/deep-result";
+import { EnhancedRubricNotice } from "@/components/deep/enhanced-availability";
 import { Card, PageHeading } from "@/components/ui/card";
 import { ButtonLink } from "@/components/ui/button";
 import { DEEP_PAYMENT_STATEMENT, LEGAL_DISCLAIMER } from "@/lib/copy";
@@ -26,6 +27,8 @@ export default async function DeepStatusPage({ params }: { params: Promise<{ id:
   const steps = deepTimeline({ status: deep.status, assigned: page.assigned });
   const completed = deep.status === "COMPLETED";
   const why = enhancedExplanation(deep.outcome, deep.decisionReason, deep.verification?.status ?? null);
+  // Selama Deep Review belum selesai, pemilik diberi tahu bila Enhanced saat ini belum dapat terbit (rubrik belum disetujui).
+  const rubricApproved = completed ? true : await deepService().rubricApproved();
   return (
     <main className="max-w-3xl space-y-6">
       <PageHeading title="Deep Review" lead="Pemeriksaan tambahan oleh profesional hukum atas Legal Note dari Legal Review Anda." />
@@ -54,6 +57,7 @@ export default async function DeepStatusPage({ params }: { params: Promise<{ id:
       ) : (
         <Card className="space-y-2">
           <p>Hasil akan tampil di halaman ini setelah profesional hukum selesai memeriksa.</p>
+          <EnhancedRubricNotice rubricApproved={rubricApproved} />
           <p>{DEEP_PAYMENT_STATEMENT}</p>
           <p>{LEGAL_DISCLAIMER}</p>
         </Card>

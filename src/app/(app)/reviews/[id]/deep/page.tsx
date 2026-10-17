@@ -33,12 +33,13 @@ export default async function DeepOfferPage({ params, searchParams }: { params: 
   if (page.kind === "redirect") redirect(page.to);
   const review = await reviewService().getForOwner(userId, id);
   if (!review) notFound();
+  const rubricApproved = page.kind === "offer" ? await deepService().rubricApproved() : true;
   return (
     <main className="max-w-3xl space-y-6">
       <PageHeading title="Deep Review" lead={`Untuk ${review.title}, versi ${review.versionNo}`} />
       {notice && <p role="alert" className="font-semibold text-red-800">{notice}</p>}
       {page.kind === "offer" ? (
-        <DeepOffer {...offerViewProps(page.eligibility)} action={requestDeepAction} parentRequestId={id} />
+        <DeepOffer {...offerViewProps(page.eligibility)} rubricApproved={rubricApproved} action={requestDeepAction} parentRequestId={id} />
       ) : (
         <Card className="space-y-2">
           <h2 className="text-xl font-semibold">Deep Review belum dapat ditawarkan</h2>

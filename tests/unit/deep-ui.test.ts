@@ -2,7 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { DeepOffer } from "@/components/deep/deep-offer";
 import { DeepResult } from "@/components/deep/deep-result";
-import { CHECKOUT_NOTE, LEGAL_DISCLAIMER, VERIFICATION_STATEMENTS } from "@/lib/copy";
+import { CHECKOUT_NOTE, ENHANCED_RUBRIC_PENDING, LEGAL_DISCLAIMER, VERIFICATION_STATEMENTS } from "@/lib/copy";
+import { EnhancedRubricNotice } from "@/components/deep/enhanced-availability";
 import { readFileSync } from "node:fs";
 import { offerViewProps } from "@/lib/deep/owner-pages";
 import type { Eligibility, OwnerDeep } from "@/lib/deep/service";
@@ -10,8 +11,8 @@ import type { Eligibility, OwnerDeep } from "@/lib/deep/service";
 const noop = async () => {};
 // Alur data halaman: hasil deepService().eligibility (termasuk harga standar yang sudah dibayar) → offerViewProps → DeepOffer.
 const eligibility = (over: Partial<Eligibility> = {}): Eligibility => ({ eligible: true, reason: "OK", quote: { amountIdr: 200000, variant: "FREE" }, standardPaidIdr: 50000, ...over });
-const offer = (over: Partial<Eligibility> = {}) =>
-  renderToStaticMarkup(DeepOffer({ ...offerViewProps(eligibility(over)), action: noop, parentRequestId: "p1" }));
+const offer = (over: Partial<Eligibility> = {}, rubricApproved = true) =>
+  renderToStaticMarkup(DeepOffer({ ...offerViewProps(eligibility(over)), rubricApproved, action: noop, parentRequestId: "p1" }));
 const links = (h: string) => h.match(/<(a|button) [^>]*>/g) ?? [];
 
 describe("DeepOffer", () => {
@@ -80,5 +81,43 @@ describe("DeepResult", () => {
   it("ditangguhkan dan ditahan ditampilkan eksplisit", () => {
     expect(renderToStaticMarkup(DeepResult({ deep: deep({ verification: { code: "e".repeat(48), status: "SUSPENDED" } }) }))).toContain("Ditangguhkan sementara");
     expect(renderToStaticMarkup(DeepResult({ deep: deep({ status: "ON_HOLD", outcome: null }) }))).toContain("Ditahan karena verifikasi Legal Review dicabut");
+  });
+});
+
+// Fix round Task 20 (I1): pembelian Deep Review tetap dibuka walau rubrik Enhanced belum disetujui, tetapi tawaran harus jujur.
+describe("tawaran Deep Review mengikuti status rubrik Enhanced dari server", () => {
+  const PENDING = "Saat ini lencana Legal Verified Enhanced belum dapat diterbitkan karena pedoman pemeriksaan Enhanced belum disetujui. Deep Review tetap memberikan pemeriksaan lanjutan dan hasil tertulis dari pengacara.";
+  it("rubrik disetujui: hasil yang mungkin termasuk persetujuan Enhanced; tanpa pemberitahuan rubrik", () => {
+    const h = offer({}, true);
+    expect(h).toContain("Hasil Deep Review dapat berupa persetujuan Enhanced, selesai dengan catatan");
+    expect(h).not.toContain(PENDING);
+    expect(h).not.toContain("data-enhanced-pending");
+  });
+  it("rubrik belum disetujui: pemberitahuan tampil sebelum tombol bayar; Enhanced tidak disebut sebagai hasil yang mungkin", () => {
+    const h = offer({}, false);
+    expect(ENHANCED_RUBRIC_PENDING).toBe(PENDING);
+    expect(h).toContain(PENDING);
+    expect(h.indexOf(PENDING)).toBeLessThan(h.indexOf("Lanjut ke pembayaran"));
+    expect(h).toContain("Hasil Deep Review dapat berupa selesai dengan catatan, belum dapat disimpulkan, atau dirujuk sebagai Special Legal Case.");
+    expect(h).not.toMatch(/persetujuan Enhanced/);
+    // Pernyataan wajib pembayaran tetap utuh (penafian, bukan janji).
+    expect(h).toContain(CHECKOUT_NOTE);
+  });
+  it("EnhancedRubricNotice: kosong bila disetujui, kalimat tetap bila belum", () => {
+    expect(renderToStaticMarkup(EnhancedRubricNotice({ rubricApproved: true }) ?? "")).toBe("");
+    expect(renderToStaticMarkup(EnhancedRubricNotice({ rubricApproved: false })!)).toContain(PENDING);
+  });
+  it("tawaran, rincian checkout Deep Review, dan status Deep Review pemilik memakai rubricApproved dari server", () => {
+    const src = (p: string) => readFileSync(p, "utf8");
+    for (const p of ["src/app/(app)/reviews/[id]/page.tsx", "src/app/(app)/reviews/[id]/deep/page.tsx"]) {
+      expect(src(p), p).toMatch(/deepService\(\)\.rubricApproved\(\)/);
+      expect(src(p), p).toMatch(/<DeepOffer [^>]*rubricApproved=\{rubricApproved\}/);
+    }
+    for (const p of ["src/app/(app)/checkout/[orderId]/page.tsx", "src/app/(app)/deep-reviews/[id]/page.tsx"]) {
+      expect(src(p), p).toMatch(/deepService\(\)\.rubricApproved\(\)/);
+      expect(src(p), p).toContain("<EnhancedRubricNotice rubricApproved={rubricApproved} />");
+    }
+    // Sumber sama dengan decide_deep / editor reviewer: rubric_approvals untuk RUBRIC_VERSION.
+    expect(src("src/lib/deep/service.ts")).toMatch(/async rubricApproved\(\) \{\s*const \{ rows \} = await pool\.query\("select exists \(select 1 from rubric_approvals where policy_version = \$1\) as ok", \[RUBRIC_VERSION\]\)/);
   });
 });

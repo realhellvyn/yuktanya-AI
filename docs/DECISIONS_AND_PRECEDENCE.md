@@ -148,3 +148,8 @@ Refunds, re-review rounds, SLA and negative-outcome legal wording require signed
   env, mati bila kosong). Gerbang di database tetap berlaku: Enhanced hanya terbit bila rubrik disetujui di
   `/admin/rubric` dan semua penjaga `decide_deep` terpenuhi. Akibat yang tercatat di `docs/RELEASE_CHECKLIST.md`
   (bagian "Flag produksi").
+- **Tawaran Deep Review jujur selama rubrik belum disetujui (fix round Task 20, ruling pengendali).** Pembelian tidak
+  diblokir (semua fitur aktif), tetapi bila `rubric_approvals` belum memuat `v8-proposed` (sumber yang sama dengan
+  `decide_deep`), tawaran, rincian checkout Deep Review, dan status Deep Review yang belum selesai menyatakan bahwa lencana
+  Legal Verified Enhanced saat ini belum dapat diterbitkan dan tidak menyebut persetujuan Enhanced sebagai hasil yang
+  mungkin (`ENHANCED_RUBRIC_PENDING`, `EnhancedRubricNotice`). `decide_deep` dan logika penerbitan tidak berubah.

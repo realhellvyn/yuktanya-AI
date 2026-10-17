@@ -6,6 +6,7 @@ import { getPool } from "@/lib/db";
 import { getSessionRoles } from "@/lib/supabase/server";
 import { revokeVerificationAction } from "./actions";
 import { fixedText } from "@/lib/query-text";
+import { VERIFICATION_STATEMENTS } from "@/lib/copy";
 import { VerificationMedal } from "@/components/verification/verification-medal";
 import { medalFor } from "@/lib/verification/medal";
 
@@ -41,7 +42,9 @@ export default async function VerificationsAdminPage({ searchParams }: { searchP
             <li key={r.id} className="space-y-2 rounded-2xl border border-line bg-surface p-5">
               {medal && <VerificationMedal tier={medal.tier} note={medal.note} size="sm" />}
               <p className="font-semibold text-navy">{KIND[r.kind] ?? r.kind} · Status: {STATUS[r.status] ?? r.status}</p>
-              <p className="font-mono break-all">{r.code}</p>
+              {/* Medali bronze selalu disertai pernyataan bahwa AI Verified bukan pemeriksaan profesional. */}
+            {r.kind === "AI" && <p>{VERIFICATION_STATEMENTS.AI}</p>}
+            <p className="font-mono break-all">{r.code}</p>
               {r.status !== "REVOKED" && (
                 <form action={revokeVerificationAction} className="space-y-2">
                   <input type="hidden" name="id" value={r.id} />

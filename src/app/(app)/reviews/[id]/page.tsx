@@ -42,6 +42,7 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
   if (deep?.verification) deepUrl = verifyUrl(deep.verification.code);
   const elig = flags.deepReviewPurchase && !deep && review.status === "COMPLETED" && review.outcome === "WITH_NOTES" ? await deepService().eligibility(userId, id) : null;
   if (elig?.eligible) await trackDeepOfferShown(userId, id);
+  const rubricApproved = elig?.eligible ? await deepService().rubricApproved() : true;
   return (
     <main className="max-w-3xl space-y-6">
       <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight text-navy md:text-4xl">{review.title}, versi {review.versionNo}</h1>
@@ -51,7 +52,7 @@ export default async function ReviewPage({ params, searchParams }: { params: Pro
       {deep && <DeepResult deep={deep} verifyUrl={deepUrl} />}
       {deepRef && <ButtonLink href={`/deep-reviews/${deepRef.deepId}`} variant="secondary">Lihat status Deep Review</ButtonLink>}
       {elig?.eligible && <ButtonLink href={`/reviews/${id}/deep`} variant="secondary">Lihat rincian Deep Review</ButtonLink>}
-      {elig && <DeepOffer {...offerViewProps(elig)} action={requestDeepAction} parentRequestId={id} />}
+      {elig && <DeepOffer {...offerViewProps(elig)} rubricApproved={rubricApproved} action={requestDeepAction} parentRequestId={id} />}
     </main>
   );
 }

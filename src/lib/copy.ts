@@ -44,6 +44,11 @@ export function verificationStatement(kind: VerificationKind, outcome: string | 
   if (kind === "LEGAL_ENHANCED") return VERIFICATION_STATEMENTS.LEGAL_ENHANCED;
   return outcome === "WITHIN_SCOPE" ? VERIFICATION_STATEMENTS.LEGAL_WITHIN_SCOPE : VERIFICATION_STATEMENTS.LEGAL_WITH_NOTES;
 }
+// Ditampilkan kepada pemilik sebelum dan sesudah membayar Deep Review selama rubrik Enhanced (RUBRIC_VERSION) belum
+// dicatat disetujui di /admin/rubric. Pembelian tetap dibuka (keputusan pemilik 17 Okt 2026); kalimat ini mencegah
+// tawaran yang menyiratkan Enhanced mungkin terbit padahal decide_deep pasti menolaknya.
+export const ENHANCED_RUBRIC_PENDING =
+  "Saat ini lencana Legal Verified Enhanced belum dapat diterbitkan karena pedoman pemeriksaan Enhanced belum disetujui. Deep Review tetap memberikan pemeriksaan lanjutan dan hasil tertulis dari pengacara.";
 export const DEEP_PAYMENT_STATEMENT =
   "Pembayaran tidak menjamin Enhanced, kesimpulan yang menguntungkan, keabsahan hukum, atau hasil di pengadilan.";
 
