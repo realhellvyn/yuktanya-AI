@@ -1,6 +1,6 @@
 // Mencetak kategori, id, versi, dan content hash ketiga template untuk commit yang sedang di-checkout.
 // Dipakai saat mencatat ulang persetujuan template (lihat docs/RELEASE_CHECKLIST.md). Tidak menyentuh database.
-// Memuat sumber TypeScript lewat jiti (sudah terpasang sebagai dependensi dev dari @tailwindcss/postcss).
+// Memuat sumber TypeScript lewat jiti (devDependency langsung, dipin 2.7.0).
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 

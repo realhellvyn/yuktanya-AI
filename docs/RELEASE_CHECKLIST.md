@@ -54,7 +54,7 @@ Audit hash template (versi 1 semua; diisi setiap kali hash berubah):
 |---|---|---|---|---|
 | 5462582 dan sebelumnya (hash yang disetujui sintetis di staging 16 Okt 2026) | asli | `715a8e53d0549e9e8286a8852a640e3cd8cc9820b32e44d958d4c17069ccfaed` | `c1d88b25608447a8113a55e27642b5f31c326861eccb4e519f10baa41a87fc1d` | `198147fbf532d31f3e73a46a9013e7a8536bf0b7613900151d3dc4024a0e51ab` |
 | 16f0273 (Task 16, tidak untuk deploy) | `prefixes` kota pengadilan, `RENDER_VERSION` 3 | `409cfbeaaaf252f98447841cc69383cf192b584a385381c47d1e9e8d5ce79c84` | `883b5f1e7ef5470684115de5c6f90ff7a72b01a4cdf406a0c782db0d841c4cbc` | `50350351bc98c908bffef37378e8dace00e1e3648d830cf649dbfa43ee74f527` |
-| commit perbaikan Task 16 dan sesudahnya | `keepWhole`, `rejectStarts` | jalankan `npm run templates:hashes` | | |
+| 405f996 dan sesudahnya | `keepWhole`, `rejectStarts` (daftar `keepWhole` dipangkas di commit berikutnya) | jalankan `npm run templates:hashes` | | |
 
 ## Langkah manual staging (pemilik proyek, lewat SQL editor dashboard Supabase)
 Alat MCP membatalkan `DROP` dan `delete from`, jadi langkah ini dijalankan manusia. Semua data staging sintetis. Jalankan berurutan; setelah tiap langkah jalankan pemeriksaannya.

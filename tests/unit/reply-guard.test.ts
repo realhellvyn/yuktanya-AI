@@ -170,4 +170,35 @@ describe("reconcileReply: balasan mengikuti apa yang benar-benar tersimpan", () 
     // Tawaran koreksi tidak ditambahkan saat belum siap.
     expect(reconcileReply("Baik.", state(nda, { disclosingParty: "Sinta Dewi" }, "Saya Sinta Dewi", { applied: [] }))).not.toContain(CORRECTION_LINE);
   });
+
+  // Re-review fix round 1.
+  const fullNda = { signingDate: "2026-10-16", disclosingParty: "Sinta Dewi", receivingParty: "Budi Santoso", confidentialInfo: "daftar pelanggan", purpose: "menilai kerja sama", termMonths: 12, disputeCity: "Bandung" };
+  it("kalimat 'siap/lengkap' dengan kata negasi yang tidak menegasikan kesiapan dibuang bila belum siap, dipertahankan bila siap", () => {
+    for (const probe of ["Semua data sudah lengkap, tidak ada yang kurang.", "Dokumen sudah siap dibuat dan tidak perlu diubah lagi."]) {
+      expect(reconcileReply(probe, state(nda, { disclosingParty: "Sinta Dewi" }, "Saya Sinta Dewi", { applied: [] })), probe).not.toContain(probe);
+      expect(reconcileReply(probe, state(nda, fullNda, "…", { applied: [] })), probe).toContain(probe);
+    }
+  });
+
+  it("kesiapan yang benar-benar dinegasikan ('belum lengkap', 'belum siap') dipertahankan hanya bila memang belum siap", () => {
+    for (const probe of ["Data Anda belum lengkap.", "Dokumen belum siap dibuat."]) {
+      expect(reconcileReply(probe, state(nda, { disclosingParty: "Sinta Dewi" }, "Saya Sinta Dewi", { applied: [] })), probe).toContain(probe);
+      expect(reconcileReply(probe, state(nda, fullNda, "…", { applied: [] })), probe).not.toContain(probe);
+    }
+  });
+
+  it("pertanyaan konfirmasi yang mengklaim nilai tak tersimpan atau menyebut nama yang tidak pernah ditulis dibuang", () => {
+    const s0 = state(nda, { disclosingParty: "Sinta Dewi" }, "Saya Sinta Dewi mau bikin NDA.", { applied: [] });
+    expect(reconcileReply("Sudah saya catat Budi Santoso sebagai penerima, benar?", s0)).not.toContain("catat Budi Santoso");
+    expect(reconcileReply("Apakah benar penerima bernama Joko Widodo?", s0)).not.toContain("Joko Widodo");
+    // Nama yang ditulis pengguna tapi belum tersimpan boleh dikonfirmasi.
+    const s1 = state(nda, { disclosingParty: "Sinta Dewi" }, "Saya Sinta Dewi, penerimanya Budi Santoso.", { applied: [] });
+    expect(reconcileReply("Apakah benar penerima bernama Budi Santoso?", s1)).toContain("Apakah benar penerima bernama Budi Santoso?");
+    // Konfirmasi atas tanggal yang tersimpan tetap; tanggal yang tidak tersimpan dan tidak ditulis dibuang.
+    const s2 = state(nda, { signingDate: "2026-10-16", disclosingParty: "Sinta Dewi" }, "Saya Sinta Dewi, tanggal 16 Oktober 2026", { applied: [] });
+    expect(reconcileReply("Apakah tanggal perjanjian 16 Oktober 2026 sudah benar?", s2)).toContain("Apakah tanggal perjanjian 16 Oktober 2026 sudah benar?");
+    expect(reconcileReply("Apakah tanggal perjanjian 20 Oktober 2026 sudah benar?", s2)).not.toContain("20 Oktober 2026");
+    // Tawaran koreksi umum tetap.
+    expect(reconcileReply("Ada yang ingin dikoreksi?", state(nda, fullNda, "…", { applied: [] }))).toContain("Ada yang ingin dikoreksi?");
+  });
 });

@@ -180,7 +180,7 @@ describe("kota pengadilan: nama yang benar tidak diubah, pengadilan lain ditolak
   const all: [string, Template, Data][] = Object.entries(valid).map(([n, v]) => [n, v.t, v.data]);
 
   it.each(all)("%s: nama PN yang memang diawali 'Kota' tetap utuh (Kota Agung, Kota Baru, Kota Bumi)", (_n, t, data) => {
-    for (const [raw, want] of [["Kota Agung", "Kota Agung"], ["Pengadilan Negeri Kota Agung", "Kota Agung"], ["PN Kota Baru", "Kota Baru"], ["Kota Bumi", "Kota Bumi"], ["kota agung", "Kota Agung"], ["Kota Mobagu", "Kota Mobagu"]]) {
+    for (const [raw, want] of [["Kota Agung", "Kota Agung"], ["Pengadilan Negeri Kota Agung", "Kota Agung"], ["PN Kota Baru", "Kota Baru"], ["Kota Bumi", "Kota Bumi"], ["kota agung", "Kota Agung"], ["Kota Mobagu", "Kota Mobagu"], ["Kota Tangerang Selatan", "Tangerang Selatan"], ["PN Jakarta Selatan", "Jakarta Selatan"], ["Kotawaringin Barat", "Kotawaringin Barat"], ["Kotapinang", "Kotapinang"]]) {
       expect(t.normalize({ disputeCity: raw }).disputeCity, raw).toBe(want);
       const r = t.validate({ ...data, disputeCity: raw });
       expect(r.ok, raw).toBe(true);
@@ -205,6 +205,14 @@ describe("kota pengadilan: nama yang benar tidak diubah, pengadilan lain ditolak
         expect(r.errors.disputeCity).toContain("Pengadilan Negeri");
         expect(r.errors.disputeCity).toContain(f.example!);
       }
+    }
+  });
+});
+
+describe("daftar nama utuh kota pengadilan (fix round 2)", () => {
+  it("hanya nama PN yang memang ditulis dua kata: Kota Agung, Kota Baru, Kota Bumi, Kota Mobagu", () => {
+    for (const t of Object.values(valid).map((v) => v.t)) {
+      expect(t.fields.find((f) => f.key === "disputeCity")!.keepWhole).toEqual(["Kota Agung", "Kota Baru", "Kota Bumi", "Kota Mobagu"]);
     }
   });
 });

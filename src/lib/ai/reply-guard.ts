@@ -92,6 +92,8 @@ export type ReplyState = {
 
 const READY = /siap dibuat|(sudah|telah) siap|dokumen (anda )?siap|(sudah|telah) lengkap|semua (kolom|data)[^.!?]*(terisi|lengkap)/i;
 const CLAIM = /\b(catat|mencatat|dicatat|tercatat|simpan|menyimpan|disimpan|tersimpan|perbarui|memperbarui|diperbarui|ubah|mengubah|diubah|ganti|mengganti|diganti|menangkap|ditangkap|mengerti|isi|mengisi|diisi|terisi|masukkan|memasukkan|dimasukkan)\b/i;
+// Kesiapan yang benar-benar dinegasikan ("belum lengkap", "tidak siap"): benar hanya bila draf memang belum siap.
+const NEG_READY = /\b(belum|tidak|bukan|tak)\s+(sepenuhnya\s+|benar-benar\s+)?(siap|lengkap|terisi)\b/i;
 // Penolakan/negasi ("saya tidak bisa mengisi …") bukan klaim mencatat; hanya nilai yang disebut yang diperiksa.
 const NEGATION = /\b(tidak|tak|belum|bukan|gagal)\b/i;
 // Pertanyaan konfirmasi atau tawaran koreksi tidak meminta nilai baru, jadi tidak dibuang walau kolomnya sudah terisi.
@@ -137,42 +139,83 @@ function mentioned(t: Template, text: string): FieldSpec[] {
   return t.fields.filter((f) => cues[f.key]?.test(text));
 }
 
-// Klaim "saya catat …" cocok bila setiap kolom yang disebut terisi dan setiap nilai yang disebut ada di draf akhir.
-// Untuk kalimat tanya yang sekaligus mengklaim ("Saya catat X, siapa Y?") hanya nilainya yang diperiksa (cues = false).
-function claimConsistent(t: Template, text: string, s: ReplyState, cues = true): boolean {
-  if (cues && mentioned(t, text).some((f) => blankVal(s.final[f.key]))) return false;
-  const dates = new Set(t.fields.filter((f) => f.kind === "date").map((f) => s.final[f.key]).filter((v): v is string => typeof v === "string"));
-  const numbers = new Set(Object.values(s.final).filter((v): v is number => typeof v === "number"));
-  const texts = Object.values(s.final).filter((v): v is string => typeof v === "string").map((v) => v.toLowerCase());
+type Mentions = { dates: (string | null)[]; numbers: number[]; names: string[] };
+
+// Nilai yang disebut sebuah kalimat: tanggal (ISO; null = tidak valid), jumlah/angka, dan nama diri berhuruf besar.
+function valuesIn(text: string): Mentions {
+  const out: Mentions = { dates: [], numbers: [], names: [] };
   let rest = text;
   for (const m of text.matchAll(DATE_TEXT)) {
     try {
-      if (!dates.has(parseDateId(m[1] ? `${m[1]} ${m[2]} ${m[3]}` : `${m[4]}/${m[5]}/${m[6]}`))) return false;
+      out.dates.push(parseDateId(m[1] ? `${m[1]} ${m[2]} ${m[3]}` : `${m[4]}/${m[5]}/${m[6]}`));
     } catch {
-      return false;
+      out.dates.push(null);
     }
     rest = rest.replace(m[0], " ");
   }
   for (const m of rest.matchAll(/(\d+(?:[.,]\d+)?)\s*(juta|jt|ribu|rb)\b/gi)) {
-    if (!numbers.has(Math.round(Number(m[1].replace(",", ".")) * (/^(juta|jt)$/i.test(m[2]) ? 1_000_000 : 1_000)))) return false;
+    out.numbers.push(Math.round(Number(m[1].replace(",", ".")) * (/^(juta|jt)$/i.test(m[2]) ? 1_000_000 : 1_000)));
     rest = rest.replace(m[0], " ");
   }
   for (const m of rest.matchAll(/Rp\.?\s?(\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?/gi)) {
-    if (!numbers.has(Number(m[1].replace(/\./g, "")))) return false;
+    out.numbers.push(Number(m[1].replace(/\./g, "")));
     rest = rest.replace(m[0], " ");
   }
-  for (const m of rest.matchAll(/\b(\d+)\s+(bulan|hari)\b/gi)) if (!numbers.has(Number(m[1]))) return false;
-  // Nama diri (kata berhuruf besar) yang ditulis pengguna tapi tidak ada di draf = klaim atas nilai yang tidak tersimpan.
+  for (const m of rest.matchAll(/\b(\d+)\s+(bulan|hari)\b/gi)) out.numbers.push(Number(m[1]));
   const firstWord = /^\P{L}*(\p{L}+)/u.exec(rest)?.[1];
   for (const m of rest.matchAll(/(?<![\p{L}\p{N}])\p{Lu}[\p{L}'’-]*(?:\s+\p{Lu}[\p{L}'’-]*)*/gu)) {
     const words = m[0].split(/\s+/);
     while (words.length && STOP.has(words[0].toLowerCase())) words.shift();
     while (words.length && STOP.has(words.at(-1)!.toLowerCase())) words.pop();
     if (!words.length || (words.length === 1 && m.index === rest.indexOf(firstWord ?? "\u0000"))) continue;
-    const name = words.join(" ");
-    if (wholeWord(name, s.userText) && !texts.some((v) => v.includes(name.toLowerCase()))) return false;
+    out.names.push(words.join(" "));
   }
-  return true;
+  return out;
+}
+
+function saved(t: Template, s: ReplyState) {
+  return {
+    dates: new Set(t.fields.filter((f) => f.kind === "date").map((f) => s.final[f.key]).filter((v): v is string => typeof v === "string")),
+    numbers: new Set(Object.values(s.final).filter((v): v is number => typeof v === "number")),
+    texts: Object.values(s.final).filter((v): v is string => typeof v === "string").map((v) => v.toLowerCase()),
+  };
+}
+
+// Klaim "saya catat …" cocok bila setiap kolom yang disebut terisi dan setiap nilai yang disebut ada di draf akhir.
+// Untuk kalimat tanya yang sekaligus mengklaim ("Saya catat X, siapa Y?") hanya nilainya yang diperiksa (cues = false).
+function claimConsistent(t: Template, text: string, s: ReplyState, cues = true): boolean {
+  if (cues && mentioned(t, text).some((f) => blankVal(s.final[f.key]))) return false;
+  const v = valuesIn(text);
+  const have = saved(t, s);
+  if (v.dates.some((d) => d === null || !have.dates.has(d))) return false;
+  if (v.numbers.some((n) => !have.numbers.has(n))) return false;
+  // Nama diri yang ditulis pengguna tapi tidak ada di draf = klaim atas nilai yang tidak tersimpan.
+  return !v.names.some((n) => wholeWord(n, s.userText) && !have.texts.some((x) => x.includes(n.toLowerCase())));
+}
+
+// Angka yang tertulis di pesan pengguna (5.000.000, 5000000, 5 juta, 500 ribu), untuk pertanyaan konfirmasi.
+function userNumbers(text: string): Set<number> {
+  const out = new Set<number>();
+  for (const m of text.matchAll(/(\d+(?:[.,]\d+)?)\s*(juta|jt|ribu|rb)\b/gi)) out.add(Math.round(Number(m[1].replace(",", ".")) * (/^(juta|jt)$/i.test(m[2]) ? 1_000_000 : 1_000)));
+  for (const raw of text.match(/\d[\d.,]*/g) ?? []) {
+    const tok = raw.replace(/[.,]+$/, "").replace(/,\d{1,2}$/, "");
+    out.add(Number(tok.replace(/[.,]/g, "")));
+  }
+  return out;
+}
+
+// Pertanyaan konfirmasi hanya boleh menyebut nilai yang tersimpan di draf atau yang ditulis pengguna sendiri.
+function confirmationGrounded(t: Template, text: string, s: ReplyState): boolean {
+  const v = valuesIn(text);
+  const have = saved(t, s);
+  const typed = (iso: string) => {
+    const [y, mo, d] = iso.split("-").map(Number);
+    return [iso, formatDateId(iso), `${d}/${mo}/${y}`, `${String(d).padStart(2, "0")}/${String(mo).padStart(2, "0")}/${y}`].some((x) => wholeWord(x, s.userText));
+  };
+  if (v.dates.some((d) => d === null || (!have.dates.has(d) && !typed(d)))) return false;
+  const nums = userNumbers(s.userText);
+  if (v.numbers.some((n) => !have.numbers.has(n) && !nums.has(n))) return false;
+  return v.names.every((n) => have.texts.some((x) => x.includes(n.toLowerCase())) || wholeWord(n, s.userText));
 }
 
 const shorten = (s: string, n = 120) => (s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s);
@@ -210,20 +253,30 @@ export function reconcileReply(said: string, s: ReplyState): string {
     if (clean !== u.text) changed = true;
     if (!clean) continue;
     const sep = /\n/.test(u.sep) ? "\n" : " ";
-    if (clean.includes("?") && CONFIRM.test(clean)) {
-      // konfirmasi/tawaran koreksi: dipertahankan
-    } else if (clean.includes("?")) {
+    if (clean.includes("?")) {
       const core = clean.replace(/\((?:[^()]*\b(?:contoh|misalnya|misal)\b[^()]*)\)/gi, " ").replace(/\b(contoh|misalnya|misal)\b[\s\S]*$/i, " ");
-      const fields = mentioned(t, core);
-      const stale = fields.length > 0 && fields.every((f) => !blankVal(s.final[f.key]));
-      const falseClaim = CLAIM.test(core) && !claimConsistent(t, core, s, false);
-      if (stale || falseClaim) {
-        drop(falseClaim);
+      const confirm = CONFIRM.test(clean);
+      // Klaim dan nilai diperiksa dulu, juga untuk pertanyaan konfirmasi ("Sudah saya catat X, benar?").
+      if (CLAIM.test(core) && !claimConsistent(t, core, s, confirm && !NEGATION.test(core))) {
+        drop(true);
         continue;
       }
-      for (const f of fields) if (f.required && blankVal(s.final[f.key])) asked.add(f.key);
-    } else if (READY.test(clean) && NEGATION.test(clean)) {
-      // "dokumen belum siap": benar hanya bila memang belum siap.
+      if (confirm) {
+        // Konfirmasi/tawaran koreksi tidak meminta nilai baru, tapi hanya boleh menyebut nilai yang tersimpan atau ditulis pengguna.
+        if (!confirmationGrounded(t, core, s)) {
+          drop(false);
+          continue;
+        }
+      } else {
+        const fields = mentioned(t, core);
+        if (fields.length > 0 && fields.every((f) => !blankVal(s.final[f.key]))) {
+          drop(false);
+          continue;
+        }
+        for (const f of fields) if (f.required && blankVal(s.final[f.key])) asked.add(f.key);
+      }
+    } else if (NEG_READY.test(clean)) {
+      // "dokumen belum siap", "data belum lengkap": benar hanya bila memang belum siap.
       if (s.ready) {
         drop(false);
         continue;

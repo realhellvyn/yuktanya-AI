@@ -23,11 +23,11 @@ export const normalizeName = (s: unknown): string => String(s ?? "").toLowerCase
 // Kolom kota pengadilan: klausul sudah menulis "Pengadilan Negeri {{disputeCity}}".
 // - Dibuang hanya frasa utuh "Pengadilan Negeri", "PN"/"PN.", dan "Kota" di depan nama kota.
 // - "Pengadilan" saja tidak dibuang: "Pengadilan Agama/Tinggi/Niaga/…" adalah pengadilan lain dan ditolak validasi.
-// - Nama PN yang memang diawali "Kota" dibiarkan utuh (daftar konservatif: Kota Agung, Kota Baru, Kota Bumi, Kota Mobagu,
-//   serta Kota Waringin dan Kota Pinang yang juga nama wilayah). "Kabupaten"/"Kab." tidak disentuh.
+// - Nama PN yang memang ditulis dua kata dan diawali "Kota" dibiarkan utuh (Kota Agung, Kota Baru, Kota Bumi, Kota Mobagu).
+//   Nama satu kata (Kotawaringin, Kotapinang) tidak pernah terpotong. "Kabupaten"/"Kab." tidak disentuh.
 export const COURT_CITY = {
   prefixes: ["Pengadilan Negeri", "PN", "Kota"],
-  keepWhole: ["Kota Agung", "Kota Baru", "Kota Bumi", "Kota Mobagu", "Kota Waringin", "Kota Pinang"],
+  keepWhole: ["Kota Agung", "Kota Baru", "Kota Bumi", "Kota Mobagu"],
   rejectStarts: ["Pengadilan", "Mahkamah"],
 } satisfies Pick<FieldSpec, "prefixes" | "keepWhole" | "rejectStarts">;
 
