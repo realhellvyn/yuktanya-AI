@@ -217,19 +217,34 @@ describe("handleChatTurn: temuan reviewer", () => {
     expect(system).toMatch(/jangan menulis daftar kolom yang tersisa/i);
   });
 
-  // Task 22 (A09): "Belum tercatat" hanya untuk nilai yang benar-benar ditulis pengguna (lolos grounding) tapi ditolak.
-  // "lima juta" tidak lolos grounding (angka berupa kata), jadi diperlakukan seperti usulan model: tanpa catatan,
-  // tetapi balasan tetap jujur (klaim "sudah saya catat" dibuang, server menyatakan belum ada data baru).
-  it("nilai yang tidak lolos grounding tidak disimpan dan tidak diaku tercatat; tanpa 'Belum tercatat'", async () => {
+  // Task 22 (A09) + fix round 1 (I1): grounding hanya membaca angka, jadi jumlah yang ditulis dengan kata ("lima juta",
+  // "sejuta", "lima ratus ribu", "enam bulan") tetap dilaporkan "Belum tercatat" dengan petunjuk menulis angka.
+  it.each([
+    ["saya pinjam lima juta", 5000000],
+    ["pinjamannya sejuta", 1000000],
+    ["uang yang saya pinjam lima ratus ribu", 500000],
+  ])("jumlah dengan kata (%s) tidak disimpan, tidak diaku tercatat, dan dilaporkan 'Belum tercatat' + petunjuk angka", async (message, n) => {
     const u = await createUser(pool);
     const id = await utang(u, {});
-    const t = setup(u, answer({ principalIdr: 5000000 }, "Baik, Rp5.000.000 sudah saya catat."));
-    const b = await (await t.call(id, { message: "saya pinjam lima juta" })).json();
+    const t = setup(u, answer({ principalIdr: n }, `Baik, Rp${n.toLocaleString("id-ID")} sudah saya catat.`));
+    const b = await (await t.call(id, { message })).json();
     expect(b.applied).toEqual([]);
     expect((await docs.get(u, id))!.draft.data.principalIdr).toBeUndefined();
     expect(b.reply).not.toContain("sudah saya catat");
-    expect(b.reply).not.toContain("Belum tercatat");
-    expect(b.reply).toContain("Belum ada data baru yang tercatat dari pesan ini.");
+    expect(b.reply).toContain("Belum tercatat: Jumlah pinjaman (rupiah).");
+    expect(b.reply).toContain("Tulis jumlahnya dengan angka, misalnya Rp5.000.000.");
+    // Kolom yang sudah dijelaskan di catatan tidak ditanyakan ulang oleh server.
+    expect(b.reply).not.toContain("Jumlah pinjaman (rupiah)?");
+  });
+
+  it("I1: bilangan bulan dengan kata ('enam bulan') juga dilaporkan dengan petunjuk angka", async () => {
+    const u = await createUser(pool);
+    const id = await newDoc(u);
+    const t = setup(u, answer({ termMonths: 6 }, "Baik."));
+    const b = await (await t.call(id, { message: "kerahasiaannya enam bulan saja" })).json();
+    expect(b.applied).toEqual([]);
+    expect(b.reply).toContain("Belum tercatat: Berapa bulan kerahasiaan berlaku.");
+    expect(b.reply).toContain("Tulis angkanya, misalnya 24.");
   });
 
   it("A09: nilai karangan model (tidak ada di pesan) dibuang diam-diam, tidak disimpan, balasan tidak mengaku mencatatnya", async () => {
@@ -269,6 +284,28 @@ describe("handleChatTurn: temuan reviewer", () => {
     const b = await (await t.call(id, { message: "pinjamannya pakai jaminan sertifikat tanah" })).json();
     expect(b.reply).toContain("termasuk Kasus Hukum Khusus (Special Legal Case), jadi");
     expect(b.reply).not.toMatch(/kasus khusus/i);
+  });
+
+  // Fix round 1 (M4): nilai pengguna yang memuat "kasus khusus" tidak ditulis ulang di balasan percakapan dokumen.
+  it("M4: 'kasus khusus' dari pesan pengguna atau draf tidak dinormalkan; baris 'Yang tercatat' tidak pernah dinormalkan", async () => {
+    const u = await createUser(pool);
+    const id = (await docs.create(u, "PKS", key())).documentId;
+    const t = setup(u, answer({ scope: "menangani kasus khusus pelanggan" }, "Baik, saya catat kerja sama menangani kasus khusus pelanggan."));
+    const b = await (await t.call(id, { message: "Kerja sama kami untuk menangani kasus khusus pelanggan." })).json();
+    expect(b.applied).toEqual(["scope"]);
+    expect((await docs.get(u, id))!.draft.data.scope).toBe("menangani kasus khusus pelanggan");
+    expect(b.reply).toContain("menangani kasus khusus pelanggan");
+    expect(b.reply).not.toContain("Special Legal Case");
+    // Giliran berikutnya: pesan tidak menyebutnya, tetapi draf memuatnya → balasan yang mengulang nilai itu tidak diubah.
+    t.chat.mockImplementation(answer({ partyA: "Dewi Lestari" }, "Baik, saya catat Dewi Lestari untuk kerja sama menangani kasus khusus pelanggan."));
+    const c = await (await t.call(id, { message: "Pihak pertama Dewi Lestari." })).json();
+    expect(c.reply).toContain("menangani kasus khusus pelanggan");
+    expect(c.reply).not.toContain("Special Legal Case");
+    // Klaim yang dibuang diganti baris server; baris itu memuat nilai asli, tanpa normalisasi.
+    t.chat.mockImplementation(answer({ partyB: "Fajar Nugroho" }, "Baik, saya catat Budi sebagai pihak kedua. Ini bukan kasus khusus."));
+    const d = await (await t.call(id, { message: "Pihak kedua Fajar Nugroho, bukan Budi." })).json();
+    expect(d.reply).toContain("Yang tercatat dari pesan ini: Nama pihak kedua: Fajar Nugroho.");
+    expect(d.reply).toContain("Ini bukan kasus khusus.");
   });
 
   it("kolom opsional dapat dikosongkan bila pengguna jelas memintanya; kolom wajib tidak", async () => {

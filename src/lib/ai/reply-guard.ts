@@ -95,17 +95,39 @@ const READY = /siap dibuat|(sudah|telah) siap|dokumen (anda )?siap|(sudah|telah)
 const CLAIM = /\b(catat|mencatat|dicatat|tercatat|simpan|menyimpan|disimpan|tersimpan|perbarui|memperbarui|diperbarui|ubah|mengubah|diubah|ganti|mengganti|diganti|menangkap|ditangkap|mengerti|isi|mengisi|diisi|terisi|masukkan|memasukkan|dimasukkan)\b/i;
 // Kesiapan yang benar-benar dinegasikan ("belum lengkap", "tidak siap"): benar hanya bila draf memang belum siap.
 const NEG_READY = /\b(belum|tidak|bukan|tak)\s+(sepenuhnya\s+|benar-benar\s+)?(siap|lengkap|terisi)\b/i;
-// Pernyataan sisa kolom ("Tersisa: …", "kota pengadilan masih kosong", "belum diisi"). Model menulisnya dari daftar
-// SEBELUM giliran ini, jadi bisa bertentangan dengan draf akhir. "belum siap/lengkap" tetap ditangani NEG_READY.
-const REMAIN = /\b(tersisa|sisanya)\b|\bsisa\s+(kolom|data|isian|pertanyaan)\b|\bmasih\s+(perlu|kosong|kurang|belum|dibutuhkan|diperlukan)\b|\bbelum\s+(diisi|terisi|ada|dilengkapi|disebutkan|ditulis)\b|\b(yang|masih)\s+kosong\b|\b(yang|masih|datanya|kolomnya)\s+kurang\b|\bkurang\s+(satu|dua|tiga|lagi)\b/i;
+// Pernyataan sisa kolom ("Tersisa: …", "kota pengadilan masih kosong", "belum Anda sebutkan"). Model menulisnya dari
+// daftar SEBELUM giliran ini, jadi bisa bertentangan dengan draf akhir. "belum siap/lengkap" tetap ditangani NEG_READY.
+// Isyarat kuat: selalu berarti sisa kolom.
+const REMAIN = new RegExp(
+  [
+    "\\btersisa\\b",
+    "\\bsisa\\s+(kolom|data|isian|pertanyaan)\\b",
+    "\\bmasih\\s+(kosong|dibutuhkan|diperlukan)\\b",
+    "\\bbelum\\s+(anda\\s+)?(diisi|terisi|ada|dilengkapi|disebutkan|ditulis|sebutkan|tulis|isi)\\b",
+    "\\b(yang|masih)\\s+kosong\\b",
+    "\\bkurang\\s+(satu|dua|tiga|lagi)\\b",
+    "\\b(perlu|harus)\\s+(diisi|dilengkapi|disebutkan)\\b",
+    "\\b(satu|dua)\\s+lagi\\b",
+    "\\byang\\s+(dibutuhkan|diperlukan)\\b",
+  ].join("|"),
+  "i",
+);
+// Isyarat lemah ("sisanya", "masih perlu/belum/ada", "yang belum", "masih kurang"): hanya sisa bila kalimat menyebut
+// kolom atau kata kolom/data/isian, dan tidak membicarakan hal lain (tanda tangan, kemampuan, cicilan).
+const REMAIN_WEAK = /\bsisanya\b|\bmasih\s+(perlu|belum|ada)\b|\byang\s+belum\b|\b(yang|masih|datanya|kolomnya)\s+kurang\b/i;
+const FIELD_WORD = /\b(kolom|data|isian)\b/i;
+const NOT_REMAIN = /\b(bisa|dapat|ditandatangani|menandatangani|tanda ?tangan|dicicil|mencicil|berlaku)\b/i;
+// Kolom opsional yang boleh dilewati bukan daftar sisa (kecuali kalimatnya tetap menulis "tersisa"/"tinggal").
+const OPTIONAL_OK = /\bboleh\s+(dilewati|dikosongkan|kosong|tidak\s+diisi)\b/i;
 // "tinggal" hanya berarti sisa bila diikuti kolom atau jumlah ("tinggal kota pengadilan", "tinggal satu lagi"),
 // bukan "tinggal di Bandung" atau "Anda tinggal memeriksa ringkasan".
 const TINGGAL = /\btinggal\b(?!\s+(?:di|ke|dari|bersama|dengan|serumah)\b)([^.!?]*)/i;
 const TINGGAL_TAIL = /\b(satu|dua|tiga|sedikit|lagi|kolom|isian|pertanyaan)\b/i;
-// "Tidak ada (lagi) yang kurang/kosong" = klaim kesiapan, bukan daftar sisa.
-const NOTHING_LEFT = /\b(tidak|tak)\s+ada\s+(lagi\s+)?(yang|kolom|data|isian)\b/i;
+// "Tidak ada (lagi) yang kurang/kosong/perlu diisi" = klaim kesiapan, bukan daftar sisa. "Tidak ada data yang dikirim …"
+// atau "Tidak ada yang bisa saya jamin …" bukan klaim kesiapan.
+const NOTHING_LEFT = /\b(tidak|tak)\s+ada\s+(lagi\s+)?(yang|kolom|data|isian)\s+((yang|lagi)\s+)*(masih\s+)?(kurang|kosong|perlu\s+diisi|tersisa|belum\s+(diisi|terisi))\b|\b(tidak|tak)\s+ada\s+(lagi\s+)?(yang\s+)?(kurang|kosong|tersisa)\b/i;
 // Tawaran koreksi bersyarat ("Bila masih perlu koreksi, sebutkan saja") bukan pernyataan sisa.
-const OFFER = /\b(jika|bila|kalau|apabila|seandainya)\b[^.!?]*\b(koreksi|ubah|mengubah|diubah|ganti|mengganti|diganti|perbaiki|memperbaiki|diperbaiki)\b/i;
+const OFFER = /\b(jika|bila|kalau|apabila|seandainya)\b[^.!?]*\b(koreksi|dikoreksi|mengoreksi|ubah|mengubah|diubah|ganti|mengganti|diganti|perbaiki|memperbaiki|diperbaiki)\b/i;
 // Penolakan/negasi ("saya tidak bisa mengisi …") bukan klaim mencatat; hanya nilai yang disebut yang diperiksa.
 const NEGATION = /\b(tidak|tak|belum|bukan|gagal)\b/i;
 // Pertanyaan konfirmasi atau tawaran koreksi tidak meminta nilai baru, jadi tidak dibuang walau kolomnya sudah terisi.
@@ -152,9 +174,12 @@ function mentioned(t: Template, text: string): FieldSpec[] {
 }
 
 function remainStatement(t: Template, text: string): boolean {
-  if (REMAIN.test(text)) return true;
   const m = TINGGAL.exec(text);
-  return !!m && (TINGGAL_TAIL.test(m[1]) || mentioned(t, m[1]).length > 0);
+  if (m && (TINGGAL_TAIL.test(m[1]) || mentioned(t, m[1]).length > 0)) return true;
+  if (/\btersisa\b/i.test(text)) return true;
+  if (OPTIONAL_OK.test(text)) return false;
+  if (REMAIN.test(text)) return true;
+  return REMAIN_WEAK.test(text) && !NOT_REMAIN.test(text) && (FIELD_WORD.test(text) || mentioned(t, text).length > 0);
 }
 
 type Mentions = { dates: (string | null)[]; numbers: number[]; names: string[] };
@@ -263,7 +288,7 @@ export function normalizeSpecialCaseTerm(text: string): string {
   });
 }
 
-export const READY_LINE ="Semua kolom wajib sudah terisi. Periksa ringkasan, lalu buat dokumen.";
+export const READY_LINE = "Semua kolom wajib sudah terisi. Periksa ringkasan, lalu buat dokumen.";
 export const CORRECTION_LINE = "Jika ada yang perlu dikoreksi, sebutkan saja.";
 
 export function reconcileReply(said: string, s: ReplyState): string {

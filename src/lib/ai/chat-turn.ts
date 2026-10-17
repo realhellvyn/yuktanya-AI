@@ -13,7 +13,7 @@ import { GatewayError, type ChatMessage, type chat as gatewayChat } from "./gate
 import { buildSystemPrompt } from "./chat-prompt";
 import { groundSuggestions } from "./grounding";
 import { parseInterviewJson } from "./interview";
-import { normalizeSpecialCaseTerm, reconcileReply } from "./reply-guard";
+import { FIELD_CUES, normalizeSpecialCaseTerm, reconcileReply } from "./reply-guard";
 import type { UsageStore } from "./quota";
 
 export type ChatTurnDeps = {
@@ -38,6 +38,22 @@ const HISTORY = 12;
 const ASKS_DELETE = /\b(hapus|kosongkan|hilangkan|buang|tidak perlu|tidak usah|tak usah)\b/i;
 const isReady = (t: Template, d: Data) => missingRequired(t, d).length === 0 && t.validate(d).ok;
 const SAFE_FALLBACK = "Maaf, saya belum menangkap maksud Anda. Bisa ulangi dengan kalimat lain? Pesan ini tidak memakai jatah AI Anda.";
+
+// Grounding hanya membaca angka. Jumlah yang ditulis dengan kata ("lima juta", "sejuta", "lima ratus ribu", "enam bulan")
+// berarti pengguna memang menyebut nilai, jadi usulan model untuk kolom angka itu dilaporkan "Belum tercatat" + petunjuk.
+const NUM_WORD = "(?:satu|dua|tiga|empat|lima|enam|tujuh|delapan|sembilan|sepuluh|sebelas|seratus|puluh|belas|ratus)";
+const SPELLED_MONEY = new RegExp(`\\b(?:se(?:ratus|ribu|juta|miliar|triliun)|${NUM_WORD}\\s+(?:ratus|ribu|juta|miliar|triliun))\\b`, "i");
+const MONEY_CUE = /\b(rp|rupiah|uang|pinjam\w*|pinjem\w*|minjam\w*|meminjam\w*|utang|hutang|nilai\w*|harga|biaya|bayar\w*|jumlah\w*|sebesar|senilai)\b/i;
+const spelledCount = (unit: string) => new RegExp(`\\b${NUM_WORD}(?:\\s+${NUM_WORD})*\\s+${unit}\\b`, "i");
+function spelledNumber(t: Template, f: FieldSpec, text: string): boolean {
+  if (f.kind === "idr") return SPELLED_MONEY.test(text) && (MONEY_CUE.test(text) || !!FIELD_CUES[t.id]?.[f.key]?.test(text));
+  if (f.kind === "integer") return spelledCount(/bulan/i.test(f.label) ? "bulan" : /hari/i.test(f.label) ? "hari" : "(?:bulan|hari)").test(text);
+  return false;
+}
+const exampleOf = (f: FieldSpec, fallback: string) => f.example?.replace(/^Contoh:\s*/i, "").trim() || fallback;
+const spelledHint = (f: FieldSpec) =>
+  f.kind === "idr" ? `Tulis jumlahnya dengan angka, misalnya ${exampleOf(f, "Rp5.000.000")}.` : `Tulis angkanya, misalnya ${exampleOf(f, "12")}.`;
+const KASUS_KHUSUS = /kasus\s+khusus/i;
 
 // Usulan model dianggap sudah tercatat bila bentuk bakunya sama dengan nilai akhir (tanggal "16 Oktober 2026" = "2026-10-16").
 function sameAsFinal(t: Template, f: FieldSpec, proposed: unknown, final: unknown): boolean {
@@ -172,20 +188,28 @@ export async function handleChatTurn(deps: ChatTurnDeps, req: Request, params: {
       await aiEvent("ai_request_succeeded");
 
       // Nilai yang benar-benar ditulis pengguna (lolos grounding) tapi tidak tersimpan, mis. ditolak validasi: sampaikan jujur.
+      // Jumlah yang ditulis dengan kata di pesan terbaru juga dilaporkan, dengan petunjuk menulis angka.
       // Usulan karangan model yang tidak ada di pesan pengguna dibuang diam-diam (tidak disimpan, tidak dicatat di sini);
       // reconcileReply tetap membuang klaim "saya catat …" atas nilai itu.
-      const unnoted = template.fields.filter((f) => f.key in grounded && !cleared.includes(f.key) && !sameAsFinal(template, f, raw[f.key], final[f.key]));
+      const proposed = (f: FieldSpec) => raw[f.key] != null && String(raw[f.key]).trim() !== "" && !cleared.includes(f.key) && !sameAsFinal(template, f, raw[f.key], final[f.key]);
+      const spelled = template.fields.filter((f) => !(f.key in grounded) && proposed(f) && spelledNumber(template, f, text));
+      const unnoted = template.fields.filter((f) => (f.key in grounded && proposed(f)) || spelled.includes(f));
+      const hints = [...new Set([...fieldIssues, ...issues, ...spelled.map(spelledHint)])];
       const note =
         unnoted.length > 0 || issues.length > 0
-          ? `Belum tercatat: ${unnoted.map((f) => f.label).join(", ") || "perubahan terakhir"}.${issues.length || fieldIssues.length ? ` ${[...fieldIssues, ...issues].join(" ")}` : " Tulis nilainya lengkap di pesan, sesuai contoh pada pertanyaan."}`
+          ? `Belum tercatat: ${unnoted.map((f) => f.label).join(", ") || "perubahan terakhir"}.${hints.length ? ` ${hints.join(" ")}` : " Tulis nilainya lengkap di pesan, sesuai contoh pada pertanyaan."}`
           : "";
       const missing = missingRequired(template, final);
-      const said = (result.data.reply ?? "").trim().slice(0, 600);
+      // Istilah glosarium untuk teks bebas model ("kasus khusus" → Kasus Hukum Khusus (Special Legal Case)), kecuali bila
+      // pesan pengguna atau draf memuat frasa itu sebagai nilai (mis. "menangani kasus khusus pelanggan"). Hanya teks model
+      // yang dinormalkan, sebelum penyesuaian; baris server ("Yang tercatat dari pesan ini: …") tidak pernah diubah.
+      const echoes = KASUS_KHUSUS.test(text) || Object.values(final).some((v) => typeof v === "string" && KASUS_KHUSUS.test(v));
+      const modelText = (result.data.reply ?? "").trim().slice(0, 600);
+      const said = echoes ? modelText : normalizeSpecialCaseTerm(modelText);
       // Balasan disesuaikan dengan draf akhir: klaim/pertanyaan yang tidak cocok diganti kalimat dari keadaan server.
       const ready = isReady(template, final);
       const guarded = reconcileReply(said, { template, final, applied, cleared, ready, userText, noted: note !== "", notedKeys: unnoted.map((f) => f.key) });
-      // Istilah glosarium untuk rute penilaian khusus ("kasus khusus" bebas dari model → Kasus Hukum Khusus (Special Legal Case)).
-      const out = [normalizeSpecialCaseTerm(guarded), note].filter(Boolean).join("\n\n").slice(0, 4000);
+      const out = [guarded, note].filter(Boolean).join("\n\n").slice(0, 4000);
       await saveAssistantReply(deps.pool, userId, params.id, out, readUpTo);
       return json({ reply: out, applied: [...applied, ...cleared], missing, ready, issues });
     } catch (e) {

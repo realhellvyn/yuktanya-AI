@@ -261,6 +261,46 @@ describe("reconcileReply: pernyataan sisa kolom mengikuti draf akhir", () => {
     expect(reconcileReply(ok[5], state(nda, { disclosingParty: "Sinta Dewi" }, "Saya Sinta Dewi", { applied: [] }))).toContain(ok[5]);
   });
 
+  // Fix round 1 (I2): ungkapan sisa yang umum juga dibuang saat siap.
+  it("siap: ungkapan sisa lain ('Yang belum: …', 'satu lagi', 'perlu diisi', 'belum Anda sebutkan') dibuang", () => {
+    for (const said of [
+      "Yang belum: kota pengadilan.",
+      "Masih ada satu lagi, yaitu kota pengadilan.",
+      "Kolom yang perlu diisi: kota pengadilan.",
+      "Satu lagi yang dibutuhkan: kota pengadilan.",
+      "Yang masih harus diisi adalah kota pengadilan.",
+      "Kota pengadilan belum Anda sebutkan.",
+    ]) {
+      const out = reconcileReply(`Baik. ${said}`, state(utangPiutang, fullUtang, userUtang, { applied: [] }));
+      expect(out, said).not.toContain(said);
+      expect(out, said).toContain(READY_LINE);
+    }
+    // Tawaran koreksi bersyarat tetap.
+    const offer = "Jika masih ada yang ingin dikoreksi, sebutkan saja.";
+    expect(reconcileReply(offer, state(utangPiutang, fullUtang, userUtang, { applied: [] }))).toContain(offer);
+  });
+
+  // Fix round 1 (M3): kalimat sah yang mirip ungkapan sisa tetap ada.
+  it("kalimat sah yang mirip ungkapan sisa dipertahankan (siap dan belum siap)", () => {
+    const keep = [
+      "Dokumen ini masih perlu ditandatangani kedua pihak.",
+      "Maaf, saya masih belum bisa memberikan nasihat hukum.",
+      "Kolom yang kosong boleh dilewati.",
+      "Sisanya dicicil setiap bulan.",
+      "Alamatnya masih kurang jelas.",
+    ];
+    const notReady = { creditor: "Rina Wulandari" };
+    for (const s of keep) {
+      expect(reconcileReply(s, state(utangPiutang, fullUtang, userUtang, { applied: [] })), `siap: ${s}`).toContain(s);
+      expect(reconcileReply(s, state(utangPiutang, notReady, "Saya Rina Wulandari", { applied: [] })), `belum: ${s}`).toContain(s);
+    }
+    for (const s of ["Tidak ada data yang dikirim ke pihak lain.", "Tidak ada yang bisa saya jamin tentang keabsahan dokumen."]) {
+      expect(reconcileReply(s, state(utangPiutang, notReady, "Saya Rina Wulandari", { applied: [] })), s).toContain(s);
+    }
+    // "kurang jelas" yang menyebut kolom yang sudah terisi tetap dibuang.
+    expect(reconcileReply("Nama pemberi pinjaman masih kurang jelas.", state(utangPiutang, fullUtang, userUtang, { applied: [] }))).not.toContain("masih kurang jelas");
+  });
+
   it("'tidak ada yang kurang' saat belum siap = klaim kesiapan palsu → dibuang", () => {
     const out = reconcileReply("Tidak ada lagi kolom yang kosong.", state(nda, { disclosingParty: "Sinta Dewi" }, "Saya Sinta Dewi", { applied: [] }));
     expect(out).not.toContain("Tidak ada lagi kolom yang kosong.");
